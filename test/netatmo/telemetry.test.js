@@ -53,7 +53,9 @@ beforeEach(async () => {
       cameraImages.push({ deviceExternalId, image });
     },
   };
-  telemetry = createTelemetry({ gladys, client, now: () => clock });
+  // loadTtlMs 0: these tests mutate the fixtures between refreshes and expect
+  // every call to reload; the burst cache has its own dedicated test.
+  telemetry = createTelemetry({ gladys, client, now: () => clock, loadTtlMs: 0 });
 });
 
 afterEach(async () => {
@@ -284,6 +286,47 @@ test('cameras stay absent with the default (opt-in) configuration', async () => 
   assert.ok(!gladys.transports.some((t) => t.external_id === 'ext:netatmo:camera-1'));
 });
 
+test('bursty callers share one account load (single-flight + TTL cache)', async () => {
+  const cached = createTelemetry({ gladys, client, now: () => clock, loadTtlMs: 60 * 1000 });
+  gladys.devices = await cached.syncDiscovery(config);
+  await cached.refreshValues(config);
+  // One load for the burst: homesdata was hit exactly once.
+  const homesdataCalls = netatmo.state.apiRequests.filter((r) =>
+    r.path.startsWith('/api/homesdata'),
+  );
+  assert.equal(homesdataCalls.length, 1);
+  cached.stop();
+});
+
+test('a partial load never replaces the published discovery list', async () => {
+  gladys.devices = await telemetry.syncDiscovery(config);
+  assert.equal(gladys.discovered.length, 1);
+
+  // The Weather API family fails: the load is partial.
+  netatmo.state.failStationsWith = 500;
+  await telemetry.syncDiscovery(config);
+  // No replace published (devices would vanish), transports still flowed.
+  assert.equal(gladys.discovered.length, 1);
+  assert.ok(gladys.transports.length > 0);
+
+  // The outage ends: the next sync publishes a full list again.
+  netatmo.state.failStationsWith = null;
+  await telemetry.syncDiscovery(config);
+  assert.equal(gladys.discovered.length, 2);
+});
+
+test('the on-demand snapshot serves the last published image when the camera dies', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  await telemetry.refreshValues(configSecurity); // publishes + caches the images
+
+  netatmo.state.failAllSnapshots = true;
+  const image = await telemetry.getCameraSnapshot(configSecurity, {
+    external_id: 'ext:netatmo:camera-1',
+  });
+  assert.match(image, /^image\/jpg;base64,/);
+});
+
 test('setDeviceValue posts the setpoint with the device params', async () => {
   gladys.devices = await telemetry.syncDiscovery(config);
   const device = gladys.devices.find((d) => d.external_id === 'ext:netatmo:therm-1');
@@ -314,6 +357,27 @@ test('setDeviceValue rejects read-only features and missing params', async () =>
     setDeviceValue({ client }, { device: noParams, feature: setpoint, value: 21 }),
     /home_id/,
   );
+
+  // home_id present but room_id missing: the room-specific message.
+  const noRoom = { ...device, params: [{ name: 'home_id', value: 'home-1' }] };
+  await assert.rejects(
+    setDeviceValue({ client }, { device: noRoom, feature: setpoint, value: 21 }),
+    /room_id/,
+  );
+});
+
+test('the camera monitoring command surfaces the missing-scope error too', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  const camera = gladys.devices.find((d) => d.external_id === 'ext:netatmo:camera-1');
+  const monitoring = camera.features.find((f) => f.external_id.endsWith(':monitoring'));
+  netatmo.state.failSetStateWith = { status: 403, body: { error: { code: 13, message: 'scope' } } };
+  await assert.rejects(
+    setDeviceValue({ gladys, client }, { device: camera, feature: monitoring, value: 1 }),
+    /reconnect your Netatmo/,
+  );
+  // The scope refusal must NOT be retried: one setstate call only.
+  assert.equal(netatmo.state.setStateRequests.length, 1);
 });
 
 test('setDeviceValue surfaces the missing-scope error (Netatmo 403 code 13)', async () => {

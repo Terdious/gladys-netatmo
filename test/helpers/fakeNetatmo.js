@@ -1,12 +1,12 @@
 // -----------------------------------------------------------------------------
-// Minimal fake of the Netatmo cloud (OAuth2 token endpoint + homesdata),
-// implementing just enough of the contract for the OAuth manager and the API
-// client:
+// Fake of the Netatmo cloud, implementing the contract the integration uses:
 //   - POST /oauth2/token: authorization_code and refresh_token grants,
 //     with rotating refresh tokens (like the real Netatmo);
-//   - GET /api/homesdata: Bearer-protected homes topology.
-// Behaviour toggles (`failTokenWith`, `rejectAccessToken`) let the tests
-// exercise the transient/fatal and 401-retry paths.
+//   - Bearer-protected API: homesdata, homestatus, getthermostatsdata,
+//     getstationsdata, setroomthermpoint (form), setstate (JSON);
+//   - two fake cameras (/vpn/<id> and /local/<id>: command/ping + snapshot).
+// Behaviour toggles (`failTokenWith`, `rejectAccessToken`, `failSetpointWith`,
+// `failLocalSnapshot`) let the tests exercise the failure paths.
 // -----------------------------------------------------------------------------
 
 import http from 'node:http';
@@ -154,9 +154,12 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     failSetpointWith: null, // set to {status, body} to make setroomthermpoint fail
     setpointRequests: [], // every parsed form POSTed to /api/setroomthermpoint
     setStateRequests: [], // every parsed JSON body POSTed to /api/setstate
+    failSetStateWith: null, // set to {status, body} to make setstate fail
+    failStationsWith: null, // set to an HTTP status to make getstationsdata fail
     cameraRequests: [], // every hit on the fake camera endpoints ({side, camId, path})
     snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
     failLocalSnapshot: false, // make the LOCAL snapshot fail (stale-cache fallback test)
+    failAllSnapshots: false, // make EVERY snapshot fail (last-image fallback test)
     baseUrl: '', // filled after listen()
     homes: buildDefaultHomes(),
     homeStatuses: buildDefaultHomeStatuses(),
@@ -202,7 +205,7 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           return;
         }
         if (subPath === '/live/snapshot_720.jpg') {
-          if (side === 'local' && state.failLocalSnapshot) {
+          if (state.failAllSnapshots || (side === 'local' && state.failLocalSnapshot)) {
             respond({ error: 'unreachable' }, 502);
             return;
           }
@@ -274,6 +277,10 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           return;
         }
         if (req.url.startsWith('/api/getstationsdata')) {
+          if (state.failStationsWith) {
+            respond({ error: { code: 500, message: 'server error' } }, state.failStationsWith);
+            return;
+          }
           respond({ status: 'ok', body: { devices: state.stationDevices } });
           return;
         }
@@ -288,6 +295,10 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
         }
         if (req.method === 'POST' && req.url.startsWith('/api/setstate')) {
           state.setStateRequests.push(JSON.parse(body));
+          if (state.failSetStateWith) {
+            respond(state.failSetStateWith.body, state.failSetStateWith.status);
+            return;
+          }
           respond({ status: 'ok' });
           return;
         }

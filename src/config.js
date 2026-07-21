@@ -11,6 +11,10 @@
 // itself via `gladys.setConfig()` — keys outside the schema are free internal
 // storage and never reach the configuration form.
 //
+// The `netatmo_account` schema key is a value-less UI field (type `oauth2`,
+// rendered as the Connect button): it carries no configuration value, which
+// is why it appears in neither DEFAULT_CONFIG nor normalizeConfig.
+//
 // This module only provides defaults and normalizes the received object, so the
 // rest of the code never has to deal with `undefined`.
 // -----------------------------------------------------------------------------

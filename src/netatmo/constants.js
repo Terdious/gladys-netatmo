@@ -81,9 +81,6 @@ export const PARAMS = {
 export const CAMERA_LIVE_QUALITIES = ['poor', 'low', 'medium', 'high'];
 export const DEFAULT_CAMERA_LIVE_QUALITY = 'high';
 
-// The `errors` array of /homestatus flags a powered-off module with this code.
-export const API_ERROR_CODE_UNREACHABLE = 6;
-
 // Telemetry refresh cadence: one batched load of every home/station per cycle
 // (the core polls at the same rate). The devices are created with
 // should_poll:false — one global loop costs 3-4 API calls per cycle instead of

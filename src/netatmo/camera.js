@@ -81,7 +81,7 @@ export function encodeUnderLimit(buffer) {
     }
   }
   logger.warn(
-    'Camera snapshot still exceeds the 150 KB bound after re-encoding — skipping this frame',
+    `Camera snapshot still exceeds the ${Math.round(MAX_IMAGE_STRING_SIZE / 1024)} KB budget after re-encoding — skipping this frame`,
   );
   return null;
 }
@@ -185,5 +185,14 @@ export function createCameraImages({ fetchImpl = fetch } = {}) {
     }
   }
 
-  return { resolveBaseUrl, getImage };
+  /** Drop the cached base URLs of cameras no longer in the account. */
+  function prune(knownIds) {
+    for (const id of baseUrls.keys()) {
+      if (!knownIds.has(id)) {
+        baseUrls.delete(id);
+      }
+    }
+  }
+
+  return { resolveBaseUrl, getImage, prune };
 }

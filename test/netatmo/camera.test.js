@@ -25,7 +25,7 @@ test('a snapshot under the bound is published as-is', () => {
   const raw = Buffer.from('small-fake-jpeg');
   const image = encodeUnderLimit(raw);
   assert.equal(image, `image/jpg;base64,${raw.toString('base64')}`);
-  assert.ok(image.length <= 150 * 1024);
+  assert.ok(image.length <= 96 * 1024);
 });
 
 test('an oversized snapshot is re-encoded under the bound (no ffmpeg in the container)', () => {
@@ -37,7 +37,7 @@ test('an oversized snapshot is re-encoded under the bound (no ffmpeg in the cont
   const image = encodeUnderLimit(oversized);
   assert.ok(image, 're-encode must produce an image');
   assert.match(image, /^image\/jpg;base64,/);
-  assert.ok(image.length <= 150 * 1024);
+  assert.ok(image.length <= 96 * 1024);
 });
 
 test('an oversized non-JPEG payload is dropped instead of crashing', () => {

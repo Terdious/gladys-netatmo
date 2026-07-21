@@ -17,6 +17,10 @@ export const UPDATE_MAPPINGS = {
     plug_connected_boiler: (deviceNetatmo) => deviceNetatmo.plug_connected_boiler ?? false,
   },
   [SUPPORTED_MODULE_TYPE.THERMOSTAT]: {
+    // The `battery_state` string fallback goes beyond the core table (which
+    // reads battery_percent only): homestatus reports battery_state for
+    // NATherm1 when the legacy getthermostatsdata merge is unavailable.
+    // Deliberate improvement, taken from the upstream camera branch.
     battery_percent: (deviceNetatmo) =>
       deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
     temperature: (deviceNetatmo) => deviceNetatmo.measured?.temperature,
