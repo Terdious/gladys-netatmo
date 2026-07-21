@@ -70,7 +70,16 @@ export const PARAMS = {
   PLUG_ID: 'plug_id',
   PLUG_NAME: 'plug_name',
   MODULES_BRIDGE_ID: 'modules_bridge_id',
+  // Read by the core rtsp-camera service (dashboard live button): must point
+  // at the current HLS manifest of the camera, refreshed when it changes.
+  CAMERA_URL: 'CAMERA_URL',
+  // User-editable on the device page; the discovery re-publish always sends
+  // back the CURRENT device value so the upsert never overwrites the user.
+  CAMERA_QUALITY: 'camera_quality',
 };
+
+export const CAMERA_LIVE_QUALITIES = ['poor', 'low', 'medium', 'high'];
+export const DEFAULT_CAMERA_LIVE_QUALITY = 'high';
 
 // The `errors` array of /homestatus flags a powered-off module with this code.
 export const API_ERROR_CODE_UNREACHABLE = 6;

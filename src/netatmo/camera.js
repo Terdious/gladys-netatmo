@@ -24,16 +24,35 @@ const PING_PATH = '/command/ping';
 const PING_TIMEOUT_MS = 5 * 1000;
 const SNAPSHOT_TIMEOUT_MS = 20 * 1000;
 
-// POST /camera/image accepts at most 150 KB measured on the FULL
-// `image/jpg;base64,...` string; the raw JPEG budget accounts for the
+// POST /camera/image accepts at most 150 KB (application bound, measured on
+// the FULL `image/jpg;base64,...` string) — BUT the core mounts its routes
+// behind `express.json()` whose DEFAULT body limit is 100 KB: any JSON body
+// between ~100 and 150 KB dies in the parser with a 413 before reaching the
+// camera route (seen on the real bench). Until the core raises the parser
+// limit (fix proposed on the external-integrations framework PR), the
+// budget targets the WHOLE JSON body under 100 KB: 96 KB of image string
+// leaves room for the envelope. The raw JPEG budget accounts for the
 // base64 expansion (4/3) and the prefix.
 const IMAGE_PREFIX = 'image/jpg;base64,';
-const MAX_IMAGE_STRING_SIZE = 150 * 1024;
+const MAX_IMAGE_STRING_SIZE = 96 * 1024;
 export const MAX_RAW_JPEG_SIZE = Math.floor(
   ((MAX_IMAGE_STRING_SIZE - IMAGE_PREFIX.length) * 3) / 4,
 );
 
 const REENCODE_QUALITIES = [70, 50, 30, 15];
+
+/**
+ * Build the HLS live manifest URL of a camera. The `files/{quality}` variant
+ * (the one used by pyatmo/Home Assistant) works on both the local and the
+ * VPN URLs, unlike the documented `index_local.m3u8` which 404s on current
+ * firmwares (core PR #2625 finding).
+ * @param {string} baseUrl camera base URL (local-first, from resolveBaseUrl)
+ * @param {string} quality one of CAMERA_LIVE_QUALITIES
+ * @returns {string} the live manifest URL
+ */
+export function buildLiveUrl(baseUrl, quality) {
+  return `${baseUrl}/live/files/${quality}/index.m3u8`;
+}
 
 /**
  * Fit a raw JPEG buffer into the camera-store bound, re-encoding with

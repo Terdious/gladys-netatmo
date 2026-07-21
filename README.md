@@ -35,14 +35,20 @@ first (Home + Security cameras, webhooks, …).
   homesdata/homestatus payloads, with WiFi quality, a **writable monitoring
   switch** (`/api/setstate`) and the **dashboard image** — snapshots are
   fetched local-first (`/command/ping` resolution, cached, VPN fallback) and
-  re-encoded in pure JS when they exceed the 150 KB camera-store bound (no
-  ffmpeg in the sandboxed container). Enabling only the Security API works
-  too — the topology load runs whenever Energy or Security is on.
+  re-encoded in pure JS when they exceed the camera-store bound (no ffmpeg
+  in the sandboxed container). Enabling only the Security API works too —
+  the topology load runs whenever Energy or Security is on.
+- **Camera live stream**: each camera carries the `CAMERA_URL` /
+  `camera_quality` params read by the core rtsp-camera service (dashboard
+  live button). The HLS manifest URL is built **on the local network first**
+  (VPN fallback), and re-published automatically when it changes (VPN
+  rotation, local/VPN switch, user-edited quality) — the external-integrations
+  framework silently upserts the params of created devices on every
+  discovery publish.
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required).
 
-The camera live stream and the webhooks land in the next milestones — see the
-roadmap issue.
+The webhooks land in a next milestone — see the roadmap issue.
 
 ## Configuration
 

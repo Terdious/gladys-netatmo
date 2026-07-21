@@ -26,12 +26,15 @@ import {
   STATE_KEEP_ALIVE_MS,
   MAX_ENTRIES_PER_REQUEST,
   SECURITY_MODULE_TYPES,
+  CAMERA_LIVE_QUALITIES,
+  DEFAULT_CAMERA_LIVE_QUALITY,
+  PARAMS,
 } from './constants.js';
 import { loadDevices, netatmoId } from './discovery.js';
 import { convertDevice } from './convert.js';
 import { UPDATE_MAPPINGS } from './updateMappings.js';
 import { readValues } from './deviceMapping.js';
-import { createCameraImages } from './camera.js';
+import { createCameraImages, buildLiveUrl } from './camera.js';
 
 const logger = createLogger({ name: 'netatmo-telemetry' });
 
@@ -150,6 +153,57 @@ export function createTelemetry({
     }
   }
 
+  // Live URL last published per camera id: a change (VPN rotation, local/VPN
+  // switch, user-edited quality) triggers a discovery re-publish so the
+  // framework upserts the CAMERA_URL param of the created device.
+  const lastLiveUrls = new Map();
+
+  /**
+   * Resolve the live-stream enrichment of every known camera: base URL
+   * (LOCAL network first, from the snapshot cache), quality read back from
+   * the created device so a user edit is never overwritten.
+   * @returns {Promise<Map<string, {liveUrl: string, quality: string}>>} by camera id
+   */
+  async function buildCameraEnrichments() {
+    const enrichments = new Map();
+    for (const [id, rawDevice] of rawCamerasById) {
+      try {
+        const baseUrl = await cameras.resolveBaseUrl(rawDevice);
+        if (!baseUrl) {
+          continue;
+        }
+        const gladysDevice = (gladys.devices ?? []).find(
+          (device) => device.external_id === gladys.externalId(id),
+        );
+        const qualityParam = (gladysDevice?.params ?? []).find(
+          (param) => param.name === PARAMS.CAMERA_QUALITY,
+        )?.value;
+        const quality = CAMERA_LIVE_QUALITIES.includes(qualityParam)
+          ? qualityParam
+          : DEFAULT_CAMERA_LIVE_QUALITY;
+        enrichments.set(id, { liveUrl: buildLiveUrl(baseUrl, quality), quality });
+      } catch (err) {
+        logger.debug(`Live URL resolution failed for camera ${id}: ${err.message}`);
+      }
+    }
+    return enrichments;
+  }
+
+  /** Publish the discovered devices + transport badges for the given load. */
+  async function publishDiscovery(rawDevices) {
+    const enrichments = await buildCameraEnrichments();
+    const devices = rawDevices
+      .map((rawDevice) => convertDevice(gladys, rawDevice, enrichments))
+      .filter(Boolean);
+    await gladys.publishDiscoveredDevices(devices);
+    await publishTransports(rawDevices);
+    for (const [id, enrichment] of enrichments) {
+      lastLiveUrls.set(id, enrichment.liveUrl);
+    }
+    logger.info(`Discovery published ${devices.length} Netatmo device(s)`);
+    return devices;
+  }
+
   /**
    * Discovery pipeline: load every raw device, publish the discovered list
    * and the transport badges.
@@ -159,11 +213,7 @@ export function createTelemetry({
   async function syncDiscovery(config) {
     const rawDevices = await loadDevices(client, config);
     rememberRawCameras(rawDevices);
-    const devices = rawDevices.map((rawDevice) => convertDevice(gladys, rawDevice)).filter(Boolean);
-    await gladys.publishDiscoveredDevices(devices);
-    await publishTransports(rawDevices);
-    logger.info(`Discovery published ${devices.length} Netatmo device(s)`);
-    return devices;
+    return publishDiscovery(rawDevices);
   }
 
   /**
@@ -250,8 +300,21 @@ export function createTelemetry({
       if (states.length > 0) {
         await publishStatesChunked(states);
       }
-      await publishTransports(rawDevices);
       await refreshCameraImages();
+      // Live stream upkeep (core PR #2625): when a camera's live URL moved
+      // (VPN rotation, local/VPN switch, user-edited quality), re-publish the
+      // discovery so the framework upserts the CAMERA_URL param of the
+      // created device — read by the core rtsp-camera service.
+      const enrichments = await buildCameraEnrichments();
+      const liveUrlChanged = [...enrichments].some(
+        ([id, enrichment]) => lastLiveUrls.get(id) !== enrichment.liveUrl,
+      );
+      if (liveUrlChanged) {
+        logger.info('Camera live URL changed — re-publishing the discovery to refresh CAMERA_URL');
+        await publishDiscovery(rawDevices);
+      } else {
+        await publishTransports(rawDevices);
+      }
       logger.debug(`Refresh cycle published ${states.length} state(s)`);
       return states.length;
     })();

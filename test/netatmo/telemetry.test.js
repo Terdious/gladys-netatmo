@@ -162,6 +162,66 @@ test('cameras are discovered and updated when security_api is enabled (core #262
   );
 });
 
+test('cameras carry a local-first CAMERA_URL and the camera_quality param (core #2625)', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  const devices = await telemetry.syncDiscovery(configSecurity);
+
+  const paramOf = (id, name) =>
+    devices.find((d) => d.external_id === `ext:netatmo:${id}`).params.find((p) => p.name === name)
+      ?.value;
+
+  // camera-1 is locally reachable: the live stream MUST use the LAN URL.
+  assert.equal(
+    paramOf('camera-1', 'CAMERA_URL'),
+    `${netatmo.url}/local/camera-1/live/files/high/index.m3u8`,
+  );
+  // noc-1 is VPN-only: the live stream uses the VPN URL.
+  assert.equal(
+    paramOf('noc-1', 'CAMERA_URL'),
+    `${netatmo.url}/vpn/noc-1/live/files/high/index.m3u8`,
+  );
+  assert.equal(paramOf('camera-1', 'camera_quality'), 'high');
+});
+
+test('a user-edited camera_quality is respected, never overwritten', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  // The user set the quality to 'low' on the device page.
+  gladys.devices = [
+    {
+      external_id: 'ext:netatmo:camera-1',
+      params: [{ name: 'camera_quality', value: 'low' }],
+    },
+  ];
+  const devices = await telemetry.syncDiscovery(configSecurity);
+  const camera = devices.find((d) => d.external_id === 'ext:netatmo:camera-1');
+  assert.equal(
+    camera.params.find((p) => p.name === 'CAMERA_URL').value,
+    `${netatmo.url}/local/camera-1/live/files/low/index.m3u8`,
+  );
+  assert.equal(camera.params.find((p) => p.name === 'camera_quality').value, 'low');
+});
+
+test('a VPN URL rotation re-publishes the discovery to refresh CAMERA_URL', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  assert.equal(gladys.discovered.length, 1);
+
+  // Stable cycle: no gratuitous re-publish.
+  await telemetry.refreshValues(configSecurity);
+  assert.equal(gladys.discovered.length, 1);
+
+  // Netatmo rotates the VPN URL of the outdoor camera.
+  const noc = netatmo.state.homeStatuses['home-1'].home.modules.find((m) => m.id === 'noc-1');
+  noc.vpn_url = `${netatmo.url}/vpn/noc-1-rotated`;
+  await telemetry.refreshValues(configSecurity);
+  assert.equal(gladys.discovered.length, 2);
+  const republished = gladys.discovered.at(-1).find((d) => d.external_id === 'ext:netatmo:noc-1');
+  assert.equal(
+    republished.params.find((p) => p.name === 'CAMERA_URL').value,
+    `${netatmo.url}/vpn/noc-1-rotated/live/files/high/index.m3u8`,
+  );
+});
+
 test('a stale local URL cache falls back to the VPN snapshot (core #2623)', async () => {
   const configSecurity = normalizeConfig({ security_api: 'true' });
   gladys.devices = await telemetry.syncDiscovery(configSecurity);

@@ -73,9 +73,11 @@ function pushMinMaxTemp(features, roomName, externalId) {
  * Convert one raw Netatmo device to a Gladys discovery payload.
  * @param {object} gladys SDK instance (external_id builder)
  * @param {object} netatmoDevice raw device from loadDevices()
+ * @param {Map<string, {liveUrl: string, quality: string}>} [cameraEnrichments]
+ * per-camera live stream data (id → CAMERA_URL/camera_quality params)
  * @returns {object|null} Gladys device payload, or null when not supported
  */
-export function convertDevice(gladys, netatmoDevice) {
+export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
   const { home, name, type: model, room = {}, plug = {} } = netatmoDevice;
   const id = netatmoId(netatmoDevice);
   const homeId = home || netatmoDevice.home_id;
@@ -217,10 +219,23 @@ export function convertDevice(gladys, netatmoDevice) {
       );
       break;
     case SUPPORTED_MODULE_TYPE.NACAMERA:
-    case SUPPORTED_MODULE_TYPE.NOC:
+    case SUPPORTED_MODULE_TYPE.NOC: {
       features.push(buildFeatureMonitoring(nameDevice, externalId));
       features.push(buildFeatureCamera(nameDevice, externalId));
+      // Live stream (core PR #2625): the rtsp-camera service reads CAMERA_URL.
+      // The framework silently upserts the params of an already-created device
+      // on every discovery re-publish, so refreshing the URL is just
+      // re-publishing. camera_quality carries the CURRENT device value so the
+      // upsert never overwrites a user edit.
+      const enrichment = cameraEnrichments?.get(id);
+      if (enrichment) {
+        params.push(
+          { name: PARAMS.CAMERA_URL, value: enrichment.liveUrl },
+          { name: PARAMS.CAMERA_QUALITY, value: enrichment.quality },
+        );
+      }
       break;
+    }
     case SUPPORTED_MODULE_TYPE.NAMODULE4:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));
       if (room.id) {
