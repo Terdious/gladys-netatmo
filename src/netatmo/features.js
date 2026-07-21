@@ -127,6 +127,20 @@ export function buildFeaturePlugConnectedBoiler(name, externalId) {
   });
 }
 
+// Camera monitoring status (core PR #2621). Read-only for now: switching the
+// monitoring on/off is unlocked with the camera commands (next milestone).
+export function buildFeatureMonitoring(name, externalId) {
+  return feature({
+    name: `Monitoring - ${name}`,
+    external_id: `${externalId}:monitoring`,
+    selector: `${externalId}:monitoring`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
 export function buildFeatureOpenWindow(name, externalId) {
   return feature({
     name: `Detecting open window - ${name}`,

@@ -42,7 +42,9 @@ function buildDefaultHomes() {
         },
         { id: 'valve-1', type: 'NRV', name: 'Vanne salon', room_id: 'room-2', bridge: 'plug-1' },
         { id: 'valve-2', type: 'NRV', name: 'Vanne éteinte', room_id: 'room-2', bridge: 'plug-1' },
-        { id: 'camera-1', type: 'NACamera', name: 'Caméra' },
+        { id: 'camera-1', type: 'NACamera', name: 'Caméra salon', room_id: 'room-1' },
+        { id: 'noc-1', type: 'NOC', name: 'Caméra jardin' },
+        { id: 'siren-1', type: 'NIS', name: 'Sirène' },
       ],
     },
   ];
@@ -79,7 +81,10 @@ function buildDefaultHomeStatuses() {
             boiler_status: true,
           },
           { id: 'valve-1', type: 'NRV', battery_state: 'medium', rf_strength: 65 },
-          { id: 'camera-1', type: 'NACamera' },
+          // wifi_status (not wifi_strength): exercises the ?? fallback.
+          { id: 'camera-1', type: 'NACamera', monitoring: 'off', wifi_status: 55 },
+          { id: 'noc-1', type: 'NOC', monitoring: 'on', wifi_strength: 72 },
+          { id: 'siren-1', type: 'NIS' },
         ],
         errors: [{ code: 6, id: 'valve-2' }],
       },

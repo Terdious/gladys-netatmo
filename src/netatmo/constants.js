@@ -32,11 +32,14 @@ export const SUPPORTED_MODULE_TYPE = {
   NAMODULE2: 'NAModule2',
   NAMODULE3: 'NAModule3',
   NAMODULE4: 'NAModule4',
+  NACAMERA: 'NACamera',
+  NOC: 'NOC',
 };
 
 export const SUPPORTED_CATEGORY_TYPE = {
   ENERGY: 'Energy',
   WEATHER: 'Weather',
+  SECURITY: 'Security',
   UNKNOWN: 'unknown',
 };
 
@@ -53,6 +56,9 @@ export const WEATHER_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NAMODULE3,
   SUPPORTED_MODULE_TYPE.NAMODULE4,
 ];
+
+// Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621.
+export const SECURITY_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
 
 // Device params persisted on the Gladys device (same names as the core:
 // home_id/room_id are required by setroomthermpoint).

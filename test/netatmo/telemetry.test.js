@@ -118,6 +118,31 @@ test('unchanged values are deduped, then re-published after the 30-minute keep-a
   assert.equal(await telemetry.refreshValues(config), first);
 });
 
+test('cameras are discovered and updated when security_api is enabled (core #2621)', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  // 6 Energy/Weather devices + 2 cameras (the NIS siren stays unsupported).
+  assert.equal(gladys.devices.length, 8);
+
+  await telemetry.refreshValues(configSecurity);
+  // monitoring 'off'/'on' → binary, wifi_status fallback (core mapping).
+  assert.deepEqual(stateOf('ext:netatmo:camera-1:monitoring'), [0]);
+  assert.deepEqual(stateOf('ext:netatmo:camera-1:wifi_strength'), [55]);
+  assert.deepEqual(stateOf('ext:netatmo:noc-1:monitoring'), [1]);
+  assert.deepEqual(stateOf('ext:netatmo:noc-1:wifi_strength'), [72]);
+
+  const badge = Object.fromEntries(gladys.transports.map((t) => [t.external_id, t.transport]));
+  assert.equal(badge['ext:netatmo:camera-1'], 'cloud');
+});
+
+test('cameras stay absent with the default (opt-in) configuration', async () => {
+  const devices = await telemetry.syncDiscovery(config);
+  assert.equal(devices.length, 6);
+  assert.ok(!devices.some((device) => device.external_id.includes('camera-1')));
+  // No badge either: an undiscovered device must not get a transport entry.
+  assert.ok(!gladys.transports.some((t) => t.external_id === 'ext:netatmo:camera-1'));
+});
+
 test('setDeviceValue posts the setpoint with the device params', async () => {
   gladys.devices = await telemetry.syncDiscovery(config);
   const device = gladys.devices.find((d) => d.external_id === 'ext:netatmo:therm-1');

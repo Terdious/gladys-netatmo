@@ -36,12 +36,14 @@ function byId(devices, id) {
 test('loadDevices merges the three API families', async () => {
   const devices = await loadDevices(client, normalizeConfig());
 
-  // Energy home: plug + thermostat + 2 valves + camera, Weather: station + outdoor.
+  // Energy home: plug + thermostat + 2 valves + cameras + siren, Weather: station + outdoor.
   const ids = devices.map((device) => netatmoId(device)).sort();
   assert.deepEqual(ids, [
     'camera-1',
+    'noc-1',
     'outdoor-1',
     'plug-1',
+    'siren-1',
     'station-1',
     'therm-1',
     'valve-1',
@@ -67,8 +69,35 @@ test('loadDevices merges the three API families', async () => {
   const outdoor = byId(devices, 'outdoor-1');
   assert.equal(outdoor.plug._id, 'station-1');
 
-  // The camera is present but flagged not handled.
-  assert.equal(byId(devices, 'camera-1').not_handled, true);
+  // The cameras are supported (Security) but their API is off by default.
+  const camera = byId(devices, 'camera-1');
+  assert.equal(camera.categoryAPI, 'Security');
+  assert.equal(camera.apiNotConfigured, true);
+  assert.equal(camera.not_handled, undefined);
+
+  // The siren is a genuinely unsupported module type.
+  assert.equal(byId(devices, 'siren-1').not_handled, true);
+});
+
+test('security-only config still loads homesdata and exposes the cameras (core #2621)', async () => {
+  const devices = await loadDevices(
+    client,
+    normalizeConfig({ energy_api: 'false', security_api: 'true' }),
+  );
+
+  // Cameras are there, with their API enabled.
+  const camera = byId(devices, 'camera-1');
+  assert.equal(camera.apiNotConfigured, false);
+  assert.equal(camera.monitoring, 'off');
+  const noc = byId(devices, 'noc-1');
+  assert.equal(noc.apiNotConfigured, false);
+  assert.equal(noc.monitoring, 'on');
+
+  // Energy modules ride along but their API is off; legacy Energy API untouched.
+  assert.equal(byId(devices, 'therm-1').apiNotConfigured, true);
+  const paths = netatmo.state.apiRequests.map((r) => r.path);
+  assert.ok(paths.some((p) => p.startsWith('/api/homesdata')));
+  assert.ok(!paths.some((p) => p.startsWith('/api/getthermostatsdata')));
 });
 
 test('a module missing from homestatus is rebuilt as unreachable (core #2620)', async () => {

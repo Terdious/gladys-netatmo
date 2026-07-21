@@ -14,7 +14,7 @@
 
 import { createLogger } from '@gladysassistant/integration-sdk';
 
-import { SUPPORTED_MODULE_TYPE, PARAMS } from './constants.js';
+import { SUPPORTED_MODULE_TYPE, SECURITY_MODULE_TYPES, PARAMS } from './constants.js';
 import { netatmoId } from './discovery.js';
 import {
   buildFeatureBattery,
@@ -26,6 +26,7 @@ import {
   buildFeatureHeatingPowerRequest,
   buildFeaturePlugConnectedBoiler,
   buildFeatureOpenWindow,
+  buildFeatureMonitoring,
   buildFeatureCo2,
   buildFeatureHumidity,
   buildFeatureNoise,
@@ -82,6 +83,12 @@ export function convertDevice(gladys, netatmoDevice) {
     logger.info(`Skipping unsupported Netatmo device "${nameDevice ?? id}" (${model})`);
     return null;
   }
+  if (netatmoDevice.apiNotConfigured) {
+    // The API covering this module is disabled in the configuration (e.g.
+    // cameras with security_api off): the device stays out of the discovery.
+    logger.debug(`Skipping Netatmo device "${nameDevice}" (${model}): its API is disabled`);
+    return null;
+  }
   const externalId = gladys.externalId(id);
   const features = [];
   let params = [];
@@ -101,7 +108,7 @@ export function convertDevice(gladys, netatmoDevice) {
       ];
     }
   }
-  if (BRIDGE_MODULE_TYPES.includes(model)) {
+  if (BRIDGE_MODULE_TYPES.includes(model) || SECURITY_MODULE_TYPES.includes(model)) {
     features.push(buildFeatureWifiStrength(nameDevice, externalId));
     if (model === SUPPORTED_MODULE_TYPE.PLUG) {
       features.push(buildFeatureRfStrength(nameDevice, externalId));
@@ -207,6 +214,10 @@ export function convertDevice(gladys, netatmoDevice) {
           DEVICE_FEATURE_UNITS.MILLIMETER_PER_DAY,
         ),
       );
+      break;
+    case SUPPORTED_MODULE_TYPE.NACAMERA:
+    case SUPPORTED_MODULE_TYPE.NOC:
+      features.push(buildFeatureMonitoring(nameDevice, externalId));
       break;
     case SUPPORTED_MODULE_TYPE.NAMODULE4:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));

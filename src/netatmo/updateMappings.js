@@ -17,7 +17,8 @@ export const UPDATE_MAPPINGS = {
     plug_connected_boiler: (deviceNetatmo) => deviceNetatmo.plug_connected_boiler ?? false,
   },
   [SUPPORTED_MODULE_TYPE.THERMOSTAT]: {
-    battery_percent: (deviceNetatmo) => deviceNetatmo.battery_percent,
+    battery_percent: (deviceNetatmo) =>
+      deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
     temperature: (deviceNetatmo) => deviceNetatmo.measured?.temperature,
     therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
     therm_setpoint_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_setpoint_temperature,
@@ -86,6 +87,20 @@ export const UPDATE_MAPPINGS = {
       deviceNetatmo.sum_rain_24 ?? deviceNetatmo.dashboard_data?.sum_rain_24,
     rf_strength: (deviceNetatmo) =>
       deviceNetatmo.rf_strength ?? deviceNetatmo.dashboard_data?.rf_status,
+  },
+  [SUPPORTED_MODULE_TYPE.NACAMERA]: {
+    monitoring: (deviceNetatmo) =>
+      deviceNetatmo.monitoring === undefined || deviceNetatmo.monitoring === null
+        ? undefined
+        : deviceNetatmo.monitoring === 'on',
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+  },
+  [SUPPORTED_MODULE_TYPE.NOC]: {
+    monitoring: (deviceNetatmo) =>
+      deviceNetatmo.monitoring === undefined || deviceNetatmo.monitoring === null
+        ? undefined
+        : deviceNetatmo.monitoring === 'on',
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
   [SUPPORTED_MODULE_TYPE.NAMODULE4]: {
     battery_percent: (deviceNetatmo) => deviceNetatmo.battery_percent,

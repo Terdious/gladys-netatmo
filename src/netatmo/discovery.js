@@ -24,6 +24,7 @@ import {
   SUPPORTED_CATEGORY_TYPE,
   ENERGY_MODULE_TYPES,
   WEATHER_MODULE_TYPES,
+  SECURITY_MODULE_TYPES,
   HOMES_CONCURRENCY,
 } from './constants.js';
 
@@ -54,6 +55,13 @@ export function getModuleCategory(model, config) {
       moduleSupported: true,
       categoryAPI: SUPPORTED_CATEGORY_TYPE.WEATHER,
       apiNotConfigured: !config.weather_api,
+    };
+  }
+  if (SECURITY_MODULE_TYPES.includes(model)) {
+    return {
+      moduleSupported: true,
+      categoryAPI: SUPPORTED_CATEGORY_TYPE.SECURITY,
+      apiNotConfigured: !config.security_api,
     };
   }
   return {
@@ -208,7 +216,10 @@ export async function loadWeatherStationDetails(client, config) {
 export async function loadDevices(client, config) {
   let listDevices = [];
 
-  if (config.energy_api) {
+  // Cameras ride in the same homesdata/homestatus payloads as the Energy
+  // modules (no dedicated API call), so the topology load also runs when only
+  // the Security API is enabled.
+  if (config.energy_api || config.security_api) {
     try {
       const homes = await client.getHomesData();
       const results = await mapWithConcurrency(homes, HOMES_CONCURRENCY, async (home) =>
@@ -218,7 +229,9 @@ export async function loadDevices(client, config) {
     } catch (err) {
       logger.error(`homesdata load failed: ${err.message}`);
     }
+  }
 
+  if (config.energy_api) {
     try {
       const { plugs, thermostats } = await loadThermostatDetails(client, config);
       if (listDevices.length > 0) {

@@ -30,11 +30,16 @@ first (Home + Security cameras, webhooks, …).
   kept, unchanged values deduped with a 30-minute keep-alive.
 - **Thermostat control**: the setpoint is writable (`setroomthermpoint`,
   mode `manual`), with a clear "reconnect" message on missing scope rights.
+- **Camera discovery** (opt-in via the `security_api` toggle, like the core):
+  indoor `NACamera` and outdoor `NOC` cameras are discovered from the same
+  homesdata/homestatus payloads, with a monitoring status (read-only for now)
+  and WiFi quality. Enabling only the Security API works too — the topology
+  load runs whenever Energy or Security is on.
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required).
 
-The camera support (image, monitoring command, live stream) and the webhooks
-land in the next milestones — see the roadmap issue.
+The camera image, monitoring command, live stream and the webhooks land in the
+next milestones — see the roadmap issue.
 
 ## Configuration
 

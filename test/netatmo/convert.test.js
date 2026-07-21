@@ -124,6 +124,39 @@ test('converts a NAModule3 with the three rain features and their units', () => 
   assert.deepEqual(units, ['mm', 'millimeter-per-hour', 'millimeter-per-day']);
 });
 
+test('converts cameras (NACamera/NOC) with wifi + read-only monitoring', () => {
+  for (const type of ['NACamera', 'NOC']) {
+    const device = convertDevice(gladys, {
+      id: `cam-${type}`,
+      type,
+      name: 'Caméra',
+      home: 'home-1',
+      room: { id: 'room-1', name: 'Salon' },
+      modules_bridged: [],
+    });
+    assert.equal(device.model, type);
+    assert.deepEqual(suffixesOf(device), ['wifi_strength', 'monitoring']);
+    const monitoring = device.features.find((f) => f.external_id.endsWith(':monitoring'));
+    assert.equal(monitoring.read_only, true); // writable in the next milestone
+    assert.equal(paramValue(device, 'home_id'), 'home-1');
+    assert.equal(paramValue(device, 'room_id'), 'room-1');
+    assert.equal(paramValue(device, 'modules_bridge_id'), '[]');
+  }
+});
+
+test('skips devices whose API is disabled (apiNotConfigured)', () => {
+  assert.equal(
+    convertDevice(gladys, {
+      id: 'cam-1',
+      type: 'NACamera',
+      name: 'Caméra',
+      home: 'home-1',
+      apiNotConfigured: true,
+    }),
+    null,
+  );
+});
+
 test('skips not-handled and unknown module types', () => {
   assert.equal(
     convertDevice(gladys, { id: 'cam-1', type: 'NACamera', name: 'Caméra', not_handled: true }),

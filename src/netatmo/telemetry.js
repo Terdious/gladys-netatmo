@@ -115,7 +115,10 @@ export function createTelemetry({
    */
   async function publishTransports(rawDevices) {
     const entries = rawDevices
-      .filter((rawDevice) => !rawDevice.not_handled && netatmoId(rawDevice))
+      .filter(
+        (rawDevice) =>
+          !rawDevice.not_handled && !rawDevice.apiNotConfigured && netatmoId(rawDevice),
+      )
       .map((rawDevice) => ({
         external_id: gladys.externalId(netatmoId(rawDevice)),
         transport: transportOf(rawDevice),
