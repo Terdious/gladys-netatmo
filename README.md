@@ -9,7 +9,7 @@ It is the externalized version of the Gladys core Netatmo service: the core
 service keeps working, and this integration is where the new capabilities land
 first (Home + Security cameras, webhooks, …).
 
-## What it does (current milestone: account access)
+## What it does
 
 - **OAuth2 connection to the Netatmo cloud** through the Gladys relay: the user
   fills the client id / client secret of their [Netatmo Connect](https://dev.netatmo.com)
@@ -20,11 +20,21 @@ first (Home + Security cameras, webhooks, …).
 - **Token lifecycle**: refresh at 80% of the access-token lifetime, rotating
   refresh tokens, transient-failure backoff, and a 24h grace window before a
   fatal-looking failure wipes the stored tokens (mirrors the core hardening).
+- **Device discovery** of the Weather family (`NAMain` station, `NAModule1`
+  outdoor, `NAModule2` wind, `NAModule3` rain, `NAModule4` indoor) and the
+  Energy family (`NATherm1` thermostat, `NAPlug` relay, `NRV` valves) — same
+  feature set as the core service, powered-off modules included (rebuilt from
+  the homestatus `errors` array and badged **unreachable**).
+- **Telemetry**: one global refresh loop every 120 s (3-4 API calls per cycle
+  for the whole account), declarative per-module mappings, legitimate zeros
+  kept, unchanged values deduped with a 30-minute keep-alive.
+- **Thermostat control**: the setpoint is writable (`setroomthermpoint`,
+  mode `manual`), with a clear "reconnect" message on missing scope rights.
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required).
 
-Device discovery (Weather / Energy) and the camera support (image, monitoring
-command, live stream) land in the next milestones — see the roadmap issue.
+The camera support (image, monitoring command, live stream) and the webhooks
+land in the next milestones — see the roadmap issue.
 
 ## Configuration
 
@@ -51,9 +61,16 @@ never appear on the configuration form.
 ├─ index.js                          # SDK bootstrap + event wiring (no Netatmo logic)
 ├─ src/
 │  ├─ netatmo/
-│  │  ├─ constants.js                # API URLs, scopes, timings, status messages
+│  │  ├─ constants.js                # API URLs, scopes, module types, timings
 │  │  ├─ oauth.js                    # OAuth2 manager (authorize URL, exchange, refresh)
-│  │  └─ client.js                   # authenticated API client (homesdata, …)
+│  │  ├─ client.js                   # authenticated API client (homesdata, homestatus, …)
+│  │  ├─ discovery.js                # raw device loading + 3-API merge (id/_id)
+│  │  ├─ features.js                 # Gladys feature builders (core parity)
+│  │  ├─ convert.js                  # raw device → Gladys discovery payload
+│  │  ├─ updateMappings.js           # declarative suffix → value table (core PR #2619)
+│  │  ├─ deviceMapping.js            # value transforms (read/write)
+│  │  ├─ telemetry.js                # 120s refresh loop, dedup, transport badges
+│  │  └─ setValue.js                 # thermostat setpoint command
 │  └─ config.js                      # config defaults + normalization
 ├─ gladys-assistant-integration.json # manifest (name, config schema, image…)
 ├─ Dockerfile                        # Node 24 Alpine, read-only rootfs ready

@@ -26,6 +26,8 @@ import { GladysIntegration, logger } from '@gladysassistant/integration-sdk';
 import { normalizeConfig } from './src/config.js';
 import { createNetatmoOAuth, NotConnectedError } from './src/netatmo/oauth.js';
 import { createNetatmoClient } from './src/netatmo/client.js';
+import { createTelemetry } from './src/netatmo/telemetry.js';
+import { setDeviceValue } from './src/netatmo/setValue.js';
 import { CONNECTION_MESSAGES } from './src/netatmo/constants.js';
 
 /**
@@ -47,9 +49,13 @@ async function reportConnectionStatus(gladys, connected, message) {
  * @param {object} [deps] injectable dependencies (tests)
  * @param {typeof fetch} [deps.fetchImpl] fetch used for the Netatmo API
  * @param {string} [deps.netatmoBaseUrl] Netatmo base URL override
- * @returns {{oauth: object, client: object, getConfig: () => object}}
+ * @param {number} [deps.refreshIntervalMs] telemetry cadence override (tests)
+ * @returns {{oauth: object, client: object, telemetry: object, getConfig: () => object}}
  */
-export function setupIntegration(gladys, { fetchImpl = fetch, netatmoBaseUrl } = {}) {
+export function setupIntegration(
+  gladys,
+  { fetchImpl = fetch, netatmoBaseUrl, refreshIntervalMs } = {},
+) {
   // Current configuration (hot-reloaded via onConfigUpdated).
   let config = normalizeConfig();
 
@@ -64,9 +70,15 @@ export function setupIntegration(gladys, { fetchImpl = fetch, netatmoBaseUrl } =
     fetchImpl,
     ...(netatmoBaseUrl ? { baseUrl: netatmoBaseUrl } : {}),
   });
+  const telemetry = createTelemetry({
+    gladys,
+    client,
+    ...(refreshIntervalMs ? { refreshIntervalMs } : {}),
+  });
 
   // Tokens wiped after the 24h grace window: ask the user to reconnect.
   oauth.onAuthLost(async (message) => {
+    telemetry.stop();
     await reportConnectionStatus(gladys, false, message);
   });
 
@@ -91,7 +103,10 @@ export function setupIntegration(gladys, { fetchImpl = fetch, netatmoBaseUrl } =
       await oauth.ensureFreshAccessToken();
       oauth.scheduleTokenRefresh();
       await reportConnectionStatus(gladys, true);
-      logger.info('Netatmo account connected, token refresh engine armed');
+      // Start (or restart) the global value refresh loop for the devices the
+      // user created in Gladys.
+      telemetry.start(config);
+      logger.info('Netatmo account connected, token refresh and telemetry engines armed');
     } catch (err) {
       if (err instanceof NotConnectedError) {
         await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.NOT_CONNECTED);
@@ -123,13 +138,19 @@ export function setupIntegration(gladys, { fetchImpl = fetch, netatmoBaseUrl } =
     const homes = await client.getHomesData();
     logger.info(`Netatmo account connected: ${homes.length} home(s) visible`);
     await reportConnectionStatus(gladys, true);
+    telemetry.start(config);
   });
 
   // --- Discovery: Gladys asks for the list of devices ------------------------
   gladys.onScanRequest(async () => {
-    // Device discovery (Weather / Energy / Security) lands in the next
-    // milestones — see the roadmap issue of the repository.
-    logger.info('onScanRequest -> device discovery not implemented yet');
+    logger.info('onScanRequest -> loading and publishing the Netatmo devices');
+    await telemetry.syncDiscovery(config);
+  });
+
+  // --- Command: the user acts on a controllable feature ----------------------
+  gladys.onSetValue(async (device, feature, value) => {
+    logger.info(`onSetValue <- ${feature.external_id} = ${value}`);
+    await setDeviceValue({ client }, { device, feature, value });
   });
 
   // --- Configuration updated by the user -------------------------------------
@@ -137,6 +158,9 @@ export function setupIntegration(gladys, { fetchImpl = fetch, netatmoBaseUrl } =
     logger.info('onConfigUpdated -> new configuration received');
     config = normalizeConfig(newConfig);
     oauth.loadFromConfig(config);
+    // The API toggles may have changed: forget the dedup memory so the next
+    // cycle re-publishes every value, and let syncConnection restart the loop.
+    telemetry.resetDedup();
     await syncConnection();
   });
 
@@ -155,22 +179,24 @@ export function setupIntegration(gladys, { fetchImpl = fetch, netatmoBaseUrl } =
   gladys.on('disconnected', () => {
     logger.warn('WebSocket disconnected - the SDK will try to reconnect');
     oauth.stop();
+    telemetry.stop();
   });
 
-  return { oauth, client, getConfig: () => config };
+  return { oauth, client, telemetry, getConfig: () => config };
 }
 
 // --- Startup (container entry point only) ------------------------------------
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   const gladys = new GladysIntegration();
-  const { oauth } = setupIntegration(gladys);
+  const { oauth, telemetry } = setupIntegration(gladys);
 
   // The SDK disconnects cleanly and exits with code 0 when the supervisor
   // stops the container (SIGTERM/SIGINT).
   gladys.handleShutdown((signal) => {
     logger.info(`Received ${signal} -> graceful shutdown`);
     oauth.stop();
+    telemetry.stop();
   });
 
   logger.info('Starting the Netatmo integration...');

@@ -17,9 +17,74 @@ export const OAUTH2 = {
 export const API_PATHS = {
   HOMESDATA: '/api/homesdata',
   HOMESTATUS: '/api/homestatus',
+  GET_THERMOSTATS: '/api/getthermostatsdata',
   GET_WEATHER_STATIONS: '/api/getstationsdata?get_favorites=false',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
 };
+
+// Netatmo module types supported by the discovery (same enum as the core).
+export const SUPPORTED_MODULE_TYPE = {
+  THERMOSTAT: 'NATherm1',
+  PLUG: 'NAPlug',
+  NRV: 'NRV',
+  NAMAIN: 'NAMain',
+  NAMODULE1: 'NAModule1',
+  NAMODULE2: 'NAModule2',
+  NAMODULE3: 'NAModule3',
+  NAMODULE4: 'NAModule4',
+};
+
+export const SUPPORTED_CATEGORY_TYPE = {
+  ENERGY: 'Energy',
+  WEATHER: 'Weather',
+  UNKNOWN: 'unknown',
+};
+
+export const ENERGY_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.THERMOSTAT,
+  SUPPORTED_MODULE_TYPE.PLUG,
+  SUPPORTED_MODULE_TYPE.NRV,
+];
+
+export const WEATHER_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.NAMAIN,
+  SUPPORTED_MODULE_TYPE.NAMODULE1,
+  SUPPORTED_MODULE_TYPE.NAMODULE2,
+  SUPPORTED_MODULE_TYPE.NAMODULE3,
+  SUPPORTED_MODULE_TYPE.NAMODULE4,
+];
+
+// Device params persisted on the Gladys device (same names as the core:
+// home_id/room_id are required by setroomthermpoint).
+export const PARAMS = {
+  HOME_ID: 'home_id',
+  ROOM_ID: 'room_id',
+  ROOM_NAME: 'room_name',
+  PLUG_ID: 'plug_id',
+  PLUG_NAME: 'plug_name',
+  MODULES_BRIDGE_ID: 'modules_bridge_id',
+};
+
+// The `errors` array of /homestatus flags a powered-off module with this code.
+export const API_ERROR_CODE_UNREACHABLE = 6;
+
+// Telemetry refresh cadence: one batched load of every home/station per cycle
+// (the core polls at the same rate). The devices are created with
+// should_poll:false — one global loop costs 3-4 API calls per cycle instead of
+// one call per device, which matters against the Netatmo rate limits.
+export const REFRESH_VALUES_INTERVAL_MS = 120 * 1000;
+
+// A state whose value did not change is re-published at most every 30 minutes
+// (keep-alive), so Gladys still sees the device alive without flooding the
+// state history at every 120s cycle.
+export const STATE_KEEP_ALIVE_MS = 30 * 60 * 1000;
+
+// How many homes are detailed concurrently (mirrors the core Promise.map).
+export const HOMES_CONCURRENCY = 2;
+
+// POST /state and POST /device/transport accept at most 100 entries per
+// request (host API contract; the SDK does not export the constant).
+export const MAX_ENTRIES_PER_REQUEST = 100;
 
 // The full scope set is requested in one go — like the core, where a single
 // (re)connection covers every device family, including the camera scopes the

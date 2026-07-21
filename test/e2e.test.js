@@ -134,3 +134,25 @@ test('the relayed callback exchanges the code, stores the tokens and validates t
   assert.equal(replay.success, false);
   assert.match(replay.error, /state mismatch/);
 });
+
+test('a scan request publishes the discovered Netatmo devices', async () => {
+  core.send(EXTERNAL_INTEGRATION.SCAN_REQUEST, {});
+  const devices = await waitFor(() => core.state.discovered.at(-1));
+  // 6 supported devices from the fixtures (the NACamera is skipped).
+  assert.equal(devices.length, 6);
+  const therm = devices.find((device) => device.external_id === 'ext:netatmo:therm-1');
+  assert.ok(therm);
+  assert.equal(
+    therm.features.some((f) => f.external_id.endsWith(':therm_setpoint_temperature')),
+    true,
+  );
+  // The transport badges went along (unreachable valve included) — published
+  // right after the device list, so wait for them.
+  // (the SDK posts entries as {device_external_id, transport})
+  const badge = await waitFor(() =>
+    core.state.transports
+      .flat()
+      .find((t) => t.device_external_id === 'ext:netatmo:valve-2' && t.transport === 'unreachable'),
+  );
+  assert.ok(badge);
+});
