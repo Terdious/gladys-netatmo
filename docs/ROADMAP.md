@@ -1,8 +1,14 @@
 # Roadmap — Netatmo external integration
 
-> This file seeds the GitHub tracking issues (one roadmap issue + one issue per
-> step, like gladys-zendure#9 / gladys-tuya). It lives in the repo until the
-> issues are created, and stays as the technical companion afterwards.
+> Tracking lives in the GitHub issues — central roadmap:
+> [#7](https://github.com/Terdious/gladys-netatmo/issues/7), steps:
+> [#1](https://github.com/Terdious/gladys-netatmo/issues/1) (devices),
+> [#2](https://github.com/Terdious/gladys-netatmo/issues/2) /
+> [#3](https://github.com/Terdious/gladys-netatmo/issues/3) /
+> [#4](https://github.com/Terdious/gladys-netatmo/issues/4) (cameras),
+> [#5](https://github.com/Terdious/gladys-netatmo/issues/5) (webhooks),
+> [#6](https://github.com/Terdious/gladys-netatmo/issues/6) (cover).
+> This file stays as the technical companion.
 
 Reference material: the Gladys core Netatmo service (`server/services/netatmo`)
 and the open core PR stack being backported —
