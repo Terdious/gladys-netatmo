@@ -56,7 +56,7 @@ before(async () => {
     token: 'integration-token',
     selector: 'netatmo',
   });
-  integration = setupIntegration(gladys, { netatmoBaseUrl: netatmo.url });
+  integration = setupIntegration(gladys, { netatmoBaseUrl: netatmo.url, deviceSyncDebounceMs: 50 });
 
   await gladys.connect();
 });
@@ -184,4 +184,16 @@ test('a scan request publishes the discovered Netatmo devices', async () => {
       .find((t) => t.device_external_id === 'ext:netatmo:valve-2' && t.transport === 'unreachable'),
   );
   assert.ok(badge);
+});
+
+test('creating a device re-publishes the discovery list automatically', async () => {
+  const discoveredCount = core.state.discovered.length;
+  const therm = core.state.discovered
+    .at(-1)
+    .find((device) => device.external_id === 'ext:netatmo:therm-1');
+  core.send(EXTERNAL_INTEGRATION.DEVICE_CREATED, { device: therm });
+  // The debounced resync republishes the discovered devices without a scan.
+  await waitFor(() => core.state.discovered.length > discoveredCount);
+  const republished = core.state.discovered.at(-1);
+  assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:therm-1'));
 });

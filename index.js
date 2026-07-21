@@ -54,7 +54,7 @@ async function reportConnectionStatus(gladys, connected, message) {
  */
 export function setupIntegration(
   gladys,
-  { fetchImpl = fetch, netatmoBaseUrl, refreshIntervalMs } = {},
+  { fetchImpl = fetch, netatmoBaseUrl, refreshIntervalMs, deviceSyncDebounceMs = 2000 } = {},
 ) {
   // Current configuration (hot-reloaded via onConfigUpdated).
   let config = normalizeConfig();
@@ -175,6 +175,33 @@ export function setupIntegration(
   gladys.onGetImage(async (device) => {
     logger.info(`onGetImage <- ${device.external_id}`);
     return telemetry.getCameraSnapshot(config, device);
+  });
+
+  // --- Device created/deleted by the user ------------------------------------
+  // Re-publish the discovery list so the "already added" / "update available"
+  // badges stay current without a manual re-scan, and run a refresh cycle so
+  // the states (and camera image) of a fresh device appear immediately.
+  // Debounced: creating several devices in a row costs one resync.
+  let deviceSyncTimer = null;
+  function scheduleDeviceSync() {
+    clearTimeout(deviceSyncTimer);
+    deviceSyncTimer = setTimeout(async () => {
+      try {
+        await telemetry.syncDiscovery(config);
+        await telemetry.refreshValues(config);
+      } catch (err) {
+        logger.error(`Post device-change resync failed: ${err.message}`);
+      }
+    }, deviceSyncDebounceMs);
+    deviceSyncTimer.unref?.();
+  }
+  gladys.onDeviceCreated(async (device) => {
+    logger.info(`onDeviceCreated <- ${device.external_id}`);
+    scheduleDeviceSync();
+  });
+  gladys.onDeviceDeleted(async (device) => {
+    logger.info(`onDeviceDeleted <- ${device.external_id}`);
+    scheduleDeviceSync();
   });
 
   // --- Configuration updated by the user -------------------------------------
