@@ -3,7 +3,8 @@
 // the slice of the integration contract the SDK uses:
 //   - WS: authenticate.integration-request -> authentication.connected,
 //     plus server-initiated messages (scan request, device poll);
-//   - REST: GET /device, GET /config, POST /discovered_device, POST /state.
+//   - REST: GET /device, GET /config, POST /config, POST /discovered_device,
+//     POST /state.
 // Lets the e2e test run the REAL @gladysassistant/integration-sdk client.
 // -----------------------------------------------------------------------------
 
@@ -12,6 +13,7 @@ import { WebSocketServer } from 'ws';
 
 export async function startFakeGladysCore({ config = {}, devices = [] } = {}) {
   const state = {
+    config, // live config store, merged by POST /config (like the real core)
     discovered: [], // one entry per POST /discovered_device (the devices array)
     states: [], // flattened states of every POST /state
     connectionStatuses: [], // one entry per POST /connection_status ({connected, message?})
@@ -34,7 +36,12 @@ export async function startFakeGladysCore({ config = {}, devices = [] } = {}) {
       if (req.method === 'GET' && req.url === '/api/integration/v1/device') {
         respond(devices);
       } else if (req.method === 'GET' && req.url === '/api/integration/v1/config') {
-        respond({ config });
+        respond({ config: state.config });
+      } else if (req.method === 'POST' && req.url === '/api/integration/v1/config') {
+        // Partial merge, like the real core: keys outside the config_schema
+        // are the integration's free storage (OAuth tokens...).
+        Object.assign(state.config, JSON.parse(body).config);
+        respond({ success: true });
       } else if (req.method === 'POST' && req.url === '/api/integration/v1/discovered_device') {
         const parsed = JSON.parse(body);
         state.discovered.push(parsed.devices);
