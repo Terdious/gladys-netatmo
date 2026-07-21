@@ -25,11 +25,13 @@ import {
   REFRESH_VALUES_INTERVAL_MS,
   STATE_KEEP_ALIVE_MS,
   MAX_ENTRIES_PER_REQUEST,
+  SECURITY_MODULE_TYPES,
 } from './constants.js';
 import { loadDevices, netatmoId } from './discovery.js';
 import { convertDevice } from './convert.js';
 import { UPDATE_MAPPINGS } from './updateMappings.js';
 import { readValues } from './deviceMapping.js';
+import { createCameraImages } from './camera.js';
 
 const logger = createLogger({ name: 'netatmo-telemetry' });
 
@@ -46,11 +48,27 @@ export function createTelemetry({
   client,
   now = Date.now,
   refreshIntervalMs = REFRESH_VALUES_INTERVAL_MS,
+  fetchImpl = fetch,
 }) {
   // Last published value per feature external_id: {state, at}.
   const published = new Map();
   let refreshTimer = null;
   let refreshInFlight = null;
+
+  const cameras = createCameraImages({ fetchImpl });
+  // Last raw Netatmo payload per camera id (vpn_url, is_local...), refreshed
+  // by every load — the on-demand snapshot handler reads from here instead of
+  // paying a full account load per image request.
+  const rawCamerasById = new Map();
+
+  function rememberRawCameras(rawDevices) {
+    for (const rawDevice of rawDevices) {
+      const id = netatmoId(rawDevice);
+      if (id && SECURITY_MODULE_TYPES.includes(rawDevice.type) && !rawDevice.apiNotConfigured) {
+        rawCamerasById.set(id, rawDevice);
+      }
+    }
+  }
 
   /** Forget the dedup memory so the next refresh re-publishes every value. */
   function resetDedup() {
@@ -140,11 +158,64 @@ export function createTelemetry({
    */
   async function syncDiscovery(config) {
     const rawDevices = await loadDevices(client, config);
+    rememberRawCameras(rawDevices);
     const devices = rawDevices.map((rawDevice) => convertDevice(gladys, rawDevice)).filter(Boolean);
     await gladys.publishDiscoveredDevices(devices);
     await publishTransports(rawDevices);
     logger.info(`Discovery published ${devices.length} Netatmo device(s)`);
     return devices;
+  }
+
+  /**
+   * Refresh the dashboard image of every created camera (external counterpart
+   * of the core updateCameraImage): snapshot fetched local-first, published
+   * through POST /camera/image. Failures are logged and never abort the cycle.
+   */
+  async function refreshCameraImages() {
+    for (const [id, rawDevice] of rawCamerasById) {
+      const externalId = gladys.externalId(id);
+      const gladysDevice = (gladys.devices ?? []).find(
+        (device) => device.external_id === externalId,
+      );
+      const hasCameraFeature = (gladysDevice?.features ?? []).some(
+        (f) => f.external_id === `${externalId}:camera`,
+      );
+      if (!hasCameraFeature) {
+        continue; // not created by the user (yet), or created before the camera feature shipped
+      }
+      try {
+        const image = await cameras.getImage(rawDevice);
+        if (image) {
+          await gladys.publishCameraImage(externalId, image);
+        }
+      } catch (err) {
+        logger.warn(`Camera image refresh failed for ${id}: ${err.message}`);
+      }
+    }
+  }
+
+  /**
+   * On-demand snapshot for the SDK getImage command (user opens the camera
+   * in Gladys). Uses the raw camera data of the last load; runs one refresh
+   * first when the camera is not known yet (fresh container).
+   * @param {object} config normalized integration config
+   * @param {object} device the Gladys device of the command
+   * @returns {Promise<string>} `image/jpg;base64,...` string
+   */
+  async function getCameraSnapshot(config, device) {
+    const id = device.external_id.replace(gladys.externalId(''), '');
+    if (!rawCamerasById.has(id)) {
+      await refreshValues(config);
+    }
+    const rawDevice = rawCamerasById.get(id);
+    if (!rawDevice) {
+      throw new Error(`Camera ${device.external_id} is unknown to the Netatmo account`);
+    }
+    const image = await cameras.getImage(rawDevice);
+    if (!image) {
+      throw new Error(`Camera ${device.external_id} did not return a snapshot`);
+    }
+    return image;
   }
 
   /**
@@ -160,6 +231,7 @@ export function createTelemetry({
     }
     refreshInFlight = (async () => {
       const rawDevices = await loadDevices(client, config);
+      rememberRawCameras(rawDevices);
       const states = [];
       for (const rawDevice of rawDevices) {
         const id = netatmoId(rawDevice);
@@ -179,6 +251,7 @@ export function createTelemetry({
         await publishStatesChunked(states);
       }
       await publishTransports(rawDevices);
+      await refreshCameraImages();
       logger.debug(`Refresh cycle published ${states.length} state(s)`);
       return states.length;
     })();
@@ -207,5 +280,13 @@ export function createTelemetry({
     }
   }
 
-  return { syncDiscovery, refreshValues, buildDeviceStates, resetDedup, start, stop };
+  return {
+    syncDiscovery,
+    refreshValues,
+    buildDeviceStates,
+    getCameraSnapshot,
+    resetDedup,
+    start,
+    stop,
+  };
 }

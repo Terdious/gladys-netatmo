@@ -127,8 +127,8 @@ export function buildFeaturePlugConnectedBoiler(name, externalId) {
   });
 }
 
-// Camera monitoring status (core PR #2621). Read-only for now: switching the
-// monitoring on/off is unlocked with the camera commands (next milestone).
+// Camera monitoring switch (core PR #2621, made writable by core PR #2623:
+// the command goes through /api/setstate).
 export function buildFeatureMonitoring(name, externalId) {
   return feature({
     name: `Monitoring - ${name}`,
@@ -136,8 +136,23 @@ export function buildFeatureMonitoring(name, externalId) {
     selector: `${externalId}:monitoring`,
     category: DEVICE_FEATURE_CATEGORIES.SWITCH,
     type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    read_only: false,
     min: 0,
     max: 1,
+  });
+}
+
+// Camera image shown in the Gladys camera dashboard (core PR #2623).
+export function buildFeatureCamera(name, externalId) {
+  return feature({
+    name: `Camera - ${name}`,
+    external_id: `${externalId}:camera`,
+    selector: `${externalId}:camera`,
+    category: DEVICE_FEATURE_CATEGORIES.CAMERA,
+    type: DEVICE_FEATURE_TYPES.CAMERA.IMAGE,
+    keep_history: false,
+    min: 0,
+    max: 0,
   });
 }
 

@@ -124,7 +124,7 @@ test('converts a NAModule3 with the three rain features and their units', () => 
   assert.deepEqual(units, ['mm', 'millimeter-per-hour', 'millimeter-per-day']);
 });
 
-test('converts cameras (NACamera/NOC) with wifi + read-only monitoring', () => {
+test('converts cameras (NACamera/NOC) with wifi, writable monitoring and image', () => {
   for (const type of ['NACamera', 'NOC']) {
     const device = convertDevice(gladys, {
       id: `cam-${type}`,
@@ -135,9 +135,13 @@ test('converts cameras (NACamera/NOC) with wifi + read-only monitoring', () => {
       modules_bridged: [],
     });
     assert.equal(device.model, type);
-    assert.deepEqual(suffixesOf(device), ['wifi_strength', 'monitoring']);
+    assert.deepEqual(suffixesOf(device), ['wifi_strength', 'monitoring', 'camera']);
     const monitoring = device.features.find((f) => f.external_id.endsWith(':monitoring'));
-    assert.equal(monitoring.read_only, true); // writable in the next milestone
+    assert.equal(monitoring.read_only, false); // command through /api/setstate
+    const camera = device.features.find((f) => f.external_id.endsWith(':camera'));
+    assert.equal(camera.category, 'camera');
+    assert.equal(camera.type, 'image');
+    assert.equal(camera.keep_history, false);
     assert.equal(paramValue(device, 'home_id'), 'home-1');
     assert.equal(paramValue(device, 'room_id'), 'room-1');
     assert.equal(paramValue(device, 'modules_bridge_id'), '[]');

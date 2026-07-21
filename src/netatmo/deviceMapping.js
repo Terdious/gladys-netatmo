@@ -25,6 +25,11 @@ export const writeValues = {
   [DEVICE_FEATURE_CATEGORIES.THERMOSTAT]: {
     [DEVICE_FEATURE_TYPES.THERMOSTAT.TARGET_TEMPERATURE]: identity,
   },
+  [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
+    /* camera monitoring: 'on' / 'off' */
+    [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: (valueFromGladys) =>
+      valueFromGladys === 1 || valueFromGladys === true ? 'on' : 'off',
+  },
 };
 
 export const readValues = {

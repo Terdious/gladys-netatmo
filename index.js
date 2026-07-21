@@ -73,6 +73,7 @@ export function setupIntegration(
   const telemetry = createTelemetry({
     gladys,
     client,
+    fetchImpl,
     ...(refreshIntervalMs ? { refreshIntervalMs } : {}),
   });
 
@@ -167,7 +168,13 @@ export function setupIntegration(
   // --- Command: the user acts on a controllable feature ----------------------
   gladys.onSetValue(async (device, feature, value) => {
     logger.info(`onSetValue <- ${feature.external_id} = ${value}`);
-    await setDeviceValue({ client }, { device, feature, value });
+    await setDeviceValue({ gladys, client }, { device, feature, value });
+  });
+
+  // --- Camera: Gladys asks for a fresh snapshot ------------------------------
+  gladys.onGetImage(async (device) => {
+    logger.info(`onGetImage <- ${device.external_id}`);
+    return telemetry.getCameraSnapshot(config, device);
   });
 
   // --- Configuration updated by the user -------------------------------------

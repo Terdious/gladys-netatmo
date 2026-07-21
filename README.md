@@ -30,16 +30,19 @@ first (Home + Security cameras, webhooks, …).
   kept, unchanged values deduped with a 30-minute keep-alive.
 - **Thermostat control**: the setpoint is writable (`setroomthermpoint`,
   mode `manual`), with a clear "reconnect" message on missing scope rights.
-- **Camera discovery** (opt-in via the `security_api` toggle, like the core):
-  indoor `NACamera` and outdoor `NOC` cameras are discovered from the same
-  homesdata/homestatus payloads, with a monitoring status (read-only for now)
-  and WiFi quality. Enabling only the Security API works too — the topology
-  load runs whenever Energy or Security is on.
+- **Cameras** (opt-in via the `security_api` toggle, like the core): indoor
+  `NACamera` and outdoor `NOC` cameras are discovered from the same
+  homesdata/homestatus payloads, with WiFi quality, a **writable monitoring
+  switch** (`/api/setstate`) and the **dashboard image** — snapshots are
+  fetched local-first (`/command/ping` resolution, cached, VPN fallback) and
+  re-encoded in pure JS when they exceed the 150 KB camera-store bound (no
+  ffmpeg in the sandboxed container). Enabling only the Security API works
+  too — the topology load runs whenever Energy or Security is on.
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required).
 
-The camera image, monitoring command, live stream and the webhooks land in the
-next milestones — see the roadmap issue.
+The camera live stream and the webhooks land in the next milestones — see the
+roadmap issue.
 
 ## Configuration
 
@@ -75,7 +78,8 @@ never appear on the configuration form.
 │  │  ├─ updateMappings.js           # declarative suffix → value table (core PR #2619)
 │  │  ├─ deviceMapping.js            # value transforms (read/write)
 │  │  ├─ telemetry.js                # 120s refresh loop, dedup, transport badges
-│  │  └─ setValue.js                 # thermostat setpoint command
+│  │  ├─ camera.js                   # snapshots: local-first URL, ≤150KB pipeline
+│  │  └─ setValue.js                 # thermostat setpoint + camera monitoring
 │  └─ config.js                      # config defaults + normalization
 ├─ gladys-assistant-integration.json # manifest (name, config schema, image…)
 ├─ Dockerfile                        # Node 24 Alpine, read-only rootfs ready

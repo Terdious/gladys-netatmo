@@ -24,22 +24,24 @@ const logger = createLogger({ name: 'netatmo-client' });
  * @param {string} [deps.baseUrl] Netatmo base URL (tests)
  */
 export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATMO_BASE_URL }) {
-  async function requestOnce(path, accessToken, { method = 'GET', form } = {}) {
+  async function requestOnce(path, accessToken, { method = 'GET', form, json } = {}) {
     return fetchImpl(`${baseUrl}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/json',
         ...(form ? { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' } : {}),
+        ...(json ? { 'Content-Type': 'application/json' } : {}),
       },
       ...(form ? { body: new URLSearchParams(form).toString() } : {}),
+      ...(json ? { body: JSON.stringify(json) } : {}),
     });
   }
 
   /**
    * Authenticated request returning the parsed JSON body.
    * @param {string} path API path (from API_PATHS, may carry a query string)
-   * @param {object} [options] `{method, form}` for form POSTs
+   * @param {object} [options] `{method, form}` (form POST) or `{method, json}` (JSON POST)
    * @returns {Promise<object>} parsed response body
    */
   async function request(path, options = {}) {
@@ -119,6 +121,19 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     });
   }
 
+  /**
+   * Set the state of a module (camera monitoring on/off), through the JSON
+   * /api/setstate endpoint (core PR #2623).
+   * @param {{homeId: string, moduleId: string, monitoring: string}} state target
+   * @returns {Promise<object>} parsed response body
+   */
+  async function setState({ homeId, moduleId, monitoring }) {
+    return request(API_PATHS.SET_STATE, {
+      method: 'POST',
+      json: { home: { id: homeId, modules: [{ id: moduleId, monitoring }] } },
+    });
+  }
+
   return {
     request,
     getHomesData,
@@ -126,5 +141,6 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     getThermostatsData,
     getStationsData,
     setRoomThermpoint,
+    setState,
   };
 }

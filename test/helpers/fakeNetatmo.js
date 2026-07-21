@@ -153,6 +153,11 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     rejectAccessToken: null, // set to a token value to answer 401 for it
     failSetpointWith: null, // set to {status, body} to make setroomthermpoint fail
     setpointRequests: [], // every parsed form POSTed to /api/setroomthermpoint
+    setStateRequests: [], // every parsed JSON body POSTed to /api/setstate
+    cameraRequests: [], // every hit on the fake camera endpoints ({side, camId, path})
+    snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
+    failLocalSnapshot: false, // make the LOCAL snapshot fail (stale-cache fallback test)
+    baseUrl: '', // filled after listen()
     homes: buildDefaultHomes(),
     homeStatuses: buildDefaultHomeStatuses(),
     thermostatDevices: buildDefaultThermostatDevices(),
@@ -184,6 +189,31 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
         res.setHeader('content-type', 'application/json');
         res.end(JSON.stringify(payload));
       };
+
+      // --- Fake camera endpoints (unauthenticated, like the real cameras) ---
+      // URLs: /vpn/<camId>/... (VPN side) and /local/<camId>/... (LAN side).
+      const cameraMatch = req.url.match(/^\/(vpn|local)\/([^/]+)(\/.*)$/);
+      if (cameraMatch) {
+        const [, side, camId, subPath] = cameraMatch;
+        state.cameraRequests.push({ side, camId, path: subPath });
+        if (subPath === '/command/ping') {
+          // Both sides answer with the LOCAL url, like real firmwares.
+          respond({ local_url: `${state.baseUrl}/local/${camId}`, product_name: 'fake-cam' });
+          return;
+        }
+        if (subPath === '/live/snapshot_720.jpg') {
+          if (side === 'local' && state.failLocalSnapshot) {
+            respond({ error: 'unreachable' }, 502);
+            return;
+          }
+          res.statusCode = 200;
+          res.setHeader('content-type', 'image/jpeg');
+          res.end(state.snapshotJpeg);
+          return;
+        }
+        respond({ error: 'not found' }, 404);
+        return;
+      }
 
       if (req.method === 'POST' && req.url === '/oauth2/token') {
         const form = Object.fromEntries(new URLSearchParams(body));
@@ -256,6 +286,11 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           respond({ status: 'ok' });
           return;
         }
+        if (req.method === 'POST' && req.url.startsWith('/api/setstate')) {
+          state.setStateRequests.push(JSON.parse(body));
+          respond({ status: 'ok' });
+          return;
+        }
         respond({ error: { code: 404, message: 'not found' } }, 404);
         return;
       }
@@ -266,6 +301,19 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
 
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
+  state.baseUrl = `http://127.0.0.1:${port}`;
+
+  // The camera VPN urls must point at this very server: patch the homestatus
+  // fixtures now that the port is known. camera-1 reports is_local (the LAN
+  // resolution path); the outdoor noc-1 is VPN-only.
+  for (const homeStatus of Object.values(state.homeStatuses)) {
+    for (const module of homeStatus.home.modules ?? []) {
+      if (module.type === 'NACamera' || module.type === 'NOC') {
+        module.vpn_url = `${state.baseUrl}/vpn/${module.id}`;
+        module.is_local = module.type === 'NACamera';
+      }
+    }
+  }
 
   return {
     url: `http://127.0.0.1:${port}`,

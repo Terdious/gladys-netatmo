@@ -32,10 +32,12 @@ beforeEach(async () => {
   const published = [];
   const transports = [];
   const discovered = [];
+  const cameraImages = [];
   gladys = {
     published,
     transports,
     discovered,
+    cameraImages,
     devices: [],
     externalId: (suffix) => `ext:netatmo:${suffix}`,
     async publishStates(states) {
@@ -46,6 +48,9 @@ beforeEach(async () => {
     },
     async publishTransports(entries) {
       transports.push(...entries);
+    },
+    async publishCameraImage(deviceExternalId, image) {
+      cameraImages.push({ deviceExternalId, image });
     },
   };
   telemetry = createTelemetry({ gladys, client, now: () => clock });
@@ -133,6 +138,82 @@ test('cameras are discovered and updated when security_api is enabled (core #262
 
   const badge = Object.fromEntries(gladys.transports.map((t) => [t.external_id, t.transport]));
   assert.equal(badge['ext:netatmo:camera-1'], 'cloud');
+
+  // The dashboard image of each created camera was refreshed with the cycle.
+  const imagesById = Object.fromEntries(
+    gladys.cameraImages.map((c) => [c.deviceExternalId, c.image]),
+  );
+  assert.match(imagesById['ext:netatmo:camera-1'], /^image\/jpg;base64,/);
+  assert.match(imagesById['ext:netatmo:noc-1'], /^image\/jpg;base64,/);
+  // camera-1 is_local: resolved through /command/ping then fetched on the LAN side.
+  assert.ok(
+    netatmo.state.cameraRequests.some(
+      (r) => r.side === 'local' && r.camId === 'camera-1' && r.path === '/live/snapshot_720.jpg',
+    ),
+  );
+  // noc-1 is VPN-only: snapshot straight from the VPN URL, no ping.
+  assert.ok(
+    netatmo.state.cameraRequests.some(
+      (r) => r.side === 'vpn' && r.camId === 'noc-1' && r.path === '/live/snapshot_720.jpg',
+    ),
+  );
+  assert.ok(
+    !netatmo.state.cameraRequests.some((r) => r.camId === 'noc-1' && r.path === '/command/ping'),
+  );
+});
+
+test('a stale local URL cache falls back to the VPN snapshot (core #2623)', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  await telemetry.refreshValues(configSecurity);
+  assert.equal(gladys.cameraImages.length, 2); // local URL now cached for camera-1
+
+  // The LAN side dies: the cached local URL is stale.
+  netatmo.state.failLocalSnapshot = true;
+  netatmo.state.cameraRequests.length = 0;
+  clock += 31 * 60 * 1000; // past the state keep-alive, irrelevant for images
+  await telemetry.refreshValues(configSecurity);
+
+  // camera-1 still got an image, through the VPN fallback.
+  const vpnFallback = netatmo.state.cameraRequests.some(
+    (r) => r.side === 'vpn' && r.camId === 'camera-1' && r.path === '/live/snapshot_720.jpg',
+  );
+  assert.ok(vpnFallback);
+  assert.equal(gladys.cameraImages.length, 4);
+});
+
+test('getCameraSnapshot serves the on-demand image, loading the account when needed', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = [
+    {
+      external_id: 'ext:netatmo:camera-1',
+      features: [{ external_id: 'ext:netatmo:camera-1:camera' }],
+    },
+  ];
+  // Fresh engine: no refresh ran yet, the camera is unknown until the load.
+  const image = await telemetry.getCameraSnapshot(configSecurity, {
+    external_id: 'ext:netatmo:camera-1',
+  });
+  assert.match(image, /^image\/jpg;base64,/);
+
+  await assert.rejects(
+    telemetry.getCameraSnapshot(configSecurity, { external_id: 'ext:netatmo:unknown-cam' }),
+    /unknown to the Netatmo account/,
+  );
+});
+
+test('setDeviceValue switches the camera monitoring through /api/setstate', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  const camera = gladys.devices.find((d) => d.external_id === 'ext:netatmo:camera-1');
+  const monitoring = camera.features.find((f) => f.external_id.endsWith(':monitoring'));
+
+  await setDeviceValue({ gladys, client }, { device: camera, feature: monitoring, value: 1 });
+  await setDeviceValue({ gladys, client }, { device: camera, feature: monitoring, value: 0 });
+  assert.deepEqual(netatmo.state.setStateRequests, [
+    { home: { id: 'home-1', modules: [{ id: 'camera-1', monitoring: 'on' }] } },
+    { home: { id: 'home-1', modules: [{ id: 'camera-1', monitoring: 'off' }] } },
+  ]);
 });
 
 test('cameras stay absent with the default (opt-in) configuration', async () => {

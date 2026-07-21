@@ -27,6 +27,7 @@ import {
   buildFeaturePlugConnectedBoiler,
   buildFeatureOpenWindow,
   buildFeatureMonitoring,
+  buildFeatureCamera,
   buildFeatureCo2,
   buildFeatureHumidity,
   buildFeatureNoise,
@@ -218,6 +219,7 @@ export function convertDevice(gladys, netatmoDevice) {
     case SUPPORTED_MODULE_TYPE.NACAMERA:
     case SUPPORTED_MODULE_TYPE.NOC:
       features.push(buildFeatureMonitoring(nameDevice, externalId));
+      features.push(buildFeatureCamera(nameDevice, externalId));
       break;
     case SUPPORTED_MODULE_TYPE.NAMODULE4:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));

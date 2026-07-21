@@ -20,6 +20,7 @@ export const API_PATHS = {
   GET_THERMOSTATS: '/api/getthermostatsdata',
   GET_WEATHER_STATIONS: '/api/getstationsdata?get_favorites=false',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
+  SET_STATE: '/api/setstate',
 };
 
 // Netatmo module types supported by the discovery (same enum as the core).
