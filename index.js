@@ -54,7 +54,7 @@ async function reportConnectionStatus(gladys, connected, message) {
  */
 export function setupIntegration(
   gladys,
-  { fetchImpl = fetch, netatmoBaseUrl, refreshIntervalMs, deviceSyncDebounceMs = 2000 } = {},
+  { fetchImpl = fetch, netatmoBaseUrl, refreshIntervalMs } = {},
 ) {
   // Current configuration (hot-reloaded via onConfigUpdated).
   let config = normalizeConfig();
@@ -177,33 +177,6 @@ export function setupIntegration(
     return telemetry.getCameraSnapshot(config, device);
   });
 
-  // --- Device created/deleted by the user ------------------------------------
-  // Re-publish the discovery list so the "already added" / "update available"
-  // badges stay current without a manual re-scan, and run a refresh cycle so
-  // the states (and camera image) of a fresh device appear immediately.
-  // Debounced: creating several devices in a row costs one resync.
-  let deviceSyncTimer = null;
-  function scheduleDeviceSync() {
-    clearTimeout(deviceSyncTimer);
-    deviceSyncTimer = setTimeout(async () => {
-      try {
-        await telemetry.syncDiscovery(config);
-        await telemetry.refreshValues(config);
-      } catch (err) {
-        logger.error(`Post device-change resync failed: ${err.message}`);
-      }
-    }, deviceSyncDebounceMs);
-    deviceSyncTimer.unref?.();
-  }
-  gladys.onDeviceCreated(async (device) => {
-    logger.info(`onDeviceCreated <- ${device.external_id}`);
-    scheduleDeviceSync();
-  });
-  gladys.onDeviceDeleted(async (device) => {
-    logger.info(`onDeviceDeleted <- ${device.external_id}`);
-    scheduleDeviceSync();
-  });
-
   // --- Configuration updated by the user -------------------------------------
   gladys.onConfigUpdated(async (newConfig) => {
     logger.info('onConfigUpdated -> new configuration received');
@@ -213,6 +186,12 @@ export function setupIntegration(
     // cycle re-publishes every value, and let syncConnection restart the loop.
     telemetry.resetDedup();
     await syncConnection();
+    // Saving the configuration re-runs the discovery automatically: enabling
+    // a toggle (e.g. security_api) must surface its devices without a manual
+    // re-scan on the Discovery screen.
+    if (oauth.hasTokens()) {
+      await telemetry.syncDiscovery(config);
+    }
   });
 
   // --- Connection lifecycle --------------------------------------------------

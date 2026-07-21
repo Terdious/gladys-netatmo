@@ -56,7 +56,7 @@ before(async () => {
     token: 'integration-token',
     selector: 'netatmo',
   });
-  integration = setupIntegration(gladys, { netatmoBaseUrl: netatmo.url, deviceSyncDebounceMs: 50 });
+  integration = setupIntegration(gladys, { netatmoBaseUrl: netatmo.url });
 
   await gladys.connect();
 });
@@ -186,14 +186,21 @@ test('a scan request publishes the discovered Netatmo devices', async () => {
   assert.ok(badge);
 });
 
-test('creating a device re-publishes the discovery list automatically', async () => {
+test('saving the configuration re-runs the discovery automatically', async () => {
   const discoveredCount = core.state.discovered.length;
-  const therm = core.state.discovered
-    .at(-1)
-    .find((device) => device.external_id === 'ext:netatmo:therm-1');
-  core.send(EXTERNAL_INTEGRATION.DEVICE_CREATED, { device: therm });
-  // The debounced resync republishes the discovered devices without a scan.
+  // The user enables the Security API and saves: the cameras must surface
+  // without a manual re-scan on the Discovery screen. The core pushes the
+  // FULL config store (the OAuth tokens live in the same store).
+  core.send(EXTERNAL_INTEGRATION.CONFIG_UPDATED, {
+    config: {
+      ...core.state.config,
+      client_id: FAKE_CLIENT_ID,
+      client_secret: FAKE_CLIENT_SECRET,
+      security_api: 'true',
+    },
+  });
   await waitFor(() => core.state.discovered.length > discoveredCount);
   const republished = core.state.discovered.at(-1);
-  assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:therm-1'));
+  assert.equal(republished.length, 8); // 6 devices + the 2 cameras
+  assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:camera-1'));
 });
