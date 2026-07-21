@@ -138,6 +138,10 @@ export const CONNECTION_MESSAGES = {
     en: 'Netatmo client id and client secret are not configured yet.',
     fr: "L'identifiant et le secret client Netatmo ne sont pas encore configurés.",
   },
+  SAVE_CREDENTIALS_FIRST: {
+    en: 'Fill in AND SAVE the Netatmo client id / client secret, then click Connect again.',
+    fr: "Renseignez ET SAUVEGARDEZ l'identifiant / secret client Netatmo, puis cliquez à nouveau sur Se connecter.",
+  },
   NOT_CONNECTED: {
     en: 'Netatmo account is not connected yet — use the Connect button.',
     fr: "Le compte Netatmo n'est pas encore connecté — utilisez le bouton Se connecter.",

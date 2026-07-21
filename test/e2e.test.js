@@ -43,9 +43,13 @@ async function sendAndWaitResult(type, payload) {
   return waitFor(() => core.state.commandResults.find((result) => result.message_id === id));
 }
 
+// The fake core serves this object on GET /config: tests mutate it to
+// simulate a config saved in the store without a config-updated push.
+const coreConfig = {};
+
 before(async () => {
   netatmo = await startFakeNetatmo();
-  core = await startFakeGladysCore({ config: {} });
+  core = await startFakeGladysCore({ config: coreConfig });
 
   gladys = new GladysIntegration({
     hostApiUrl: core.url,
@@ -68,6 +72,31 @@ test('a fresh install reports "missing client config" on the Configuration scree
   const status = await waitFor(() => core.state.connectionStatuses[0]);
   assert.equal(status.connected, false);
   assert.match(status.message.en, /client id and client secret/);
+});
+
+test('Connect without saved credentials fails with an actionable status message', async () => {
+  const result = await sendAndWaitResult(EXTERNAL_INTEGRATION.OAUTH_GET_AUTHORIZE_URL, {
+    key: 'netatmo_account',
+    redirect_uri: REDIRECT_URI,
+  });
+  assert.equal(result.success, false);
+  assert.match(result.error, /must be saved first/);
+  // The config screen gets an explicit "save first" hint (the front only
+  // shows a generic error for the failed command itself).
+  const status = core.state.connectionStatuses.at(-1);
+  assert.match(status.message.fr, /SAUVEGARDEZ/);
+});
+
+test('a save-then-connect race is covered by the config re-fetch', async () => {
+  // Credentials land in the core store, but no config-updated push reaches
+  // the container (the front does not save on Connect; pushes can also race).
+  Object.assign(coreConfig, { client_id: FAKE_CLIENT_ID, client_secret: FAKE_CLIENT_SECRET });
+  const result = await sendAndWaitResult(EXTERNAL_INTEGRATION.OAUTH_GET_AUTHORIZE_URL, {
+    key: 'netatmo_account',
+    redirect_uri: REDIRECT_URI,
+  });
+  assert.equal(result.success, true);
+  assert.equal(new URL(result.data.authorize_url).searchParams.get('client_id'), FAKE_CLIENT_ID);
 });
 
 test('filling the client credentials moves the status to "not connected yet"', async () => {

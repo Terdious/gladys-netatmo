@@ -127,6 +127,23 @@ export function setupIntegration(
   // --- OAuth2: the user clicks Connect on the Configuration screen -----------
   gladys.onOAuthAuthorizeUrl(async (key, redirectUri) => {
     logger.info(`onOAuthAuthorizeUrl <- ${key}`);
+    if (!config.client_id || !config.client_secret) {
+      // The credentials may have just been saved: the config-updated push and
+      // the connect click can race, so re-fetch the store before giving up.
+      try {
+        config = normalizeConfig(await gladys.getConfig());
+        oauth.loadFromConfig(config);
+      } catch (err) {
+        logger.warn(`Config re-fetch before connect failed: ${err.message}`);
+      }
+    }
+    if (!config.client_id || !config.client_secret) {
+      // The user filled the form but never saved it (the front does not save
+      // on Connect): surface an actionable hint right on the config screen —
+      // the front only shows a generic error for the failed command itself.
+      await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.SAVE_CREDENTIALS_FIRST);
+      throw new Error('Netatmo client id / client secret must be saved first');
+    }
     return oauth.buildAuthorizeUrl(redirectUri);
   });
 
