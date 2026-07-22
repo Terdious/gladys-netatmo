@@ -158,6 +158,34 @@ export function buildFeatureCamera(name, externalId) {
   });
 }
 
+// Door/window tag (NACamDoorTag): open/closed contact, read from homestatus
+// `status` (issue #9). Distinct suffix from the thermostat `open_window`.
+export function buildFeatureOpeningSensor(name, externalId) {
+  return feature({
+    name: `Opening - ${name}`,
+    external_id: `${externalId}:opening`,
+    selector: `${externalId}:opening`,
+    category: DEVICE_FEATURE_CATEGORIES.OPENING_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// Indoor siren (NIS): read-only sounding state for now (control is a later
+// milestone), read from homestatus `status` (issue #9).
+export function buildFeatureSiren(name, externalId) {
+  return feature({
+    name: `Siren - ${name}`,
+    external_id: `${externalId}:siren`,
+    selector: `${externalId}:siren`,
+    category: DEVICE_FEATURE_CATEGORIES.SIREN,
+    type: DEVICE_FEATURE_TYPES.SIREN.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
 export function buildFeatureOpenWindow(name, externalId) {
   return feature({
     name: `Detecting open window - ${name}`,

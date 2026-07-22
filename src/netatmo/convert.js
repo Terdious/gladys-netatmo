@@ -18,7 +18,7 @@ import {
   DEVICE_FEATURE_UNITS,
 } from '@gladysassistant/integration-sdk';
 
-import { SUPPORTED_MODULE_TYPE, SECURITY_MODULE_TYPES, PARAMS } from './constants.js';
+import { SUPPORTED_MODULE_TYPE, CAMERA_MODULE_TYPES, PARAMS } from './constants.js';
 import { netatmoId } from './discovery.js';
 import {
   buildFeatureBattery,
@@ -30,6 +30,8 @@ import {
   buildFeatureHeatingPowerRequest,
   buildFeaturePlugConnectedBoiler,
   buildFeatureOpenWindow,
+  buildFeatureOpeningSensor,
+  buildFeatureSiren,
   buildFeatureMonitoring,
   buildFeatureCamera,
   buildFeatureCo2,
@@ -50,6 +52,10 @@ const BATTERY_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NAMODULE2,
   SUPPORTED_MODULE_TYPE.NAMODULE3,
   SUPPORTED_MODULE_TYPE.NAMODULE4,
+  // Camera-bridged security accessories carry battery + RF, like the modules
+  // above; their "plug" is the bridging camera (issue #9).
+  SUPPORTED_MODULE_TYPE.NACAMDOORTAG,
+  SUPPORTED_MODULE_TYPE.NIS,
 ];
 
 const BRIDGE_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.PLUG, SUPPORTED_MODULE_TYPE.NAMAIN];
@@ -120,7 +126,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       ];
     }
   }
-  if (BRIDGE_MODULE_TYPES.includes(model) || SECURITY_MODULE_TYPES.includes(model)) {
+  if (BRIDGE_MODULE_TYPES.includes(model) || CAMERA_MODULE_TYPES.includes(model)) {
     features.push(buildFeatureWifiStrength(nameDevice, externalId));
     if (model === SUPPORTED_MODULE_TYPE.PLUG) {
       features.push(buildFeatureRfStrength(nameDevice, externalId));
@@ -229,6 +235,20 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
           'sum_rain_24',
           DEVICE_FEATURE_UNITS.MILLIMETER_PER_DAY,
         ),
+      );
+      break;
+    case SUPPORTED_MODULE_TYPE.NACAMDOORTAG:
+      features.push(buildFeatureOpeningSensor(nameDevice, externalId));
+      break;
+    case SUPPORTED_MODULE_TYPE.NIS:
+      features.push(buildFeatureSiren(nameDevice, externalId));
+      break;
+    case SUPPORTED_MODULE_TYPE.NSD:
+      // Smoke alarm: only battery + signal are pollable today (published only
+      // if present). The smoke state arrives via webhooks (issue #5).
+      features.push(
+        buildFeatureBattery(nameDevice, externalId),
+        buildFeatureWifiStrength(nameDevice, externalId),
       );
       break;
     case SUPPORTED_MODULE_TYPE.NACAMERA:

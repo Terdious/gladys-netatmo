@@ -40,10 +40,12 @@ test('loadDevices merges the three API families', async () => {
   const ids = devices.map((device) => netatmoId(device)).sort();
   assert.deepEqual(ids, [
     'camera-1',
+    'doortag-1',
     'noc-1',
     'outdoor-1',
     'plug-1',
     'siren-1',
+    'smoke-1',
     'station-1',
     'therm-1',
     'valve-1',
@@ -78,8 +80,11 @@ test('loadDevices merges the three API families', async () => {
   assert.equal(camera.apiNotConfigured, true);
   assert.equal(camera.not_handled, undefined);
 
-  // The siren is a genuinely unsupported module type.
-  assert.equal(byId(devices, 'siren-1').not_handled, true);
+  // The camera-bridged security accessories are supported too (issue #9).
+  assert.equal(byId(devices, 'siren-1').categoryAPI, 'Security');
+  assert.equal(byId(devices, 'siren-1').not_handled, undefined);
+  assert.equal(byId(devices, 'doortag-1').not_handled, undefined);
+  assert.equal(byId(devices, 'smoke-1').not_handled, undefined);
 });
 
 test('security-only config still loads homesdata and exposes the cameras (core #2621)', async () => {

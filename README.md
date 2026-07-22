@@ -45,6 +45,12 @@ capabilities land (Home + Security cameras, webhooks, …).
   rotation, local/VPN switch, user-edited quality) — the external-integrations
   framework silently upserts the params of created devices on every
   discovery publish.
+- **Camera-bridged security accessories** (opt-in with the cameras): the
+  door/window tag (`NACamDoorTag`) as an opening sensor, the indoor siren
+  (`NIS`) as a read-only sounding sensor, both with battery + RF quality; the
+  smoke alarm (`NSD`) is discovered with battery + signal — its smoke state is
+  webhook-driven and lands with the webhooks milestone. Net-new vs the core
+  service.
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required).
 
