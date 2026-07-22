@@ -16,6 +16,11 @@ import { NETATMO_BASE_URL, API_PATHS } from './constants.js';
 
 const logger = createLogger({ name: 'netatmo-client' });
 
+// Netatmo error code for "scope rights" refusals (403): NOT a token problem.
+const SCOPE_ERROR_CODE = 13;
+// Hard bound on any single Netatmo API request.
+const REQUEST_TIMEOUT_MS = 30 * 1000;
+
 /**
  * Create the Netatmo API client.
  * @param {object} deps dependencies
@@ -35,6 +40,9 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
       },
       ...(form ? { body: new URLSearchParams(form).toString() } : {}),
       ...(json ? { body: JSON.stringify(json) } : {}),
+      // A hung connection must never stall a whole refresh cycle (the
+      // single-flight would keep returning the stuck promise for minutes).
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   }
 
@@ -47,16 +55,22 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
   async function request(path, options = {}) {
     let accessToken = await oauth.ensureFreshAccessToken();
     let response = await requestOnce(path, accessToken, options);
-    if (response.status === 401 || response.status === 403) {
-      // Token invalidated server-side before its expiry: refresh once, retry.
+    let body = await response.json().catch(() => ({}));
+    // Netatmo reports an expired/invalid token as 401 OR 403 (error code 3);
+    // a 403 with error code 13 is a SCOPE refusal — refreshing would burn a
+    // refresh-token rotation and replay a non-idempotent POST for nothing.
+    const isAuthFailure =
+      (response.status === 401 || response.status === 403) &&
+      body?.error?.code !== SCOPE_ERROR_CODE;
+    if (isAuthFailure) {
       logger.warn(
         `Netatmo answered ${response.status} on ${path} — refreshing the token and retrying once`,
       );
       await oauth.refreshTokens();
       accessToken = await oauth.ensureFreshAccessToken();
       response = await requestOnce(path, accessToken, options);
+      body = await response.json().catch(() => ({}));
     }
-    const body = await response.json().catch(() => ({}));
     if (!response.ok) {
       const error = new Error(`Netatmo API ${path} answered ${response.status}`);
       error.status = response.status;

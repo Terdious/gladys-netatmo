@@ -81,8 +81,18 @@ export const PARAMS = {
 export const CAMERA_LIVE_QUALITIES = ['poor', 'low', 'medium', 'high'];
 export const DEFAULT_CAMERA_LIVE_QUALITY = 'high';
 
-// The `errors` array of /homestatus flags a powered-off module with this code.
-export const API_ERROR_CODE_UNREACHABLE = 6;
+// Feature suffixes whose value comes from the ROOM (fed by every sensor of
+// the room), not from the module itself: still current when the module is
+// down, so they keep being published for `reachable: false` devices — while
+// the module-own values (battery, rf, measures) would only replay Netatmo's
+// last-known snapshot (bench finding: a dead anemometer kept "reporting"
+// 9% battery and stale wind for months).
+export const ROOM_DERIVED_SUFFIXES = [
+  'therm_measured_temperature',
+  'therm_setpoint_temperature',
+  'open_window',
+  'heating_power_request',
+];
 
 // Telemetry refresh cadence: one batched load of every home/station per cycle
 // (the core polls at the same rate). The devices are created with

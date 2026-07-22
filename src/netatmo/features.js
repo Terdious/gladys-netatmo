@@ -77,7 +77,7 @@ export function buildFeatureTemperature(
   });
 }
 
-export function buildFeatureThermSetpointTemperature(name, externalId) {
+export function buildFeatureThermSetpointTemperature(name, externalId, { writable = true } = {}) {
   return feature({
     name: `Setpoint temperature - ${name}`,
     external_id: `${externalId}:therm_setpoint_temperature`,
@@ -85,7 +85,9 @@ export function buildFeatureThermSetpointTemperature(name, externalId) {
     category: DEVICE_FEATURE_CATEGORIES.THERMOSTAT,
     type: DEVICE_FEATURE_TYPES.THERMOSTAT.TARGET_TEMPERATURE,
     unit: DEVICE_FEATURE_UNITS.CELSIUS,
-    read_only: false,
+    // Read-only for legacy-only thermostats without home_id/room_id: the
+    // setroomthermpoint command cannot be built for them.
+    read_only: !writable,
     min: 5,
     max: 30,
   });

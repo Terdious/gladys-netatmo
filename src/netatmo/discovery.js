@@ -101,8 +101,10 @@ export async function loadDeviceDetails(client, config, homeData) {
   const { rooms: roomsHomeData = [], modules: modulesHomeData = [], id: homeId } = homeData;
   const { home, errors } = await client.getHomeStatus(homeId);
   if (!home) {
+    // null (not []) so the caller can tell "home unavailable" from "no
+    // modules" and flag the load as partial.
     logger.warn(`homestatus of home ${homeId} unavailable — skipping`);
-    return [];
+    return null;
   }
   const { rooms: roomsHomestatus = [], modules: modulesHomestatus = [] } = home;
 
@@ -214,19 +216,41 @@ export async function loadWeatherStationDetails(client, config) {
  * @returns {Promise<Array>} raw devices
  */
 export async function loadDevices(client, config) {
+  const { devices } = await loadAccount(client, config);
+  return devices;
+}
+
+/**
+ * Same load, with a `partial` flag: true when any API family failed (or a
+ * home's status was unavailable). A partial load must never REPLACE the
+ * published discovery list — devices would vanish from the Discovery screen
+ * for the duration of a Netatmo hiccup.
+ * @param {object} client Netatmo API client
+ * @param {object} config normalized integration config
+ * @returns {Promise<{devices: Array, partial: boolean}>} raw devices + flag
+ */
+export async function loadAccount(client, config) {
   let listDevices = [];
+  let partial = false;
 
   // Cameras ride in the same homesdata/homestatus payloads as the Energy
   // modules (no dedicated API call), so the topology load also runs when only
-  // the Security API is enabled.
+  // the Security API is enabled. NOTE — divergence from the core `loadDevices`
+  // gating, on purpose: the core treats "no API configured at all" as "load
+  // everything" (its variables may simply be unset); the manifest toggles are
+  // always defined with sensible defaults, so here OFF means OFF.
   if (config.energy_api || config.security_api) {
     try {
       const homes = await client.getHomesData();
       const results = await mapWithConcurrency(homes, HOMES_CONCURRENCY, async (home) =>
         home.modules && home.modules.length > 0 ? loadDeviceDetails(client, config, home) : [],
       );
-      listDevices = results.flat();
+      if (results.includes(null)) {
+        partial = true;
+      }
+      listDevices = results.filter(Boolean).flat();
     } catch (err) {
+      partial = true;
       logger.error(`homesdata load failed: ${err.message}`);
     }
   }
@@ -269,6 +293,7 @@ export async function loadDevices(client, config) {
         }
       }
     } catch (err) {
+      partial = true;
       logger.error(`getthermostatsdata load failed: ${err.message}`);
     }
   }
@@ -319,6 +344,7 @@ export async function loadDevices(client, config) {
         }
       }
     } catch (err) {
+      partial = true;
       logger.error(`getstationsdata load failed: ${err.message}`);
     }
   }
@@ -326,7 +352,9 @@ export async function loadDevices(client, config) {
   logger.debug(`${listDevices.length} Netatmo devices loaded`);
   const notHandled = listDevices.filter((device) => device.not_handled).length;
   if (notHandled > 0) {
-    logger.info(`Netatmo devices not supported: ${notHandled}`);
+    // Info-level reporting on CHANGE lives in the telemetry afterLoad hook:
+    // logging it here would repeat the same line every 120s cycle.
+    logger.debug(`Netatmo devices not supported: ${notHandled}`);
   }
-  return listDevices;
+  return { devices: listDevices, partial };
 }

@@ -82,6 +82,12 @@ export function createNetatmoOAuth({
   fetchImpl = fetch,
   baseUrl = NETATMO_BASE_URL,
   now = Date.now,
+  // Injectable timers so the tests can drive the scheduled refresh engine
+  // (backoff ladder, 24h grace window) without waiting real time.
+  timers = {
+    setTimeout: (...args) => setTimeout(...args),
+    clearTimeout: (...args) => clearTimeout(...args),
+  },
 }) {
   // In-memory tokens, kept in sync with the Gladys config store: loaded from it
   // on (re)connect / config update, written back on every exchange or refresh.
@@ -98,9 +104,18 @@ export function createNetatmoOAuth({
 
   // Called when the tokens are wiped for good (grace window exhausted).
   let authLostCallback = null;
+  // Called when a SCHEDULED refresh succeeds after failures: the connection
+  // recovered in the background and the caller can resume (telemetry, status).
+  let refreshRecoveredCallback = null;
 
   /** Sync the in-memory tokens from the (normalized) config store. */
   function loadFromConfig(config) {
+    // Netatmo rotates the refresh token on every refresh: when a store write
+    // failed (Gladys core restarting), the store may hold an OLDER token than
+    // memory. Never overwrite fresher in-memory tokens with stale stored ones.
+    if (tokens.refreshToken && tokens.expiresAt > (Number(config.expires_at) || 0)) {
+      return;
+    }
     tokens = {
       accessToken: config.access_token,
       refreshToken: config.refresh_token,
@@ -145,6 +160,8 @@ export function createNetatmoOAuth({
           Accept: 'application/json',
         },
         body: new URLSearchParams(form).toString(),
+        // A hung token request must not stall the refresh engine for minutes.
+        signal: AbortSignal.timeout(30 * 1000),
       });
     } catch (err) {
       // Network failure: always transient.
@@ -173,11 +190,21 @@ export function createNetatmoOAuth({
       refreshToken: data.refresh_token,
       expiresAt: expiresInSeconds > 0 ? now() + expiresInSeconds * 1000 : 0,
     };
-    await gladys.setConfig({
-      access_token: tokens.accessToken,
-      refresh_token: tokens.refreshToken,
-      expires_at: tokens.expiresAt,
-    });
+    try {
+      await gladys.setConfig({
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+        expires_at: tokens.expiresAt,
+      });
+    } catch (err) {
+      // A failed STORE write (Gladys core restarting) is not a Netatmo auth
+      // failure: the in-memory tokens are valid and the refresh engine must
+      // NOT enter the fatal path (which would re-hit Netatmo and burn a
+      // refresh-token rotation every retry). The next successful refresh
+      // persists again.
+      err.transient = true;
+      throw err;
+    }
   }
 
   /** Wipe the tokens (memory + store): the user must reconnect. */
@@ -261,14 +288,14 @@ export function createNetatmoOAuth({
 
   function stopTimer() {
     if (refreshTimer) {
-      clearTimeout(refreshTimer);
+      timers.clearTimeout(refreshTimer);
       refreshTimer = null;
     }
   }
 
   function armTimer(delayMs) {
     stopTimer();
-    refreshTimer = setTimeout(runScheduledRefresh, delayMs);
+    refreshTimer = timers.setTimeout(runScheduledRefresh, delayMs);
     // Never keep the process (or a test run) alive just for this timer.
     refreshTimer.unref?.();
   }
@@ -276,8 +303,19 @@ export function createNetatmoOAuth({
   /** Timer body: refresh, and on failure retry per the transient/fatal rules. */
   async function runScheduledRefresh() {
     try {
+      const wasRetrying = retryAttempt > 0 || firstFatalAt !== null;
       await refreshTokens();
       scheduleTokenRefresh();
+      if (wasRetrying) {
+        // The connection recovered in the background: let the caller resume
+        // (report connected, restart telemetry). A throwing callback must not
+        // be classified as a refresh failure.
+        try {
+          await refreshRecoveredCallback?.();
+        } catch (cbErr) {
+          logger.error(`Refresh-recovered callback failed: ${cbErr.message}`);
+        }
+      }
     } catch (err) {
       if (err.transient) {
         const delay = RECONNECT_BACKOFF_MS[Math.min(retryAttempt, RECONNECT_BACKOFF_MS.length - 1)];
@@ -305,7 +343,13 @@ export function createNetatmoOAuth({
       await clearTokens().catch((clearErr) =>
         logger.error('Failed to clear Netatmo tokens', clearErr),
       );
-      await authLostCallback?.(CONNECTION_MESSAGES.RECONNECT_REQUIRED);
+      // Defensive: a throwing callback in a bare timer body would take the
+      // whole process down with an unhandled rejection.
+      try {
+        await authLostCallback?.(CONNECTION_MESSAGES.RECONNECT_REQUIRED);
+      } catch (cbErr) {
+        logger.error(`Auth-lost callback failed: ${cbErr.message}`);
+      }
     }
   }
 
@@ -330,6 +374,10 @@ export function createNetatmoOAuth({
     /** Register the callback invoked when the tokens are wiped for good. */
     onAuthLost(callback) {
       authLostCallback = callback;
+    },
+    /** Register the callback invoked when a scheduled refresh RECOVERS. */
+    onRefreshRecovered(callback) {
+      refreshRecoveredCallback = callback;
     },
     /** Stop the refresh engine (shutdown, WebSocket disconnected). */
     stop() {

@@ -12,7 +12,11 @@
 // per-device polls that would hammer the Netatmo rate limits.
 // -----------------------------------------------------------------------------
 
-import { createLogger } from '@gladysassistant/integration-sdk';
+import {
+  createLogger,
+  DEVICE_FEATURE_TYPES,
+  DEVICE_FEATURE_UNITS,
+} from '@gladysassistant/integration-sdk';
 
 import { SUPPORTED_MODULE_TYPE, SECURITY_MODULE_TYPES, PARAMS } from './constants.js';
 import { netatmoId } from './discovery.js';
@@ -36,7 +40,6 @@ import {
   buildFeatureWindAngle,
   buildFeatureRain,
 } from './features.js';
-import { DEVICE_FEATURE_TYPES, DEVICE_FEATURE_UNITS } from '@gladysassistant/integration-sdk';
 
 const logger = createLogger({ name: 'netatmo-convert' });
 
@@ -81,11 +84,17 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
   const { home, name, type: model, room = {}, plug = {} } = netatmoDevice;
   const id = netatmoId(netatmoDevice);
   const homeId = home || netatmoDevice.home_id;
-  const nameDevice = name || netatmoDevice.module_name || netatmoDevice.station_name;
+  // A module present in homestatus but missing from homesdata has no name:
+  // fall back to its id rather than shipping the string "undefined".
+  const nameDevice = name || netatmoDevice.module_name || netatmoDevice.station_name || id;
   if (netatmoDevice.not_handled || !id) {
-    logger.info(`Skipping unsupported Netatmo device "${nameDevice ?? id}" (${model})`);
+    logger.debug(`Skipping unsupported Netatmo device "${nameDevice ?? id}" (${model})`);
     return null;
   }
+  // Legacy-only thermostats (getthermostatsdata without a homesdata home)
+  // carry no home_id: setroomthermpoint cannot work — expose the setpoint
+  // read-only instead of publishing a command doomed to fail.
+  const setpointWritable = Boolean(homeId && room.id);
   if (netatmoDevice.apiNotConfigured) {
     // The API covering this module is disabled in the configuration (e.g.
     // cameras with security_api off): the device stays out of the discovery.
@@ -141,7 +150,9 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         );
       }
       features.push(
-        buildFeatureThermSetpointTemperature(nameDevice, externalId),
+        buildFeatureThermSetpointTemperature(nameDevice, externalId, {
+          writable: setpointWritable,
+        }),
         buildFeatureOpenWindow(nameDevice, externalId),
         buildFeatureBoilerStatus(nameDevice, externalId),
       );
@@ -156,7 +167,9 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         );
       }
       features.push(
-        buildFeatureThermSetpointTemperature(nameDevice, externalId),
+        buildFeatureThermSetpointTemperature(nameDevice, externalId, {
+          writable: setpointWritable,
+        }),
         buildFeatureOpenWindow(nameDevice, externalId),
         buildFeatureHeatingPowerRequest(nameDevice, externalId),
       );
@@ -250,7 +263,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       );
       break;
     default:
-      logger.info(`Skipping unsupported Netatmo device "${nameDevice}" (${model})`);
+      logger.debug(`Skipping unsupported Netatmo device "${nameDevice}" (${model})`);
       return null;
   }
 

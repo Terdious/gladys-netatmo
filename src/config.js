@@ -11,6 +11,10 @@
 // itself via `gladys.setConfig()` — keys outside the schema are free internal
 // storage and never reach the configuration form.
 //
+// The `netatmo_account` schema key is a value-less UI field (type `oauth2`,
+// rendered as the Connect button): it carries no configuration value, which
+// is why it appears in neither DEFAULT_CONFIG nor normalizeConfig.
+//
 // This module only provides defaults and normalizes the received object, so the
 // rest of the code never has to deal with `undefined`.
 // -----------------------------------------------------------------------------
@@ -23,6 +27,7 @@ export const DEFAULT_CONFIG = {
   energy_api: true, // discover Energy devices (thermostats, relay plugs, valves)
   weather_api: true, // discover Weather devices (stations and modules)
   security_api: false, // discover Security devices (cameras), opt-in like the core
+  camera_quality: 'high', // live stream quality (per-camera device param overrides)
 
   // Internal keys (NOT in the config_schema), persisted through setConfig():
   access_token: '', // OAuth2 access token
@@ -62,6 +67,7 @@ export function normalizeConfig(raw = {}) {
     energy_api: toBoolean(raw.energy_api, DEFAULT_CONFIG.energy_api),
     weather_api: toBoolean(raw.weather_api, DEFAULT_CONFIG.weather_api),
     security_api: toBoolean(raw.security_api, DEFAULT_CONFIG.security_api),
+    camera_quality: String(raw.camera_quality ?? DEFAULT_CONFIG.camera_quality).trim(),
     access_token: String(raw.access_token ?? DEFAULT_CONFIG.access_token).trim(),
     refresh_token: String(raw.refresh_token ?? DEFAULT_CONFIG.refresh_token).trim(),
     expires_at: Number(raw.expires_at ?? DEFAULT_CONFIG.expires_at) || 0,

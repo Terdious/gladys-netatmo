@@ -81,19 +81,29 @@ export function encodeUnderLimit(buffer) {
     }
   }
   logger.warn(
-    'Camera snapshot still exceeds the 150 KB bound after re-encoding — skipping this frame',
+    `Camera snapshot still exceeds the ${Math.round(MAX_IMAGE_STRING_SIZE / 1024)} KB budget after re-encoding — skipping this frame`,
   );
   return null;
 }
+
+// After a LOCAL snapshot failure, snapshots go through the VPN for this long
+// before retrying the LAN (bench finding: a camera whose local snapshot kept
+// failing caused a resolve→fail→invalidate churn on every cycle). The cached
+// local base URL is KEPT during the cooldown: the rtsp-camera core service
+// runs on the host network and can still stream it.
+const LOCAL_RETRY_COOLDOWN_MS = 30 * 60 * 1000;
 
 /**
  * Create the camera snapshot engine.
  * @param {object} [deps] dependencies
  * @param {typeof fetch} [deps.fetchImpl] fetch implementation (tests)
+ * @param {() => number} [deps.now] clock (tests)
  */
-export function createCameraImages({ fetchImpl = fetch } = {}) {
+export function createCameraImages({ fetchImpl = fetch, now = Date.now } = {}) {
   // Per-camera resolved local base URL (id -> url), like the core cache.
   const baseUrls = new Map();
+  // Per-camera LOCAL snapshot failure state: {failedAt, strikes}.
+  const localFailures = new Map();
 
   async function pingJson(url) {
     const response = await fetchImpl(`${url}${PING_PATH}`, {
@@ -163,20 +173,40 @@ export function createCameraImages({ fetchImpl = fetch } = {}) {
   async function getImage(rawDevice) {
     const { vpn_url: vpnUrl } = rawDevice;
     const id = rawDevice.id ?? rawDevice._id;
-    const baseUrl = await resolveBaseUrl(rawDevice);
+    let baseUrl = await resolveBaseUrl(rawDevice);
     if (!baseUrl) {
       return undefined;
     }
+    // Recent LOCAL failure: snapshot through the VPN during the cooldown,
+    // without touching the cached local base URL (the live stream keeps it).
+    const failure = localFailures.get(id);
+    if (baseUrl !== vpnUrl && failure && now() - failure.failedAt < LOCAL_RETRY_COOLDOWN_MS) {
+      baseUrl = vpnUrl;
+    }
     try {
-      return encodeUnderLimit(await fetchSnapshot(baseUrl)) ?? undefined;
+      const image = encodeUnderLimit(await fetchSnapshot(baseUrl)) ?? undefined;
+      if (baseUrl !== vpnUrl) {
+        localFailures.delete(id); // the LAN answered: forget the strikes
+      }
+      return image;
     } catch (err) {
       logger.debug(`Netatmo camera ${id}: snapshot failed on ${baseUrl}: ${err.message}`);
     }
     if (baseUrl === vpnUrl) {
       return undefined;
     }
-    // The cached local URL is stale: forget it and fall back to the VPN URL.
-    baseUrls.delete(id);
+    // LOCAL snapshot failed: arm the cooldown. Two failed retries in a row
+    // mean the cached URL itself is probably stale (camera moved IP): drop it
+    // so the next attempt re-runs the full ping resolution.
+    const strikes = (failure?.strikes ?? 0) + 1;
+    localFailures.set(id, { failedAt: now(), strikes });
+    if (strikes >= 2) {
+      logger.info(
+        `Netatmo camera ${id}: local URL looks stale after ${strikes} failures — re-resolving later`,
+      );
+      baseUrls.delete(id);
+      localFailures.set(id, { failedAt: now(), strikes: 0 });
+    }
     try {
       return encodeUnderLimit(await fetchSnapshot(vpnUrl)) ?? undefined;
     } catch (err) {
@@ -185,5 +215,19 @@ export function createCameraImages({ fetchImpl = fetch } = {}) {
     }
   }
 
-  return { resolveBaseUrl, getImage };
+  /** Drop the cached state of cameras no longer in the account. */
+  function prune(knownIds) {
+    for (const id of baseUrls.keys()) {
+      if (!knownIds.has(id)) {
+        baseUrls.delete(id);
+      }
+    }
+    for (const id of localFailures.keys()) {
+      if (!knownIds.has(id)) {
+        localFailures.delete(id);
+      }
+    }
+  }
+
+  return { resolveBaseUrl, getImage, prune };
 }

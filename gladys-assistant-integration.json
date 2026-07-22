@@ -91,6 +91,50 @@
       },
       "required": false,
       "default": false
+    },
+    {
+      "key": "camera_quality",
+      "type": "select",
+      "label": {
+        "en": "Camera live stream quality",
+        "fr": "Qualité du flux vidéo des caméras"
+      },
+      "description": {
+        "en": "Quality of the camera live stream (per-camera override via the camera_quality device param).",
+        "fr": "Qualité du flux vidéo des caméras (surcharge par caméra via le paramètre camera_quality)."
+      },
+      "required": false,
+      "default": "high",
+      "options": [
+        {
+          "value": "poor",
+          "label": {
+            "en": "Poor",
+            "fr": "Basse"
+          }
+        },
+        {
+          "value": "low",
+          "label": {
+            "en": "Low",
+            "fr": "Faible"
+          }
+        },
+        {
+          "value": "medium",
+          "label": {
+            "en": "Medium",
+            "fr": "Moyenne"
+          }
+        },
+        {
+          "value": "high",
+          "label": {
+            "en": "High",
+            "fr": "Haute"
+          }
+        }
+      ]
     }
   ]
 }

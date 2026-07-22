@@ -83,6 +83,13 @@ export function setupIntegration(
     await reportConnectionStatus(gladys, false, message);
   });
 
+  // A scheduled refresh recovered after failures (Netatmo/DNS outage over):
+  // reflect it on the Configuration screen and make sure telemetry runs.
+  oauth.onRefreshRecovered(async () => {
+    await reportConnectionStatus(gladys, true);
+    telemetry.start(config);
+  });
+
   /**
    * Shared by the connected / config-updated paths: make sure the stored
    * tokens are usable, keep the refresh engine armed, and reflect the real
@@ -91,11 +98,14 @@ export function setupIntegration(
   async function syncConnection() {
     if (!config.client_id || !config.client_secret) {
       // Expected state on every fresh install, until the user fills the form.
+      // Stop any running loop: the previous credentials are gone.
+      telemetry.stop();
       logger.warn('Netatmo client id / client secret not configured yet');
       await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.MISSING_CLIENT_CONFIG);
       return;
     }
     if (!oauth.hasTokens()) {
+      telemetry.stop();
       logger.warn('Netatmo account not connected yet — waiting for the OAuth2 connection');
       await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.NOT_CONNECTED);
       return;
@@ -110,17 +120,23 @@ export function setupIntegration(
       logger.info('Netatmo account connected, token refresh and telemetry engines armed');
     } catch (err) {
       if (err instanceof NotConnectedError) {
+        telemetry.stop();
         await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.NOT_CONNECTED);
         return;
       }
       if (err.transient) {
-        // The refresh engine keeps retrying with backoff on its own.
+        // The refresh engine keeps retrying with backoff on its own — and
+        // telemetry STILL starts: a cycle failing while Netatmo is down is
+        // caught and retried every interval, so states resume by themselves
+        // when the cloud comes back (the recovered hook flips the status).
         logger.warn(`Netatmo unreachable at startup (${err.message}) — retrying in the background`);
         oauth.scheduleTokenRefresh();
+        telemetry.start(config);
         await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.NETATMO_UNREACHABLE);
         return;
       }
       logger.error(`Netatmo token check failed: ${err.message}`);
+      telemetry.stop();
       await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.RECONNECT_REQUIRED);
     }
   }
@@ -152,9 +168,16 @@ export function setupIntegration(
   gladys.onOAuthCallback(async (key, params) => {
     logger.info(`onOAuthCallback <- ${key}`);
     await oauth.handleCallback(params);
-    // Validate the brand-new tokens (and their scopes) with a real API call.
-    const homes = await client.getHomesData();
-    logger.info(`Netatmo account connected: ${homes.length} home(s) visible`);
+    // Validate the brand-new tokens with a real API call — but a transient
+    // failure here (Netatmo 500 seconds after a successful exchange) must not
+    // report the WHOLE connection as failed: the tokens are stored and
+    // refreshing, and the telemetry loop surfaces any real problem.
+    try {
+      const homes = await client.getHomesData();
+      logger.info(`Netatmo account connected: ${homes.length} home(s) visible`);
+    } catch (err) {
+      logger.warn(`Post-connect validation call failed (${err.message}) — the loop will retry`);
+    }
     await reportConnectionStatus(gladys, true);
     telemetry.start(config);
   });
@@ -180,11 +203,19 @@ export function setupIntegration(
   // --- Configuration updated by the user -------------------------------------
   gladys.onConfigUpdated(async (newConfig) => {
     logger.info('onConfigUpdated -> new configuration received');
+    const previous = config;
     config = normalizeConfig(newConfig);
     oauth.loadFromConfig(config);
-    // The API toggles may have changed: forget the dedup memory so the next
-    // cycle re-publishes every value, and let syncConnection restart the loop.
-    telemetry.resetDedup();
+    // Only when the API toggles actually changed: forget the dedup memory so
+    // the next cycle re-publishes every value. A plain save must not flood
+    // the state history with duplicates of every state.
+    const togglesChanged =
+      previous.energy_api !== config.energy_api ||
+      previous.weather_api !== config.weather_api ||
+      previous.security_api !== config.security_api;
+    if (togglesChanged) {
+      telemetry.resetDedup();
+    }
     await syncConnection();
     // Saving the configuration re-runs the discovery automatically: enabling
     // a toggle (e.g. security_api) must surface its devices without a manual
