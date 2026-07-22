@@ -88,7 +88,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
   // fall back to its id rather than shipping the string "undefined".
   const nameDevice = name || netatmoDevice.module_name || netatmoDevice.station_name || id;
   if (netatmoDevice.not_handled || !id) {
-    logger.info(`Skipping unsupported Netatmo device "${nameDevice ?? id}" (${model})`);
+    logger.debug(`Skipping unsupported Netatmo device "${nameDevice ?? id}" (${model})`);
     return null;
   }
   // Legacy-only thermostats (getthermostatsdata without a homesdata home)
@@ -263,7 +263,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       );
       break;
     default:
-      logger.info(`Skipping unsupported Netatmo device "${nameDevice}" (${model})`);
+      logger.debug(`Skipping unsupported Netatmo device "${nameDevice}" (${model})`);
       return null;
   }
 

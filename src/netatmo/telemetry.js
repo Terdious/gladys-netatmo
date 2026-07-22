@@ -32,6 +32,7 @@ import {
   SECURITY_MODULE_TYPES,
   CAMERA_LIVE_QUALITIES,
   DEFAULT_CAMERA_LIVE_QUALITY,
+  ROOM_DERIVED_SUFFIXES,
   PARAMS,
 } from './constants.js';
 import { loadAccount, netatmoId } from './discovery.js';
@@ -89,7 +90,7 @@ export function createTelemetry({
   let refreshTimer = null;
   let refreshInFlight = null;
 
-  const cameras = createCameraImages({ fetchImpl });
+  const cameras = createCameraImages({ fetchImpl, now });
   // Last raw Netatmo payload per camera id (vpn_url, is_local...), refreshed
   // by every load — the on-demand snapshot handler reads from here instead of
   // paying a full account load per image request.
@@ -134,8 +135,16 @@ export function createTelemetry({
     return promise;
   }
 
+  // Last "devices not supported" count: logged at info only when it changes.
+  let lastNotHandledCount = null;
+
   /** Post-load bookkeeping: camera cache upkeep + stale-entry pruning. */
   function afterLoad({ devices: rawDevices, partial }) {
+    const notHandledCount = rawDevices.filter((rawDevice) => rawDevice.not_handled).length;
+    if (!partial && notHandledCount !== lastNotHandledCount) {
+      logger.info(`Netatmo devices not supported: ${notHandledCount}`);
+      lastNotHandledCount = notHandledCount;
+    }
     const cameraIds = new Set();
     for (const rawDevice of rawDevices) {
       const id = netatmoId(rawDevice);
@@ -203,8 +212,16 @@ export function createTelemetry({
     if (!mapping) {
       return [];
     }
+    // Stale-module detection (issue #10): Netatmo keeps returning the
+    // LAST-KNOWN module values (battery, rf, measures) for a dead/offline
+    // module, with `reachable: false` set. Never republish those — only the
+    // room-derived values stay meaningful (fed by the other room sensors).
+    const unreachable = rawDevice.reachable === false;
     const states = [];
     for (const [suffix, extractValue] of Object.entries(mapping)) {
+      if (unreachable && !ROOM_DERIVED_SUFFIXES.includes(suffix)) {
+        continue;
+      }
       const featureExternalId = `${gladysDevice.external_id}:${suffix}`;
       const feature = (gladysDevice.features ?? []).find(
         (f) => f.external_id === featureExternalId,
@@ -266,7 +283,7 @@ export function createTelemetry({
    * the created device so a user edit is never overwritten.
    * @returns {Promise<Map<string, {liveUrl: string, quality: string}>>} by camera id
    */
-  async function buildCameraEnrichments() {
+  async function buildCameraEnrichments(config) {
     const enrichments = new Map();
     for (const [id, rawDevice] of rawCamerasById) {
       try {
@@ -274,12 +291,16 @@ export function createTelemetry({
         if (!baseUrl) {
           continue;
         }
+        // Quality resolution: per-device param first (once the front lets
+        // users edit device params), then the global configuration select.
         const qualityParam = (findGladysDevice(id)?.params ?? []).find(
           (param) => param.name === PARAMS.CAMERA_QUALITY,
         )?.value;
         const quality = CAMERA_LIVE_QUALITIES.includes(qualityParam)
           ? qualityParam
-          : DEFAULT_CAMERA_LIVE_QUALITY;
+          : CAMERA_LIVE_QUALITIES.includes(config?.camera_quality)
+            ? config.camera_quality
+            : DEFAULT_CAMERA_LIVE_QUALITY;
         enrichments.set(id, { liveUrl: buildLiveUrl(baseUrl, quality), quality });
       } catch (err) {
         logger.debug(`Live URL resolution failed for camera ${id}: ${err.message}`);
@@ -291,8 +312,8 @@ export function createTelemetry({
   // --- Discovery -------------------------------------------------------------
 
   /** Publish the discovered devices + transport badges for the given load. */
-  async function publishDiscovery({ devices: rawDevices, partial }) {
-    const enrichments = await buildCameraEnrichments();
+  async function publishDiscovery({ devices: rawDevices, partial }, config) {
+    const enrichments = await buildCameraEnrichments(config);
     const devices = rawDevices
       .map((rawDevice) => convertDevice(gladys, rawDevice, enrichments))
       .filter(Boolean);
@@ -319,7 +340,7 @@ export function createTelemetry({
    * @returns {Promise<Array>} the published Gladys device payloads
    */
   async function syncDiscovery(config) {
-    return publishDiscovery(await loadAccountCached(config));
+    return publishDiscovery(await loadAccountCached(config), config);
   }
 
   // --- Camera images ---------------------------------------------------------
@@ -433,13 +454,13 @@ export function createTelemetry({
       // (VPN rotation, local/VPN switch, user-edited quality), re-publish the
       // discovery so the framework upserts the CAMERA_URL param of the
       // created device — read by the core rtsp-camera service.
-      const enrichments = await buildCameraEnrichments();
+      const enrichments = await buildCameraEnrichments(config);
       const liveUrlChanged = [...enrichments].some(
         ([id, enrichment]) => lastLiveUrls.get(id) !== enrichment.liveUrl,
       );
       if (liveUrlChanged) {
         logger.info('Camera live URL changed — re-publishing the discovery to refresh CAMERA_URL');
-        await publishDiscovery(load);
+        await publishDiscovery(load, config);
       } else {
         await publishTransports(rawDevices);
       }

@@ -167,8 +167,8 @@ test('the relayed callback exchanges the code, stores the tokens and validates t
 test('a scan request publishes the discovered Netatmo devices', async () => {
   core.send(EXTERNAL_INTEGRATION.SCAN_REQUEST, {});
   const devices = await waitFor(() => core.state.discovered.at(-1));
-  // 6 supported devices from the fixtures (the NACamera is skipped).
-  assert.equal(devices.length, 6);
+  // 7 supported devices from the fixtures (the cameras are skipped).
+  assert.equal(devices.length, 7);
   const therm = devices.find((device) => device.external_id === 'ext:netatmo:therm-1');
   assert.ok(therm);
   assert.equal(
@@ -201,6 +201,6 @@ test('saving the configuration re-runs the discovery automatically', async () =>
   });
   await waitFor(() => core.state.discovered.length > discoveredCount);
   const republished = core.state.discovered.at(-1);
-  assert.equal(republished.length, 8); // 6 devices + the 2 cameras
+  assert.equal(republished.length, 9); // 7 devices + the 2 cameras
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:camera-1'));
 });

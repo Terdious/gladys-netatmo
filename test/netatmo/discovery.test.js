@@ -48,6 +48,7 @@ test('loadDevices merges the three API families', async () => {
     'therm-1',
     'valve-1',
     'valve-2',
+    'wind-1',
   ]);
 
   // The relay plug got the legacy merge: plug_connected_boiler + modules_bridged.
@@ -65,9 +66,11 @@ test('loadDevices merges the three API families', async () => {
   // The weather station and its module are appended with their category.
   const station = byId(devices, 'station-1');
   assert.equal(station.categoryAPI, 'Weather');
-  assert.deepEqual(station.modules_bridged, ['outdoor-1']);
+  assert.deepEqual(station.modules_bridged, ['outdoor-1', 'wind-1']);
   const outdoor = byId(devices, 'outdoor-1');
   assert.equal(outdoor.plug._id, 'station-1');
+  // The dead anemometer keeps the reachability flag from getstationsdata.
+  assert.equal(byId(devices, 'wind-1').reachable, false);
 
   // The cameras are supported (Security) but their API is off by default.
   const camera = byId(devices, 'camera-1');
@@ -114,7 +117,7 @@ test('a module missing from homestatus is rebuilt as unreachable (core #2620)', 
 test('the energy_api toggle skips the Energy loads entirely', async () => {
   const devices = await loadDevices(client, normalizeConfig({ energy_api: 'false' }));
   const ids = devices.map((device) => netatmoId(device)).sort();
-  assert.deepEqual(ids, ['outdoor-1', 'station-1']);
+  assert.deepEqual(ids, ['outdoor-1', 'station-1', 'wind-1']);
   const paths = netatmo.state.apiRequests.map((r) => r.path);
   assert.ok(!paths.some((p) => p.startsWith('/api/homesdata')));
   assert.ok(!paths.some((p) => p.startsWith('/api/getthermostatsdata')));

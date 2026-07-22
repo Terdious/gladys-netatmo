@@ -352,7 +352,9 @@ export async function loadAccount(client, config) {
   logger.debug(`${listDevices.length} Netatmo devices loaded`);
   const notHandled = listDevices.filter((device) => device.not_handled).length;
   if (notHandled > 0) {
-    logger.info(`Netatmo devices not supported: ${notHandled}`);
+    // Info-level reporting on CHANGE lives in the telemetry afterLoad hook:
+    // logging it here would repeat the same line every 120s cycle.
+    logger.debug(`Netatmo devices not supported: ${notHandled}`);
   }
   return { devices: listDevices, partial };
 }

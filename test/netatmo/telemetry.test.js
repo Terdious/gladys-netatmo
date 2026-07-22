@@ -71,8 +71,8 @@ function stateOf(featureExternalId) {
 
 test('syncDiscovery publishes the supported devices and the transport badges', async () => {
   const devices = await telemetry.syncDiscovery(config);
-  // 6 supported devices (the NACamera is skipped).
-  assert.equal(devices.length, 6);
+  // 7 supported devices (the cameras are skipped by default).
+  assert.equal(devices.length, 7);
   assert.deepEqual(gladys.discovered[0], devices);
 
   const badge = Object.fromEntries(gladys.transports.map((t) => [t.external_id, t.transport]));
@@ -105,6 +105,27 @@ test('refreshValues publishes the states of the devices created in Gladys', asyn
   assert.deepEqual(stateOf('ext:netatmo:valve-2:therm_measured_temperature'), [17]);
 });
 
+test('a reachable:false module never republishes its last-known values (issue #10)', async () => {
+  gladys.devices = await telemetry.syncDiscovery(config);
+  await telemetry.refreshValues(config);
+
+  // The dead anemometer (bench payload): Netatmo still returns battery 9%,
+  // rf and stale wind measures with reachable:false — none is published.
+  assert.deepEqual(stateOf('ext:netatmo:wind-1:battery_percent'), []);
+  assert.deepEqual(stateOf('ext:netatmo:wind-1:wind_strength'), []);
+  assert.deepEqual(stateOf('ext:netatmo:wind-1:rf_strength'), []);
+  // And its transport badge says unreachable.
+  const badge = Object.fromEntries(gladys.transports.map((t) => [t.external_id, t.transport]));
+  assert.equal(badge['ext:netatmo:wind-1'], 'unreachable');
+
+  // The module comes back to life: values flow again.
+  const wind = netatmo.state.stationDevices[0].modules.find((m) => m._id === 'wind-1');
+  wind.reachable = true;
+  await telemetry.refreshValues(config);
+  assert.deepEqual(stateOf('ext:netatmo:wind-1:battery_percent'), [9]);
+  assert.deepEqual(stateOf('ext:netatmo:wind-1:wind_strength'), [5]);
+});
+
 test('unchanged values are deduped, then re-published after the 30-minute keep-alive', async () => {
   gladys.devices = await telemetry.syncDiscovery(config);
   const first = await telemetry.refreshValues(config);
@@ -128,8 +149,8 @@ test('unchanged values are deduped, then re-published after the 30-minute keep-a
 test('cameras are discovered and updated when security_api is enabled (core #2621)', async () => {
   const configSecurity = normalizeConfig({ security_api: 'true' });
   gladys.devices = await telemetry.syncDiscovery(configSecurity);
-  // 6 Energy/Weather devices + 2 cameras (the NIS siren stays unsupported).
-  assert.equal(gladys.devices.length, 8);
+  // 7 Energy/Weather devices + 2 cameras (the NIS siren stays unsupported).
+  assert.equal(gladys.devices.length, 9);
 
   await telemetry.refreshValues(configSecurity);
   // monitoring 'off'/'on' → binary, wifi_status fallback (core mapping).
@@ -183,6 +204,44 @@ test('cameras carry a local-first CAMERA_URL and the camera_quality param (core 
     `${netatmo.url}/vpn/noc-1/live/files/high/index.m3u8`,
   );
   assert.equal(paramOf('camera-1', 'camera_quality'), 'high');
+});
+
+test('the camera_quality configuration select drives the live URL (no device param)', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true', camera_quality: 'medium' });
+  const devices = await telemetry.syncDiscovery(configSecurity);
+  const camera = devices.find((d) => d.external_id === 'ext:netatmo:camera-1');
+  assert.equal(
+    camera.params.find((p) => p.name === 'CAMERA_URL').value,
+    `${netatmo.url}/local/camera-1/live/files/medium/index.m3u8`,
+  );
+  assert.equal(camera.params.find((p) => p.name === 'camera_quality').value, 'medium');
+});
+
+test('a failing LOCAL snapshot arms a cooldown: next cycles go straight to the VPN', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  netatmo.state.failLocalSnapshot = true;
+
+  await telemetry.refreshValues(configSecurity); // local fails once, VPN succeeds
+  netatmo.state.cameraRequests.length = 0;
+  clock += 2 * 60 * 1000; // within the 30-min cooldown
+  await telemetry.refreshValues(configSecurity);
+
+  // No local snapshot retry, no re-ping churn: straight to the VPN, and the
+  // cached local base URL is KEPT for the live stream.
+  const camera1Requests = netatmo.state.cameraRequests.filter((r) => r.camId === 'camera-1');
+  assert.ok(
+    !camera1Requests.some((r) => r.side === 'local' && r.path === '/live/snapshot_720.jpg'),
+  );
+  assert.ok(!camera1Requests.some((r) => r.path === '/command/ping'));
+  assert.ok(camera1Requests.some((r) => r.side === 'vpn' && r.path === '/live/snapshot_720.jpg'));
+  const republished = gladys.discovered
+    .at(-1)
+    .find((d) => d.external_id === 'ext:netatmo:camera-1');
+  assert.match(
+    republished.params.find((p) => p.name === 'CAMERA_URL').value,
+    /\/local\/camera-1\//,
+  );
 });
 
 test('a user-edited camera_quality is respected, never overwritten', async () => {
@@ -280,7 +339,7 @@ test('setDeviceValue switches the camera monitoring through /api/setstate', asyn
 
 test('cameras stay absent with the default (opt-in) configuration', async () => {
   const devices = await telemetry.syncDiscovery(config);
-  assert.equal(devices.length, 6);
+  assert.equal(devices.length, 7);
   assert.ok(!devices.some((device) => device.external_id.includes('camera-1')));
   // No badge either: an undiscovered device must not get a transport entry.
   assert.ok(!gladys.transports.some((t) => t.external_id === 'ext:netatmo:camera-1'));

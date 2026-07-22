@@ -136,7 +136,20 @@ function buildDefaultStationDevices() {
           type: 'NAModule1',
           battery_percent: 60,
           rf_status: 70,
+          reachable: true,
           dashboard_data: { Temperature: 0, Humidity: 80, min_temp: -2.5, max_temp: 4.2 },
+        },
+        {
+          // Dead-battery module: Netatmo keeps returning the LAST-KNOWN
+          // values with reachable:false (bench payload 2026-07-22).
+          _id: 'wind-1',
+          module_name: 'Anémomètre mort',
+          type: 'NAModule2',
+          battery_percent: 9,
+          rf_status: 120,
+          reachable: false,
+          last_seen: 1761673485,
+          dashboard_data: { WindStrength: 5, WindAngle: 120, GustStrength: 9, GustAngle: 130 },
         },
       ],
     },
