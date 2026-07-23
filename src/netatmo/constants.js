@@ -21,7 +21,17 @@ export const API_PATHS = {
   GET_WEATHER_STATIONS: '/api/getstationsdata?get_favorites=false',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
   SET_STATE: '/api/setstate',
+  ADD_WEBHOOK: '/api/addwebhook',
+  DROP_WEBHOOK: '/api/dropwebhook',
 };
+
+// The manifest declares ONE webhook (`events`): Netatmo pushes every event
+// (Energy setpoint, camera movement/person, siren, smoke…) to a single URL.
+export const WEBHOOK_KEY = 'events';
+// Doctrine "trigger, not data" (SDK): a webhook event only TRIGGERS a refresh
+// through the API — events arrive duplicated/late/out of order. Debounce a
+// burst of events into one refresh.
+export const WEBHOOK_DEBOUNCE_MS = 2 * 1000;
 
 // Netatmo module types supported by the discovery (same enum as the core).
 export const SUPPORTED_MODULE_TYPE = {

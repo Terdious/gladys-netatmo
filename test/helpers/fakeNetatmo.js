@@ -187,6 +187,9 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     setpointRequests: [], // every parsed form POSTed to /api/setroomthermpoint
     setStateRequests: [], // every parsed JSON body POSTed to /api/setstate
     failSetStateWith: null, // set to {status, body} to make setstate fail
+    addWebhookRequests: [], // every parsed form POSTed to /api/addwebhook
+    dropWebhookRequests: [], // every parsed form POSTed to /api/dropwebhook
+    failAddWebhookWith: null, // set to an HTTP status to make addwebhook fail
     failStationsWith: null, // set to an HTTP status to make getstationsdata fail
     cameraRequests: [], // every hit on the fake camera endpoints ({side, camId, path})
     snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
@@ -331,6 +334,20 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
             respond(state.failSetStateWith.body, state.failSetStateWith.status);
             return;
           }
+          respond({ status: 'ok' });
+          return;
+        }
+        if (req.method === 'POST' && req.url.startsWith('/api/addwebhook')) {
+          state.addWebhookRequests.push(Object.fromEntries(new URLSearchParams(body)));
+          if (state.failAddWebhookWith) {
+            respond({ error: { code: 500, message: 'server error' } }, state.failAddWebhookWith);
+            return;
+          }
+          respond({ status: 'ok' });
+          return;
+        }
+        if (req.method === 'POST' && req.url.startsWith('/api/dropwebhook')) {
+          state.dropWebhookRequests.push(Object.fromEntries(new URLSearchParams(body)));
           respond({ status: 'ok' });
           return;
         }

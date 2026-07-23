@@ -148,6 +148,25 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     });
   }
 
+  /**
+   * Register a webhook URL at Netatmo (issue #5): Netatmo then POSTs every
+   * event (Energy, camera, siren, smoke…) to this URL. Idempotent — safe to
+   * re-register on every connection.
+   * @param {string} url the Gladys Plus relay URL from gladys.getWebhooks()
+   * @returns {Promise<object>} parsed response body
+   */
+  async function addWebhook(url) {
+    return request(API_PATHS.ADD_WEBHOOK, { method: 'POST', form: { url } });
+  }
+
+  /**
+   * Drop the registered webhook at Netatmo (on disconnect / key cleared).
+   * @returns {Promise<object>} parsed response body
+   */
+  async function dropWebhook() {
+    return request(API_PATHS.DROP_WEBHOOK, { method: 'POST', form: { app_types: 'app_security' } });
+  }
+
   return {
     request,
     getHomesData,
@@ -156,5 +175,7 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     getStationsData,
     setRoomThermpoint,
     setState,
+    addWebhook,
+    dropWebhook,
   };
 }
