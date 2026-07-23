@@ -6,8 +6,8 @@
     "en": "Connect your Netatmo devices (weather station, thermostats, cameras) to Gladys Assistant.",
     "fr": "Connectez vos appareils Netatmo (station météo, thermostats, caméras) à Gladys Assistant."
   },
-  "version": "1.0.1",
-  "docker_image": "ghcr.io/terdious/gladys-netatmo:1.0.1",
+  "version": "1.1.0",
+  "docker_image": "ghcr.io/terdious/gladys-netatmo:1.1.0",
   "gladys_version": ">=4.84.0",
   "cover_image": "https://raw.githubusercontent.com/Terdious/gladys-netatmo/master/cover.png",
   "webhooks": [
@@ -35,11 +35,17 @@
       "links": [
         {
           "url": "https://dev.netatmo.com/",
-          "label": { "en": "Netatmo Connect", "fr": "Netatmo Connect" }
+          "label": {
+            "en": "Netatmo Connect",
+            "fr": "Netatmo Connect"
+          }
         },
         {
           "url": "https://dev.netatmo.com/apps/",
-          "label": { "en": "Create an application", "fr": "Créer une application" }
+          "label": {
+            "en": "Create an application",
+            "fr": "Créer une application"
+          }
         }
       ]
     },
