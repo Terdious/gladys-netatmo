@@ -149,8 +149,8 @@ test('unchanged values are deduped, then re-published after the 30-minute keep-a
 test('cameras are discovered and updated when security_api is enabled (core #2621)', async () => {
   const configSecurity = normalizeConfig({ security_api: 'true' });
   gladys.devices = await telemetry.syncDiscovery(configSecurity);
-  // 7 Energy/Weather devices + 2 cameras (the NIS siren stays unsupported).
-  assert.equal(gladys.devices.length, 9);
+  // 7 Energy/Weather devices + 2 cameras + siren + door tag + smoke alarm.
+  assert.equal(gladys.devices.length, 12);
 
   await telemetry.refreshValues(configSecurity);
   // monitoring 'off'/'on' → binary, wifi_status fallback (core mapping).
@@ -183,6 +183,34 @@ test('cameras are discovered and updated when security_api is enabled (core #262
   assert.ok(
     !netatmo.state.cameraRequests.some((r) => r.camId === 'noc-1' && r.path === '/command/ping'),
   );
+});
+
+test('the camera-bridged security accessories publish their states (issue #9)', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  await telemetry.refreshValues(configSecurity);
+
+  // Door tag: status 'open' → opening 1, battery_state 'high' → 75, rf 68.
+  assert.deepEqual(stateOf('ext:netatmo:doortag-1:opening'), [1]);
+  assert.deepEqual(stateOf('ext:netatmo:doortag-1:battery_percent'), [75]);
+  assert.deepEqual(stateOf('ext:netatmo:doortag-1:rf_strength'), [68]);
+
+  // Siren: status 'no_sound' → siren 0 (idle), battery 90, rf 70.
+  assert.deepEqual(stateOf('ext:netatmo:siren-1:siren'), [0]);
+  assert.deepEqual(stateOf('ext:netatmo:siren-1:battery_percent'), [90]);
+  assert.deepEqual(stateOf('ext:netatmo:siren-1:rf_strength'), [70]);
+
+  // Smoke alarm: battery + signal pollable today (smoke state is webhook-only).
+  assert.deepEqual(stateOf('ext:netatmo:smoke-1:battery_percent'), [88]);
+  assert.deepEqual(stateOf('ext:netatmo:smoke-1:wifi_strength'), [66]);
+
+  // A door opening flows on the next cycle.
+  const doortag = netatmo.state.homeStatuses['home-1'].home.modules.find(
+    (m) => m.id === 'doortag-1',
+  );
+  doortag.status = 'closed';
+  await telemetry.refreshValues(configSecurity);
+  assert.deepEqual(stateOf('ext:netatmo:doortag-1:opening'), [1, 0]);
 });
 
 test('cameras carry a local-first CAMERA_URL and the camera_quality param (core #2625)', async () => {

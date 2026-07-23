@@ -106,6 +106,41 @@ export const UPDATE_MAPPINGS = {
         : deviceNetatmo.monitoring === 'on',
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
+  // Camera-bridged door/window tag (issue #9). Homestatus `status` is a string:
+  // "open"/"closed" (other values — "no_news"/"calibrating"/"undefined" — mean
+  // "no reliable state", skipped). Battery is a percent or the string state.
+  [SUPPORTED_MODULE_TYPE.NACAMDOORTAG]: {
+    opening: (deviceNetatmo) => {
+      if (deviceNetatmo.status === 'open') return true;
+      if (deviceNetatmo.status === 'closed') return false;
+      return undefined;
+    },
+    battery_percent: (deviceNetatmo) =>
+      deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
+    rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
+  },
+  // Camera-bridged indoor siren (issue #9), read-only for now. Homestatus
+  // `status`: "no_sound" (idle) vs a sounding state; unknown → skip.
+  [SUPPORTED_MODULE_TYPE.NIS]: {
+    siren: (deviceNetatmo) => {
+      if (deviceNetatmo.status === undefined || deviceNetatmo.status === null) return undefined;
+      if (deviceNetatmo.status === 'no_sound') return false;
+      return ['sound', 'playing', 'warning', 'alarm'].includes(deviceNetatmo.status)
+        ? true
+        : undefined;
+    },
+    battery_percent: (deviceNetatmo) =>
+      deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
+    rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
+  },
+  // Smart smoke alarm (issue #9): only battery + signal are pollable — emitted
+  // only when the homestatus payload carries them. Smoke state is webhook-driven
+  // (issue #5). Field names to confirm on a real NSD payload.
+  [SUPPORTED_MODULE_TYPE.NSD]: {
+    battery_percent: (deviceNetatmo) =>
+      deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+  },
   [SUPPORTED_MODULE_TYPE.NAMODULE4]: {
     battery_percent: (deviceNetatmo) => deviceNetatmo.battery_percent,
     temperature: (deviceNetatmo) =>

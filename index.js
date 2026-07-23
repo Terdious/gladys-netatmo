@@ -27,8 +27,9 @@ import { normalizeConfig } from './src/config.js';
 import { createNetatmoOAuth, NotConnectedError } from './src/netatmo/oauth.js';
 import { createNetatmoClient } from './src/netatmo/client.js';
 import { createTelemetry } from './src/netatmo/telemetry.js';
+import { createWebhooks } from './src/netatmo/webhooks.js';
 import { setDeviceValue } from './src/netatmo/setValue.js';
-import { CONNECTION_MESSAGES } from './src/netatmo/constants.js';
+import { CONNECTION_MESSAGES, WEBHOOK_KEY } from './src/netatmo/constants.js';
 
 /**
  * Report the application-level connection status of the integration.
@@ -76,6 +77,14 @@ export function setupIntegration(
     fetchImpl,
     ...(refreshIntervalMs ? { refreshIntervalMs } : {}),
   });
+  // Gladys Plus webhooks (issue #5): a relayed event triggers an immediate
+  // telemetry refresh (doctrine "trigger, not data"). Degrades to poll only
+  // when Gladys Plus is not linked.
+  const webhooks = createWebhooks({
+    gladys,
+    client,
+    refresh: () => telemetry.refreshValues(config),
+  });
 
   // Tokens wiped after the 24h grace window: ask the user to reconnect.
   oauth.onAuthLost(async (message) => {
@@ -117,6 +126,9 @@ export function setupIntegration(
       // Start (or restart) the global value refresh loop for the devices the
       // user created in Gladys.
       telemetry.start(config);
+      // (Re)register the webhook relay URL at Netatmo — the Netatmo pattern is
+      // to re-register on every successful connection, best effort.
+      await webhooks.register();
       logger.info('Netatmo account connected, token refresh and telemetry engines armed');
     } catch (err) {
       if (err instanceof NotConnectedError) {
@@ -200,6 +212,19 @@ export function setupIntegration(
     return telemetry.getCameraSnapshot(config, device);
   });
 
+  // --- Webhooks: a Netatmo event was relayed by Gladys Plus ------------------
+  // fire_and_forget: the resolved value is ignored — we only debounce a refresh.
+  gladys.onWebhook(WEBHOOK_KEY, async () => {
+    logger.debug('Netatmo webhook event received -> scheduling a refresh');
+    webhooks.handleEvent();
+  });
+  // The Gladys Plus availability changed (Plus linked/unlinked, key changed):
+  // re-register the fresh URL at Netatmo, or degrade to poll only.
+  gladys.onWebhookUpdated(async () => {
+    logger.info('Gladys Plus webhook availability changed -> re-registering');
+    await webhooks.register();
+  });
+
   // --- Configuration updated by the user -------------------------------------
   gladys.onConfigUpdated(async (newConfig) => {
     logger.info('onConfigUpdated -> new configuration received');
@@ -241,16 +266,17 @@ export function setupIntegration(
     logger.warn('WebSocket disconnected - the SDK will try to reconnect');
     oauth.stop();
     telemetry.stop();
+    webhooks.stop();
   });
 
-  return { oauth, client, telemetry, getConfig: () => config };
+  return { oauth, client, telemetry, webhooks, getConfig: () => config };
 }
 
 // --- Startup (container entry point only) ------------------------------------
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   const gladys = new GladysIntegration();
-  const { oauth, telemetry } = setupIntegration(gladys);
+  const { oauth, telemetry, webhooks } = setupIntegration(gladys);
 
   // The SDK disconnects cleanly and exits with code 0 when the supervisor
   // stops the container (SIGTERM/SIGINT).
@@ -258,6 +284,7 @@ if (isMain) {
     logger.info(`Received ${signal} -> graceful shutdown`);
     oauth.stop();
     telemetry.stop();
+    webhooks.stop();
   });
 
   logger.info('Starting the Netatmo integration...');

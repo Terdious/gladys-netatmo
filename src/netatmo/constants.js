@@ -21,7 +21,17 @@ export const API_PATHS = {
   GET_WEATHER_STATIONS: '/api/getstationsdata?get_favorites=false',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
   SET_STATE: '/api/setstate',
+  ADD_WEBHOOK: '/api/addwebhook',
+  DROP_WEBHOOK: '/api/dropwebhook',
 };
+
+// The manifest declares ONE webhook (`events`): Netatmo pushes every event
+// (Energy setpoint, camera movement/person, siren, smoke…) to a single URL.
+export const WEBHOOK_KEY = 'events';
+// Doctrine "trigger, not data" (SDK): a webhook event only TRIGGERS a refresh
+// through the API — events arrive duplicated/late/out of order. Debounce a
+// burst of events into one refresh.
+export const WEBHOOK_DEBOUNCE_MS = 2 * 1000;
 
 // Netatmo module types supported by the discovery (same enum as the core).
 export const SUPPORTED_MODULE_TYPE = {
@@ -35,6 +45,14 @@ export const SUPPORTED_MODULE_TYPE = {
   NAMODULE4: 'NAModule4',
   NACAMERA: 'NACamera',
   NOC: 'NOC',
+  // Camera-bridged accessories over an internal radio link (no wifi of their
+  // own): door/window tag and indoor siren.
+  NACAMDOORTAG: 'NACamDoorTag',
+  NIS: 'NIS',
+  // Smart smoke alarm. Discovered with battery + signal (published only if the
+  // homestatus payload carries them); its SMOKE state is webhook-driven and
+  // lands with the webhooks milestone (issue #5).
+  NSD: 'NSD',
 };
 
 export const SUPPORTED_CATEGORY_TYPE = {
@@ -59,7 +77,22 @@ export const WEATHER_MODULE_TYPES = [
 ];
 
 // Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621.
-export const SECURITY_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
+export const CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
+
+// Camera-bridged security accessories (radio-linked to a camera): door/window
+// tag (NACamDoorTag) and indoor siren (NIS). Net-new vs the core service — the
+// core does not handle these either (issue #9).
+export const CAMERA_BRIDGED_SECURITY_TYPES = [
+  SUPPORTED_MODULE_TYPE.NACAMDOORTAG,
+  SUPPORTED_MODULE_TYPE.NIS,
+];
+
+// Every Security-family module the discovery supports (drives getModuleCategory).
+export const SECURITY_MODULE_TYPES = [
+  ...CAMERA_MODULE_TYPES,
+  ...CAMERA_BRIDGED_SECURITY_TYPES,
+  SUPPORTED_MODULE_TYPE.NSD,
+];
 
 // Device params persisted on the Gladys device (same names as the core:
 // home_id/room_id are required by setroomthermpoint).

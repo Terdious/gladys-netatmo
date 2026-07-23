@@ -44,7 +44,17 @@ function buildDefaultHomes() {
         { id: 'valve-2', type: 'NRV', name: 'Vanne éteinte', room_id: 'room-2', bridge: 'plug-1' },
         { id: 'camera-1', type: 'NACamera', name: 'Caméra salon', room_id: 'room-1' },
         { id: 'noc-1', type: 'NOC', name: 'Caméra jardin' },
-        { id: 'siren-1', type: 'NIS', name: 'Sirène' },
+        { id: 'siren-1', type: 'NIS', name: 'Sirène', bridge: 'camera-1' },
+        {
+          id: 'doortag-1',
+          type: 'NACamDoorTag',
+          name: "Porte d'entrée",
+          room_id: 'room-1',
+          bridge: 'camera-1',
+        },
+        // Smoke alarm: discovered with battery + signal; smoke state is
+        // webhook-driven (issue #9 / #5).
+        { id: 'smoke-1', type: 'NSD', name: 'Détecteur de fumée', bridge: 'camera-1' },
       ],
     },
   ];
@@ -84,7 +94,16 @@ function buildDefaultHomeStatuses() {
           // wifi_status (not wifi_strength): exercises the ?? fallback.
           { id: 'camera-1', type: 'NACamera', monitoring: 'off', wifi_status: 55 },
           { id: 'noc-1', type: 'NOC', monitoring: 'on', wifi_strength: 72 },
-          { id: 'siren-1', type: 'NIS' },
+          // Siren idle; door tag open. battery_state string exercises the map.
+          { id: 'siren-1', type: 'NIS', status: 'no_sound', battery_percent: 90, rf_strength: 70 },
+          {
+            id: 'doortag-1',
+            type: 'NACamDoorTag',
+            status: 'open',
+            battery_state: 'high',
+            rf_strength: 68,
+          },
+          { id: 'smoke-1', type: 'NSD', battery_percent: 88, wifi_strength: 66 },
         ],
         errors: [{ code: 6, id: 'valve-2' }],
       },
@@ -168,6 +187,9 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     setpointRequests: [], // every parsed form POSTed to /api/setroomthermpoint
     setStateRequests: [], // every parsed JSON body POSTed to /api/setstate
     failSetStateWith: null, // set to {status, body} to make setstate fail
+    addWebhookRequests: [], // every parsed form POSTed to /api/addwebhook
+    dropWebhookRequests: [], // every parsed form POSTed to /api/dropwebhook
+    failAddWebhookWith: null, // set to an HTTP status to make addwebhook fail
     failStationsWith: null, // set to an HTTP status to make getstationsdata fail
     cameraRequests: [], // every hit on the fake camera endpoints ({side, camId, path})
     snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
@@ -312,6 +334,20 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
             respond(state.failSetStateWith.body, state.failSetStateWith.status);
             return;
           }
+          respond({ status: 'ok' });
+          return;
+        }
+        if (req.method === 'POST' && req.url.startsWith('/api/addwebhook')) {
+          state.addWebhookRequests.push(Object.fromEntries(new URLSearchParams(body)));
+          if (state.failAddWebhookWith) {
+            respond({ error: { code: 500, message: 'server error' } }, state.failAddWebhookWith);
+            return;
+          }
+          respond({ status: 'ok' });
+          return;
+        }
+        if (req.method === 'POST' && req.url.startsWith('/api/dropwebhook')) {
+          state.dropWebhookRequests.push(Object.fromEntries(new URLSearchParams(body)));
           respond({ status: 'ok' });
           return;
         }
