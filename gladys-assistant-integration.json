@@ -8,9 +8,31 @@
   },
   "version": "1.0.1",
   "docker_image": "ghcr.io/terdious/gladys-netatmo:1.0.1",
-  "gladys_version": ">=4.62.0",
+  "gladys_version": ">=4.84.0",
   "cover_image": "https://raw.githubusercontent.com/Terdious/gladys-netatmo/master/cover.png",
   "config_schema": [
+    {
+      "key": "section_connect",
+      "type": "section",
+      "label": {
+        "en": "Netatmo Connect application",
+        "fr": "Application Netatmo Connect"
+      },
+      "description": {
+        "en": "Gladys talks to Netatmo through YOUR own Netatmo Connect application. Create a Netatmo account, then a developer application to obtain the client id and client secret below. The scopes (read + write) are requested automatically at connection — nothing to configure on the portal. See the step-by-step in the Documentation.",
+        "fr": "Gladys communique avec Netatmo via VOTRE propre application Netatmo Connect. Créez un compte Netatmo, puis une application développeur pour obtenir l'identifiant et le secret client ci-dessous. Les scopes (lecture + écriture) sont demandés automatiquement à la connexion — rien à configurer sur le portail. Voir le pas-à-pas dans la Documentation."
+      },
+      "links": [
+        {
+          "url": "https://dev.netatmo.com/",
+          "label": { "en": "Netatmo Connect", "fr": "Netatmo Connect" }
+        },
+        {
+          "url": "https://dev.netatmo.com/apps/",
+          "label": { "en": "Create an application", "fr": "Créer une application" }
+        }
+      ]
+    },
     {
       "key": "client_id",
       "type": "string",
@@ -49,6 +71,18 @@
         "fr": "Connectez-vous avec votre compte Netatmo pour autoriser Gladys à accéder à vos appareils."
       },
       "required": true
+    },
+    {
+      "key": "section_devices",
+      "type": "section",
+      "label": {
+        "en": "Devices to discover",
+        "fr": "Appareils à découvrir"
+      },
+      "description": {
+        "en": "Choose which Netatmo device families Gladys should discover. Enabling a family and saving re-runs the discovery automatically — no manual re-scan needed. Security covers the cameras and their accessories (door/window tag, siren, smoke alarm).",
+        "fr": "Choisissez les familles d'appareils Netatmo que Gladys doit découvrir. Activer une famille et sauvegarder relance la découverte automatiquement — pas besoin de re-scanner. La Sécurité couvre les caméras et leurs accessoires (capteur porte/fenêtre, sirène, détecteur de fumée)."
+      }
     },
     {
       "key": "energy_api",
