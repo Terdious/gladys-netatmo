@@ -158,6 +158,73 @@ export function buildFeatureCamera(name, externalId) {
   });
 }
 
+// --- Momentary event features (webhook-driven, issue #5) --------------------
+// These exist only in the Netatmo event stream: no API state reports them, so
+// they are published from the webhook payload and reset after EVENT_RESET_MS.
+
+export function buildFeatureMotion(name, externalId) {
+  return feature({
+    name: `Motion - ${name}`,
+    external_id: `${externalId}:motion`,
+    selector: `${externalId}:motion`,
+    category: DEVICE_FEATURE_CATEGORIES.MOTION_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+export function buildFeatureHuman(name, externalId) {
+  return feature({
+    name: `Person detected - ${name}`,
+    external_id: `${externalId}:human`,
+    selector: `${externalId}:human`,
+    category: DEVICE_FEATURE_CATEGORIES.PRESENCE_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// Outdoor camera (NOC) only: it classifies what it sees.
+export function buildFeatureAnimal(name, externalId) {
+  return feature({
+    name: `Animal detected - ${name}`,
+    external_id: `${externalId}:animal`,
+    selector: `${externalId}:animal`,
+    category: DEVICE_FEATURE_CATEGORIES.MOTION_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+export function buildFeatureVehicle(name, externalId) {
+  return feature({
+    name: `Vehicle detected - ${name}`,
+    external_id: `${externalId}:vehicle`,
+    selector: `${externalId}:vehicle`,
+    category: DEVICE_FEATURE_CATEGORIES.MOTION_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// Smoke alarm (NSD): the smoke state is webhook-only — the homestatus payload
+// never reports it.
+export function buildFeatureSmoke(name, externalId) {
+  return feature({
+    name: `Smoke - ${name}`,
+    external_id: `${externalId}:smoke`,
+    selector: `${externalId}:smoke`,
+    category: DEVICE_FEATURE_CATEGORIES.SMOKE_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
 // Door/window tag (NACamDoorTag): open/closed contact, read from homestatus
 // `status` (issue #9). Distinct suffix from the thermostat `open_window`.
 export function buildFeatureOpeningSensor(name, externalId) {

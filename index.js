@@ -28,6 +28,7 @@ import { createNetatmoOAuth, NotConnectedError } from './src/netatmo/oauth.js';
 import { createNetatmoClient } from './src/netatmo/client.js';
 import { createTelemetry } from './src/netatmo/telemetry.js';
 import { createWebhooks } from './src/netatmo/webhooks.js';
+import { createEvents } from './src/netatmo/events.js';
 import { setDeviceValue } from './src/netatmo/setValue.js';
 import { CONNECTION_MESSAGES, WEBHOOK_KEY } from './src/netatmo/constants.js';
 
@@ -85,6 +86,9 @@ export function setupIntegration(
     client,
     refresh: () => telemetry.refreshValues(config),
   });
+  // Momentary detections (motion, person, smoke…): published as push features
+  // straight from the event payload — no API state ever reports them.
+  const events = createEvents({ gladys });
 
   // Tokens wiped after the 24h grace window: ask the user to reconnect.
   oauth.onAuthLost(async (message) => {
@@ -213,9 +217,12 @@ export function setupIntegration(
   });
 
   // --- Webhooks: a Netatmo event was relayed by Gladys Plus ------------------
-  // fire_and_forget: the resolved value is ignored — we only debounce a refresh.
-  gladys.onWebhook(WEBHOOK_KEY, async () => {
-    logger.debug('Netatmo webhook event received -> scheduling a refresh');
+  // fire_and_forget: the resolved value is ignored. Two complementary paths:
+  // momentary detections are published from the payload (they exist nowhere
+  // else), and every event debounces a refresh of the pollable state.
+  gladys.onWebhook(WEBHOOK_KEY, async (request) => {
+    logger.debug('Netatmo webhook event received');
+    await events.handleWebhook(request?.body);
     webhooks.handleEvent();
   });
   // The Gladys Plus availability changed (Plus linked/unlinked, key changed):
@@ -267,16 +274,17 @@ export function setupIntegration(
     oauth.stop();
     telemetry.stop();
     webhooks.stop();
+    events.stop();
   });
 
-  return { oauth, client, telemetry, webhooks, getConfig: () => config };
+  return { oauth, client, telemetry, webhooks, events, getConfig: () => config };
 }
 
 // --- Startup (container entry point only) ------------------------------------
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
   const gladys = new GladysIntegration();
-  const { oauth, telemetry, webhooks } = setupIntegration(gladys);
+  const { oauth, telemetry, webhooks, events } = setupIntegration(gladys);
 
   // The SDK disconnects cleanly and exits with code 0 when the supervisor
   // stops the container (SIGTERM/SIGINT).
@@ -285,6 +293,7 @@ if (isMain) {
     oauth.stop();
     telemetry.stop();
     webhooks.stop();
+    events.stop();
   });
 
   logger.info('Starting the Netatmo integration...');

@@ -129,18 +129,34 @@ Netatmo webhook registered — events will trigger an immediate refresh
 Without a key (or without Gladys Plus), the integration behaves exactly as
 before, polling every 2 minutes.
 
-### What it does today — and what it does not do yet
+### What it brings
 
-- ✅ **What it does:** _pollable_ values land almost instantly — for example a
-  thermostat setpoint changed from the Netatmo app, or a camera monitoring
-  state.
-- ❌ **What it does not do yet:** **momentary** events (motion detected, person
-  recognized, smoke detected) do **not** provide a scene trigger yet. Those are
-  instantaneous events that do not exist in the polled state: they need
-  dedicated features, planned for a next increment.
+- **Values land almost instantly** — for example a thermostat setpoint changed
+  from the Netatmo app, or a camera monitoring state.
+- **Detections you can use in your scenes** (see below).
 
-In short: webhooks currently speed up value updates; camera event triggers come
-next.
+### Real-time detections (scene triggers)
+
+Some events are **momentary**: they exist only in the event stream, no API poll
+can report them. They are published as dedicated features, usable as **scene
+triggers**:
+
+| Device                     | Feature              | Fired by                       |
+| -------------------------- | -------------------- | ------------------------------ |
+| Indoor and outdoor cameras | **Motion**           | motion detected                |
+| Indoor and outdoor cameras | **Person detected**  | a person detected / recognized |
+| Outdoor camera (Presence)  | **Animal detected**  | an animal detected             |
+| Outdoor camera (Presence)  | **Vehicle detected** | a vehicle detected             |
+| Smoke alarm                | **Smoke**            | a smoke detection              |
+
+Each detection goes to **Yes** and returns to **No** by itself after one minute
+(Netatmo sends no "detection over" event). In a scene, use the "value becomes
+Yes" trigger.
+
+> ⚠️ **If your cameras already existed in Gladys**, these new features do not
+> appear on their own: go to the **Discovery** screen and click **Update** on
+> each camera (or smoke alarm) to add them. Without webhooks configured, these
+> features simply stay at "No".
 
 ---
 
@@ -152,9 +168,9 @@ discovered too:
 - **Door / window tag** (`NACamDoorTag`) — an opening sensor (open/closed), plus
   battery and RF signal.
 - **Indoor siren** (`NIS`) — a read-only sounding sensor, plus battery and RF.
-- **Smoke alarm** (`NSD`) — discovered with its battery and signal. Its **smoke
-  state** is delivered by webhooks (real-time events), which arrive in a later
-  milestone; polling alone cannot report it.
+- **Smoke alarm** (`NSD`) — discovered with its battery and signal, plus a
+  **Smoke** feature fed by the webhooks (see the section above): polling alone
+  cannot report that state.
 
 ---
 
