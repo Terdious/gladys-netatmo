@@ -102,6 +102,48 @@ When the Security family is enabled, each camera is created with:
 
 ---
 
+## Gladys Plus webhooks (real time) — optional
+
+By default Gladys polls Netatmo **every 2 minutes**. With webhooks, Netatmo
+**tells** Gladys as soon as something happens: values are then refreshed in
+**2-3 seconds** instead of waiting for the next cycle — without increasing the
+number of Netatmo API calls.
+
+Since a local Gladys is not reachable from the Internet, **Gladys Plus** relays
+the events, so an active Gladys Plus subscription is required.
+
+### Setup (a single step)
+
+1. On the integration **Configuration** screen, find the **"Gladys Plus
+   webhooks"** block (shown automatically).
+2. Paste your Gladys Plus **Open API key** there. That's it.
+
+**Nothing to paste on the Netatmo website:** the integration registers the URL
+at Netatmo itself, and re-registers it on every reconnection. To check, open the
+integration **Logs**: you should see
+
+```
+Netatmo webhook registered — events will trigger an immediate refresh
+```
+
+Without a key (or without Gladys Plus), the integration behaves exactly as
+before, polling every 2 minutes.
+
+### What it does today — and what it does not do yet
+
+- ✅ **What it does:** _pollable_ values land almost instantly — for example a
+  thermostat setpoint changed from the Netatmo app, or a camera monitoring
+  state.
+- ❌ **What it does not do yet:** **momentary** events (motion detected, person
+  recognized, smoke detected) do **not** provide a scene trigger yet. Those are
+  instantaneous events that do not exist in the polled state: they need
+  dedicated features, planned for a next increment.
+
+In short: webhooks currently speed up value updates; camera event triggers come
+next.
+
+---
+
 ## Security accessories (camera-bridged)
 
 When the Security family is enabled, the accessories linked to your cameras are
