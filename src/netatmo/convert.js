@@ -32,6 +32,11 @@ import {
   buildFeatureOpenWindow,
   buildFeatureOpeningSensor,
   buildFeatureSiren,
+  buildFeatureMotion,
+  buildFeatureHuman,
+  buildFeatureAnimal,
+  buildFeatureVehicle,
+  buildFeatureSmoke,
   buildFeatureMonitoring,
   buildFeatureCamera,
   buildFeatureCo2,
@@ -244,17 +249,31 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       features.push(buildFeatureSiren(nameDevice, externalId));
       break;
     case SUPPORTED_MODULE_TYPE.NSD:
-      // Smoke alarm: only battery + signal are pollable today (published only
-      // if present). The smoke state arrives via webhooks (issue #5).
+      // Smoke alarm: battery + signal are pollable, the SMOKE state only
+      // exists in the webhook event stream (issue #5).
       features.push(
         buildFeatureBattery(nameDevice, externalId),
         buildFeatureWifiStrength(nameDevice, externalId),
+        buildFeatureSmoke(nameDevice, externalId),
       );
       break;
     case SUPPORTED_MODULE_TYPE.NACAMERA:
     case SUPPORTED_MODULE_TYPE.NOC: {
       features.push(buildFeatureMonitoring(nameDevice, externalId));
       features.push(buildFeatureCamera(nameDevice, externalId));
+      // Momentary detections, fed by the webhook event stream (issue #5) —
+      // this is what makes "camera detects motion -> scene" possible.
+      features.push(
+        buildFeatureMotion(nameDevice, externalId),
+        buildFeatureHuman(nameDevice, externalId),
+      );
+      if (model === SUPPORTED_MODULE_TYPE.NOC) {
+        // The outdoor Presence classifies what it sees.
+        features.push(
+          buildFeatureAnimal(nameDevice, externalId),
+          buildFeatureVehicle(nameDevice, externalId),
+        );
+      }
       // Live stream (core PR #2625): the rtsp-camera service reads CAMERA_URL.
       // The framework silently upserts the params of an already-created device
       // on every discovery re-publish, so refreshing the URL is just

@@ -136,19 +136,37 @@ Netatmo webhook registered — events will trigger an immediate refresh
 Sans clé (ou sans Gladys Plus), l'intégration fonctionne exactement comme avant,
 en interrogation toutes les 2 minutes.
 
-### Ce que ça change aujourd'hui — et ce que ça ne fait pas encore
+### Ce que ça apporte
 
-- ✅ **Ce que ça fait :** les valeurs _pollables_ remontent quasi
-  instantanément — par exemple une consigne de thermostat changée depuis
-  l'application Netatmo, ou l'état de surveillance d'une caméra.
-- ❌ **Ce que ça ne fait pas encore :** les événements **ponctuels** (mouvement
-  détecté, personne reconnue, fumée détectée) ne créent **pas encore** de
-  déclencheur utilisable dans les scènes. Ce sont des événements instantanés,
-  qui n'existent pas dans l'état interrogé : ils demandent des fonctionnalités
-  dédiées, prévues dans un prochain incrément.
+- **Les valeurs remontent quasi instantanément** — par exemple une consigne de
+  thermostat changée depuis l'application Netatmo, ou l'état de surveillance
+  d'une caméra.
+- **Des détections utilisables dans vos scènes** (voir ci-dessous).
 
-Autrement dit : les webhooks accélèrent aujourd'hui la remontée des valeurs ;
-les déclencheurs d'événements caméra arrivent ensuite.
+### Détections en temps réel (déclencheurs de scène)
+
+Certains événements sont **ponctuels** : ils n'existent que dans le flux
+d'événements, aucune interrogation de l'API ne peut les remonter. Ils sont
+publiés comme des fonctionnalités dédiées, utilisables comme **déclencheurs de
+scène** :
+
+| Appareil                        | Fonctionnalité        | Déclenchée par                   |
+| ------------------------------- | --------------------- | -------------------------------- |
+| Caméra intérieure et extérieure | **Mouvement**         | un mouvement détecté             |
+| Caméra intérieure et extérieure | **Personne détectée** | une personne détectée / reconnue |
+| Caméra extérieure (Presence)    | **Animal détecté**    | un animal détecté                |
+| Caméra extérieure (Presence)    | **Véhicule détecté**  | un véhicule détecté              |
+| Détecteur de fumée              | **Fumée**             | une détection de fumée           |
+
+Chaque détection passe à **Oui** puis revient automatiquement à **Non** au bout
+d'une minute (Netatmo n'envoie pas d'événement de « fin de détection »). Dans
+une scène, utilisez donc le déclencheur « la valeur passe à Oui ».
+
+> ⚠️ **Si vos caméras existaient déjà dans Gladys**, ces nouvelles
+> fonctionnalités n'apparaissent pas toutes seules : allez sur l'écran
+> **Découverte** et cliquez sur **Mettre à jour** sur chaque caméra (ou
+> détecteur de fumée) pour les ajouter. Sans webhooks configurés, ces
+> fonctionnalités restent simplement à « Non ».
 
 ---
 
@@ -161,9 +179,9 @@ Quand la famille Sécurité est activée, les accessoires liés à vos caméras 
   (ouvert/fermé), plus la batterie et le signal RF.
 - **Sirène intérieure** (`NIS`) — un capteur sirène en lecture seule, plus la
   batterie et le signal RF.
-- **Détecteur de fumée** (`NSD`) — découvert avec sa batterie et son signal. Son
-  **état de fumée** est délivré par les webhooks (événements temps réel), qui
-  arriveront dans un jalon ultérieur ; le polling seul ne peut pas le remonter.
+- **Détecteur de fumée** (`NSD`) — découvert avec sa batterie et son signal,
+  plus la fonctionnalité **Fumée** alimentée par les webhooks (voir la section
+  ci-dessus) : le polling seul ne peut pas remonter cet état.
 
 ---
 

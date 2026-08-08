@@ -135,7 +135,17 @@ test('converts cameras (NACamera/NOC) with wifi, writable monitoring and image',
       modules_bridged: [],
     });
     assert.equal(device.model, type);
-    assert.deepEqual(suffixesOf(device), ['wifi_strength', 'monitoring', 'camera']);
+    // Momentary detections (webhook-driven, issue #5) ride along; only the
+    // outdoor Presence classifies animals and vehicles.
+    assert.deepEqual(
+      suffixesOf(device),
+      type === 'NOC'
+        ? ['wifi_strength', 'monitoring', 'camera', 'motion', 'human', 'animal', 'vehicle']
+        : ['wifi_strength', 'monitoring', 'camera', 'motion', 'human'],
+    );
+    const motion = device.features.find((f) => f.external_id.endsWith(':motion'));
+    assert.equal(motion.category, 'motion-sensor');
+    assert.equal(motion.type, 'binary');
     const monitoring = device.features.find((f) => f.external_id.endsWith(':monitoring'));
     assert.equal(monitoring.read_only, false); // command through /api/setstate
     const camera = device.features.find((f) => f.external_id.endsWith(':camera'));

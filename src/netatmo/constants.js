@@ -33,6 +33,29 @@ export const WEBHOOK_KEY = 'events';
 // burst of events into one refresh.
 export const WEBHOOK_DEBOUNCE_MS = 2 * 1000;
 
+// MOMENTARY events (motion, person, smoke…) are the documented exception to
+// "trigger, not data": they exist ONLY in the event stream — no API state ever
+// reports them, so a refresh cannot surface them. They are published as
+// dedicated push features, which is what makes "camera detects motion → scene"
+// possible.
+//
+// Netatmo sends `push_type: "<module type>-<event>"` (e.g. "NACamera-movement",
+// "NOC-human", "NSD-smoke"). We key on the EVENT part so every module type is
+// handled by one table, and unknown events are ignored instead of guessed.
+export const EVENT_FEATURE_SUFFIXES = {
+  movement: 'motion',
+  human: 'human',
+  person: 'human',
+  animal: 'animal',
+  vehicle: 'vehicle',
+  smoke: 'smoke',
+};
+
+// A momentary event has no "cleared" counterpart in the Netatmo stream: the
+// feature is set to 1 then automatically back to 0 after this delay, like any
+// motion sensor (a stuck 1 would make a scene trigger fire once and never again).
+export const EVENT_RESET_MS = 60 * 1000;
+
 // Netatmo module types supported by the discovery (same enum as the core).
 export const SUPPORTED_MODULE_TYPE = {
   THERMOSTAT: 'NATherm1',
