@@ -108,6 +108,50 @@ Quand la famille Sécurité est activée, chaque caméra est créée avec :
 
 ---
 
+## Webhooks Gladys Plus (temps réel) — optionnel
+
+Par défaut, Gladys interroge Netatmo **toutes les 2 minutes**. Avec les
+webhooks, Netatmo **prévient** Gladys dès qu'il se passe quelque chose : les
+valeurs sont alors rafraîchies en **2-3 secondes** au lieu d'attendre le
+prochain cycle — sans augmenter le nombre d'appels à l'API Netatmo.
+
+Comme une installation Gladys locale n'est pas joignable depuis Internet, c'est
+**Gladys Plus** qui relaie les événements. Il faut donc un abonnement Gladys
+Plus actif.
+
+### Mise en place (une seule étape)
+
+1. Sur l'écran **Configuration** de l'intégration, repérez le bloc
+   **« Webhooks Gladys Plus »** (affiché automatiquement).
+2. Collez-y votre **clé Open API** Gladys Plus. C'est tout.
+
+**Vous n'avez rien à coller sur le site Netatmo :** l'intégration enregistre
+elle-même l'URL auprès de Netatmo, et la ré-enregistre à chaque reconnexion.
+Pour vérifier, ouvrez les **Journaux** de l'intégration : vous devez y voir
+
+```
+Netatmo webhook registered — events will trigger an immediate refresh
+```
+
+Sans clé (ou sans Gladys Plus), l'intégration fonctionne exactement comme avant,
+en interrogation toutes les 2 minutes.
+
+### Ce que ça change aujourd'hui — et ce que ça ne fait pas encore
+
+- ✅ **Ce que ça fait :** les valeurs _pollables_ remontent quasi
+  instantanément — par exemple une consigne de thermostat changée depuis
+  l'application Netatmo, ou l'état de surveillance d'une caméra.
+- ❌ **Ce que ça ne fait pas encore :** les événements **ponctuels** (mouvement
+  détecté, personne reconnue, fumée détectée) ne créent **pas encore** de
+  déclencheur utilisable dans les scènes. Ce sont des événements instantanés,
+  qui n'existent pas dans l'état interrogé : ils demandent des fonctionnalités
+  dédiées, prévues dans un prochain incrément.
+
+Autrement dit : les webhooks accélèrent aujourd'hui la remontée des valeurs ;
+les déclencheurs d'événements caméra arrivent ensuite.
+
+---
+
 ## Accessoires de sécurité (bridgés par caméra)
 
 Quand la famille Sécurité est activée, les accessoires liés à vos caméras sont
