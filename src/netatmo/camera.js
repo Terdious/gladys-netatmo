@@ -24,22 +24,27 @@ const PING_PATH = '/command/ping';
 const PING_TIMEOUT_MS = 5 * 1000;
 const SNAPSHOT_TIMEOUT_MS = 20 * 1000;
 
-// POST /camera/image accepts at most 150 KB (application bound, measured on
-// the FULL `image/jpg;base64,...` string) — BUT the core mounts its routes
-// behind `express.json()` whose DEFAULT body limit is 100 KB: any JSON body
-// between ~100 and 150 KB dies in the parser with a 413 before reaching the
-// camera route (seen on the real bench). Until the core raises the parser
-// limit (fix proposed on the external-integrations framework PR), the
-// budget targets the WHOLE JSON body under 100 KB: 96 KB of image string
-// leaves room for the envelope. The raw JPEG budget accounts for the
-// base64 expansion (4/3) and the prefix.
+// POST /camera/image accepts at most 150 KB (MAX_CAMERA_IMAGE_SIZE, measured
+// on the FULL `image/jpg;base64,...` string). The core used to mount the host
+// API behind the DEFAULT 100 KB `express.json()` parser, so a body between
+// ~100 and 150 KB died with a 413 before reaching the route — this shipped
+// with a 96 KB workaround. The core now parses the host API with a dedicated
+// 20 MB bound (jsonBodyMiddleware), so the application bound is the only one
+// left: the budget is back to the full 150 KB. The raw JPEG budget accounts
+// for the base64 expansion (4/3) and the prefix.
 const IMAGE_PREFIX = 'image/jpg;base64,';
-const MAX_IMAGE_STRING_SIZE = 96 * 1024;
+const MAX_IMAGE_STRING_SIZE = 150 * 1024;
 export const MAX_RAW_JPEG_SIZE = Math.floor(
   ((MAX_IMAGE_STRING_SIZE - IMAGE_PREFIX.length) * 3) / 4,
 );
 
 const REENCODE_QUALITIES = [70, 50, 30, 15];
+// Last-resort downscale factors, applied when even the lowest quality does not
+// fit (bench report: a camera whose snapshots stayed above the budget had EVERY
+// frame skipped, so the dashboard image never appeared). Shrinking the pixel
+// count is far more effective than lowering the quality further, and a smaller
+// but visible image always beats no image at all.
+const DOWNSCALE_FACTORS = [0.75, 0.5, 0.35];
 
 /**
  * Build the HLS live manifest URL of a camera. The `files/{quality}` variant
@@ -55,8 +60,35 @@ export function buildLiveUrl(baseUrl, quality) {
 }
 
 /**
- * Fit a raw JPEG buffer into the camera-store bound, re-encoding with
- * decreasing quality when needed.
+ * Downscale a decoded RGBA image by a factor, with nearest-neighbour sampling
+ * (pure JS: the container has no native image library).
+ * @param {{width: number, height: number, data: Buffer|Uint8Array}} decoded decoded image
+ * @param {number} factor scale factor in ]0, 1[
+ * @returns {{width: number, height: number, data: Buffer}} the smaller image
+ */
+function downscale(decoded, factor) {
+  const width = Math.max(1, Math.round(decoded.width * factor));
+  const height = Math.max(1, Math.round(decoded.height * factor));
+  const data = Buffer.alloc(width * height * 4);
+  for (let y = 0; y < height; y += 1) {
+    const sourceY = Math.min(decoded.height - 1, Math.floor(y / factor));
+    for (let x = 0; x < width; x += 1) {
+      const sourceX = Math.min(decoded.width - 1, Math.floor(x / factor));
+      const source = (sourceY * decoded.width + sourceX) * 4;
+      const target = (y * width + x) * 4;
+      data[target] = decoded.data[source];
+      data[target + 1] = decoded.data[source + 1];
+      data[target + 2] = decoded.data[source + 2];
+      data[target + 3] = decoded.data[source + 3];
+    }
+  }
+  return { width, height, data };
+}
+
+/**
+ * Fit a raw JPEG buffer into the camera-store bound: re-encode with decreasing
+ * quality, then downscale as a last resort so a frame is never dropped just
+ * because the camera produces heavy snapshots.
  * @param {Buffer} buffer raw JPEG bytes
  * @returns {string|null} `image/jpg;base64,...` string, or null when it cannot fit
  */
@@ -80,8 +112,19 @@ export function encodeUnderLimit(buffer) {
       return `${IMAGE_PREFIX}${Buffer.from(data).toString('base64')}`;
     }
   }
+  // Still too heavy at the lowest quality: shrink the image itself.
+  for (const factor of DOWNSCALE_FACTORS) {
+    const smaller = downscale(decoded, factor);
+    const { data } = jpeg.encode(smaller, REENCODE_QUALITIES.at(-1));
+    if (data.length <= MAX_RAW_JPEG_SIZE) {
+      logger.debug(
+        `Camera snapshot downscaled to ${smaller.width}x${smaller.height} (${buffer.length} -> ${data.length} bytes)`,
+      );
+      return `${IMAGE_PREFIX}${Buffer.from(data).toString('base64')}`;
+    }
+  }
   logger.warn(
-    `Camera snapshot still exceeds the ${Math.round(MAX_IMAGE_STRING_SIZE / 1024)} KB budget after re-encoding — skipping this frame`,
+    `Camera snapshot still exceeds the ${Math.round(MAX_IMAGE_STRING_SIZE / 1024)} KB budget after re-encoding and downscaling — skipping this frame`,
   );
   return null;
 }
