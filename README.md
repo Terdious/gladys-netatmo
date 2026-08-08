@@ -54,16 +54,19 @@ capabilities land (Home + Security cameras, webhooks, …).
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required).
 
-The webhooks land in a next milestone — see the roadmap issue.
+- **Gladys Plus webhooks**: Netatmo events are relayed to the integration and
+  trigger an immediate refresh (a setpoint change lands in ~2-3 s instead of
+  waiting for the next cycle), without shortening the poll. Degrades to poll
+  only when Gladys Plus is not linked.
 
 Two behaviours differ from the core service on purpose: modules of an
 unsupported type (or whose API toggle is off) are **not listed** in the
 discovery (the core lists them greyed-out as "not handled" — the external
 discovery screen has no such rendering yet), and an API toggle that is off
 really skips its API calls (the core treats "nothing configured" as "load
-everything"). Snapshots are bounded to a ~96 KB image string for now — the
-core host API accepts 150 KB but its JSON body parser does not (fix proposed
-upstream).
+everything"). Snapshots are bounded to the 150 KB image string the core host
+API accepts; heavy snapshots are re-encoded, then downscaled if needed, so a
+frame is never dropped.
 
 ## Installation & updates
 
@@ -119,7 +122,7 @@ never appear on the configuration form.
 │  │  ├─ updateMappings.js           # declarative suffix → value table (core PR #2619)
 │  │  ├─ deviceMapping.js            # value transforms (read/write)
 │  │  ├─ telemetry.js                # 120s refresh loop, dedup, transport badges
-│  │  ├─ camera.js                   # snapshots: local-first URL, ≤96KB pipeline
+│  │  ├─ camera.js                   # snapshots: local-first URL, ≤150KB pipeline
 │  │  └─ setValue.js                 # thermostat setpoint + camera monitoring
 │  └─ config.js                      # config defaults + normalization
 ├─ gladys-assistant-integration.json # manifest (name, config schema, image…)

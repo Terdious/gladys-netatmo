@@ -1,7 +1,8 @@
 // -----------------------------------------------------------------------------
 // Unit tests of the snapshot image pipeline: pass-through under the 150 KB
 // camera-store bound, jpeg-js re-encode above it (the container has no
-// ffmpeg), and rejection of undecodable oversized payloads.
+// ffmpeg), downscale as a last resort (a heavy camera must never have every
+// frame skipped), and rejection of undecodable oversized payloads.
 // -----------------------------------------------------------------------------
 
 import { test } from 'node:test';
@@ -25,7 +26,7 @@ test('a snapshot under the bound is published as-is', () => {
   const raw = Buffer.from('small-fake-jpeg');
   const image = encodeUnderLimit(raw);
   assert.equal(image, `image/jpg;base64,${raw.toString('base64')}`);
-  assert.ok(image.length <= 96 * 1024);
+  assert.ok(image.length <= 150 * 1024);
 });
 
 test('an oversized snapshot is re-encoded under the bound (no ffmpeg in the container)', () => {
@@ -37,7 +38,31 @@ test('an oversized snapshot is re-encoded under the bound (no ffmpeg in the cont
   const image = encodeUnderLimit(oversized);
   assert.ok(image, 're-encode must produce an image');
   assert.match(image, /^image\/jpg;base64,/);
-  assert.ok(image.length <= 96 * 1024);
+  assert.ok(image.length <= 150 * 1024);
+});
+
+test('a snapshot too heavy even at the lowest quality is downscaled, never skipped', () => {
+  // Bench report: a camera whose snapshots stayed above the budget had EVERY
+  // frame skipped, so the dashboard image never appeared. Full-HD pseudo-noise
+  // does not fit at quality 15 either — the downscale ladder must save it.
+  const huge = noiseJpeg(1920, 1080, 100);
+  const lowestQuality = Buffer.from(
+    jpeg.encode(jpeg.decode(huge, { maxMemoryUsageInMB: 128 }), 15).data,
+  );
+  assert.ok(
+    lowestQuality.length > MAX_RAW_JPEG_SIZE,
+    `fixture must still exceed the bound at quality 15 (${lowestQuality.length})`,
+  );
+
+  const image = encodeUnderLimit(huge);
+  assert.ok(image, 'the frame must be published, not skipped');
+  assert.match(image, /^image\/jpg;base64,/);
+  assert.ok(image.length <= 150 * 1024);
+  // And it is still a decodable JPEG, just smaller.
+  const decoded = jpeg.decode(Buffer.from(image.replace('image/jpg;base64,', ''), 'base64'), {
+    maxMemoryUsageInMB: 128,
+  });
+  assert.ok(decoded.width < 1920 && decoded.width > 0);
 });
 
 test('an oversized non-JPEG payload is dropped instead of crashing', () => {
