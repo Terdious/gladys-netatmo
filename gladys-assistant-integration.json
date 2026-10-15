@@ -20,6 +20,7 @@
       "mode": "fire_and_forget"
     }
   ],
+  "transports": ["cloud"],
   "config_schema": [
     {
       "key": "section_connect",
