@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 import { DEFAULT_CONFIG } from '../src/config.js';
-import { WEBHOOK_KEY } from '../src/netatmo/constants.js';
+import { WEBHOOK_KEY, CONNECTION_MESSAGES } from '../src/netatmo/constants.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -38,6 +38,25 @@ const CATALOG_CATEGORIES = [
 // validator refuses a manifest whose `gladys_version` minimum is lower than
 // the first release accepting every field it declares.
 const CATEGORIES_MIN_GLADYS_VERSION = [4, 86, 0];
+// The languages of the Gladys interface: every text the user reads ships in
+// all of them (Gladys falls back to English for a missing one).
+const GLADYS_LANGUAGES = ['en', 'fr', 'de', 'es'];
+
+/** Every multi-language text object ({ en, fr, ... }) of a manifest subtree. */
+function multiLanguageTexts(node, path = 'manifest') {
+  if (Array.isArray(node)) {
+    return node.flatMap((child, index) => multiLanguageTexts(child, `${path}[${index}]`));
+  }
+  if (node === null || typeof node !== 'object') {
+    return [];
+  }
+  if (typeof node.en === 'string') {
+    return [{ path, text: node }];
+  }
+  return Object.entries(node).flatMap(([key, child]) =>
+    multiLanguageTexts(child, `${path}.${key}`),
+  );
+}
 
 /** Minimum version of the manifest `gladys_version` range, e.g. [4, 86, 0]. */
 function minGladysVersion() {
@@ -117,4 +136,21 @@ test('the declared webhook is the one the code handles', () => {
     (manifest.webhooks ?? []).map((webhook) => webhook.key),
     [WEBHOOK_KEY],
   );
+});
+
+test('every manifest text ships in every Gladys language', () => {
+  const texts = multiLanguageTexts(manifest);
+  assert.ok(texts.length > 0);
+  for (const { path, text } of texts) {
+    assert.deepEqual(Object.keys(text).sort(), [...GLADYS_LANGUAGES].sort(), `${path} languages`);
+    for (const language of GLADYS_LANGUAGES) {
+      assert.ok(text[language].trim().length > 0, `${path}.${language} is empty`);
+    }
+  }
+});
+
+test('every connection status message ships in every Gladys language', () => {
+  for (const [key, message] of Object.entries(CONNECTION_MESSAGES)) {
+    assert.deepEqual(Object.keys(message).sort(), [...GLADYS_LANGUAGES].sort(), `${key} languages`);
+  }
 });

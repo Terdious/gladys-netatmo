@@ -47,12 +47,12 @@ Sur l'écran **Configuration** de l'intégration :
 
 1. Collez votre **client id** et votre **client secret**.
 2. Cliquez sur **Enregistrer**.
-3. Cliquez sur **Se connecter** : une fenêtre Netatmo s'ouvre, connectez-vous et
+3. Cliquez sur **Connecter** : une fenêtre Netatmo s'ouvre, connectez-vous et
    autorisez Gladys. Vous êtes redirigé et le statut passe à **Connecté**.
 
 > **Astuce :** **Enregistrez** toujours le client id / secret _avant_ de cliquer
-> sur Se connecter. Si la connexion indique qu'il faut d'abord sauvegarder les
-> identifiants, enregistrez le formulaire et recliquez sur Se connecter.
+> sur Connecter. Si la connexion indique qu'il faut d'abord sauvegarder les
+> identifiants, enregistrez le formulaire et recliquez sur Connecter.
 
 Les jetons d'accès et de rafraîchissement sont stockés par l'intégration
 elle-même et n'apparaissent jamais dans le formulaire. Gladys les rafraîchit
@@ -207,8 +207,8 @@ donc pas repris — recréez les appareils depuis l'écran Découverte.
 ## Dépannage
 
 - **« Enregistrez d'abord » à la connexion :** enregistrez le client id /
-  secret, puis recliquez sur Se connecter.
-- **Session expirée :** recliquez sur Se connecter pour réautoriser votre compte
+  secret, puis recliquez sur Connecter.
+- **Session expirée :** recliquez sur Connecter pour réautoriser votre compte
   Netatmo.
 - **Un appareil affiche un badge « injoignable » :** Netatmo le signale hors
   ligne (batterie morte, éteint, hors de portée). Gladys cesse de publier ses

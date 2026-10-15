@@ -213,21 +213,31 @@ export const CONNECTION_MESSAGES = {
   MISSING_CLIENT_CONFIG: {
     en: 'Netatmo client id and client secret are not configured yet.',
     fr: "L'identifiant et le secret client Netatmo ne sont pas encore configurés.",
+    de: 'Client-ID und Client-Secret von Netatmo sind noch nicht konfiguriert.',
+    es: 'El ID de cliente y el secreto de cliente de Netatmo aún no están configurados.',
   },
   SAVE_CREDENTIALS_FIRST: {
     en: 'Fill in AND SAVE the Netatmo client id / client secret, then click Connect again.',
-    fr: "Renseignez ET SAUVEGARDEZ l'identifiant / secret client Netatmo, puis cliquez à nouveau sur Se connecter.",
+    fr: "Renseignez ET SAUVEGARDEZ l'identifiant / secret client Netatmo, puis cliquez à nouveau sur Connecter.",
+    de: 'Trage die Netatmo-Client-ID / das Client-Secret ein UND SPEICHERE sie, dann klicke erneut auf Verbinden.',
+    es: 'Introduzca Y GUARDE el ID / secreto de cliente de Netatmo y luego vuelva a hacer clic en Conectar.',
   },
   NOT_CONNECTED: {
     en: 'Netatmo account is not connected yet — use the Connect button.',
-    fr: "Le compte Netatmo n'est pas encore connecté — utilisez le bouton Se connecter.",
+    fr: "Le compte Netatmo n'est pas encore connecté — utilisez le bouton Connecter.",
+    de: 'Das Netatmo-Konto ist noch nicht verbunden — nutze die Schaltfläche Verbinden.',
+    es: 'La cuenta Netatmo aún no está conectada — use el botón Conectar.',
   },
   RECONNECT_REQUIRED: {
     en: 'Netatmo session expired, please reconnect your Netatmo account.',
     fr: 'La session Netatmo a expiré, veuillez reconnecter votre compte Netatmo.',
+    de: 'Die Netatmo-Sitzung ist abgelaufen, bitte verbinde dein Netatmo-Konto erneut.',
+    es: 'La sesión de Netatmo ha caducado, vuelva a conectar su cuenta Netatmo.',
   },
   NETATMO_UNREACHABLE: {
     en: 'Netatmo cloud is unreachable, retrying automatically.',
     fr: 'Le cloud Netatmo est injoignable, nouvelle tentative automatique.',
+    de: 'Die Netatmo-Cloud ist nicht erreichbar, neuer Versuch erfolgt automatisch.',
+    es: 'La nube de Netatmo no está disponible, se reintentará automáticamente.',
   },
 };
