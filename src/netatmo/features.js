@@ -90,6 +90,8 @@ export function buildFeatureThermSetpointTemperature(name, externalId, { writabl
     read_only: !writable,
     min: 5,
     max: 30,
+    // Netatmo setpoints move by half degrees (Gladys 4.86+ reads `step`).
+    step: 0.5,
   });
 }
 

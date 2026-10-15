@@ -70,22 +70,26 @@ frame is never dropped.
 
 ## Installation & updates
 
-The integration is installed from its **manifest**
-(`gladys-assistant-integration.json`), pasted into Gladys under
-**Integrations → Install an integration → Developer mode**. The released image
-is published to `ghcr.io/terdious/gladys-netatmo:latest` (and `:<version>`);
-the manifest below already points its `docker_image` at it — copy it as-is:
+Requires **Gladys Assistant 4.86.0 or later** (`gladys_version` in the
+manifest).
 
-```jsonc
-// see gladys-assistant-integration.json in this repo (docker_image -> :latest)
-```
+The integration is listed in the Gladys integration catalog (categories
+_Climate_, _Security_ and _Environment_): open
+**Integrations**, search for "Netatmo" and install it. Every release publishes
+the multi-arch image `ghcr.io/terdious/gladys-netatmo:<version>` (and
+`:latest`) and its GitHub Release, whose notes are the matching section of
+[`CHANGELOG.md`](CHANGELOG.md).
 
-> **Updating.** The **"Force update"** button in the Supervision box only pulls
-> a new **Docker image (the runtime)**. The **version shown** and the
-> **configuration fields** (`config_schema`, e.g. the `camera_quality` select)
-> are rendered from the **manifest pasted at install time** and do **not**
-> refresh with the image. To pick up new configuration fields or the correct
-> version after an update, **re-paste the manifest** in Developer mode.
+To test a development build, paste the manifest
+(`gladys-assistant-integration.json`) under **Integrations → Install an
+integration → Developer mode**: the summary of a manual run of the **Build and
+publish image** workflow prints the manifest already pointing at that build.
+
+> **Developer mode updates.** The **"Force update"** button in the Supervision
+> box only pulls a new **Docker image (the runtime)**. The **version shown**
+> and the **configuration fields** (`config_schema`) are rendered from the
+> **manifest pasted at install time** and do **not** refresh with the image:
+> re-paste the manifest to pick them up.
 
 ## Configuration
 
@@ -132,12 +136,22 @@ never appear on the configuration form.
 
 ## Development
 
+Node.js 22 or later.
+
 ```bash
 npm install
 npm run format:check   # Prettier
 npm run lint           # ESLint
-npm test               # unit + e2e (node --test)
+npm test               # unit + e2e + manifest + release helpers (node --test)
+npx github:GladysAssistant/integration-store .   # store admission rules
 ```
+
+Describe each change under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md).
+A release is cut from **Actions → Release → Run workflow** (patch / minor /
+major): it bumps `package.json` and the manifest (`version` + `docker_image`,
+Prettier layout kept), rolls the changelog, tags `vX.Y.Z`, publishes the
+image and the GitHub Release. Dependabot keeps the SDK and the GitHub Actions
+up to date.
 
 The e2e test runs the real SDK client against a fake Gladys core and a fake
 Netatmo cloud — no account or hardware needed.

@@ -12,6 +12,12 @@ the notes of the version's GitHub Release.
 
 ### Added
 
+- Catalog categories (Gladys 4.86+): the integration sits on the _Climate_,
+  _Security_ and _Environment_ shelves of the integration catalog.
+- The thermostat and valve setpoints declare their half-degree `step`.
+- Manifest tests: `version` matches `package.json`, `docker_image` is tagged
+  with it, categories are known and coupled to Gladys 4.86, descriptions hold
+  10 to 100 characters, config defaults match the code.
 - `CHANGELOG.md`, rolled by the Release workflow.
 - A GitHub Release for every version, with its changelog section as notes: the
   Gladys Supervision page links each version to the repository's releases.
@@ -21,6 +27,8 @@ the notes of the version's GitHub Release.
 
 ### Changed
 
+- Gladys Assistant 4.86.0 or later is required: older releases reject the
+  `categories` field (and 4.83.0 had no external integrations at all).
 - Integration SDK 0.15.0.
 - Node.js 22 or later is required (Node 20 is end-of-life).
 - The Release workflow rewrites the manifest `version` and `docker_image` in

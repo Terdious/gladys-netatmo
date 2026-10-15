@@ -15,7 +15,7 @@ découvre vos appareils puis maintient leurs valeurs à jour.
 - Un **compte Netatmo**, avec vos appareils déjà installés et fonctionnels dans
   l'application Netatmo (Gladys lit ce que Netatmo expose — un appareil doit
   d'abord être en ligne dans Netatmo).
-- Une instance Gladys Assistant compatible avec les intégrations externes.
+- Gladys Assistant **4.86 ou plus récent**.
 
 ---
 
