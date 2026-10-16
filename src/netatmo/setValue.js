@@ -1,19 +1,30 @@
 // -----------------------------------------------------------------------------
 // User command → Netatmo (port of the core netatmo.setValue.js).
 //
-// Two writable features:
+// Writable features:
 //   - thermostat setpoint: POST /api/setroomthermpoint with the device's
 //     home_id/room_id params and mode `manual`;
 //   - camera monitoring: POST /api/setstate (JSON) with the home_id param and
-//     the camera module id — no room required (core PR #2623).
+//     the camera module id — no room required (core PR #2623);
+//   - roller shutter state / position (issue #34): POST /api/setstate with a
+//     target_position (100 open, 0 closed, -1 stop, or a percentage) and the
+//     iDiamant bridge id (plug_id param), then one delayed refresh so the
+//     new position lands without waiting for the next cycle.
 // A 403 with the Netatmo error code 13 means the token lacks the write scope
 // — surfaced as a clear "reconnect" message.
 // -----------------------------------------------------------------------------
 
-import { DEVICE_FEATURE_CATEGORIES } from '@gladysassistant/integration-sdk';
+import { createLogger, DEVICE_FEATURE_CATEGORIES } from '@gladysassistant/integration-sdk';
 
-import { PARAMS, SUPPORTED_MODULE_TYPE } from './constants.js';
+import {
+  PARAMS,
+  SUPPORTED_MODULE_TYPE,
+  SHUTTER_MODULE_TYPES,
+  CONNECTION_MESSAGES,
+} from './constants.js';
 import { writeValues } from './deviceMapping.js';
+
+const logger = createLogger({ name: 'netatmo-setvalue' });
 
 const CAMERA_MODELS = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
 
@@ -22,8 +33,12 @@ export function getDeviceParam(device, name) {
   return (device.params ?? []).find((param) => param.name === name)?.value;
 }
 
+function isScopeError(err) {
+  return err.status === 403 && err.body?.error?.code === 13;
+}
+
 function rethrowScopeError(err) {
-  if (err.status === 403 && err.body?.error?.code === 13) {
+  if (isScopeError(err)) {
     // Core behaviour: scope-rights failure gets its own actionable message.
     throw new Error(
       'Netatmo rejected the command (missing scope rights) — please reconnect your Netatmo account',
@@ -34,17 +49,41 @@ function rethrowScopeError(err) {
 }
 
 /**
+ * Shutter scope refusal: the token predates the Bubendorff scopes. Besides
+ * the failed command, say it on the Configuration screen (in the user's
+ * language) — the account stays connected for every other device.
+ */
+async function rethrowShutterScopeError(gladys, err) {
+  if (!isScopeError(err)) {
+    throw err;
+  }
+  try {
+    await gladys.setConnectionStatus(true, CONNECTION_MESSAGES.SHUTTER_SCOPE_MISSING);
+  } catch (statusErr) {
+    logger.debug(`setConnectionStatus skipped (older Gladys core?): ${statusErr.message}`);
+  }
+  throw new Error(CONNECTION_MESSAGES.SHUTTER_SCOPE_MISSING.en, { cause: err });
+}
+
+/**
  * Apply a user command on a Netatmo device.
- * @param {object} deps `{gladys, client}` SDK instance + Netatmo API client
+ * @param {object} deps `{gladys, client, scheduleRefresh?}` SDK instance,
+ * Netatmo API client, and the delayed refresh to arm after a shutter command
  * @param {object} command `{device, feature, value}` from the SDK
  * @returns {Promise<void>} resolves when Netatmo acknowledged the command
  */
-export async function setDeviceValue({ gladys, client }, { device, feature, value }) {
+export async function setDeviceValue(
+  { gladys, client, scheduleRefresh },
+  { device, feature, value },
+) {
   const transform = writeValues[feature.category]?.[feature.type];
   const isCameraMonitoring =
     CAMERA_MODELS.includes(device.model) && feature.external_id.endsWith(':monitoring');
   const isThermostatSetpoint = feature.category === DEVICE_FEATURE_CATEGORIES.THERMOSTAT;
-  if (!transform || (!isCameraMonitoring && !isThermostatSetpoint)) {
+  const isShutter =
+    SHUTTER_MODULE_TYPES.includes(device.model) &&
+    feature.category === DEVICE_FEATURE_CATEGORIES.SHUTTER;
+  if (!transform || (!isCameraMonitoring && !isThermostatSetpoint && !isShutter)) {
     // Every other feature (boiler status, open window...) is read-only: a
     // command reaching it is a routing error, never something to forward.
     throw new Error(`Feature ${feature.external_id} is not writable`);
@@ -52,6 +91,29 @@ export async function setDeviceValue({ gladys, client }, { device, feature, valu
   const homeId = getDeviceParam(device, PARAMS.HOME_ID);
   if (!homeId) {
     throw new Error(`Missing ${PARAMS.HOME_ID} param on ${device.external_id}`);
+  }
+
+  // Roller shutter: setstate on the module, routed through its iDiamant
+  // bridge (mandatory in the module entry, like pyatmo).
+  if (isShutter) {
+    const bridgeId = getDeviceParam(device, PARAMS.PLUG_ID);
+    if (!bridgeId) {
+      throw new Error(`Missing ${PARAMS.PLUG_ID} param on ${device.external_id}`);
+    }
+    const targetPosition = transform(value);
+    const moduleId = device.external_id.replace(gladys.externalId(''), '');
+    try {
+      await client.setState({
+        homeId,
+        moduleId,
+        target_position: targetPosition,
+        bridge: bridgeId,
+      });
+    } catch (err) {
+      await rethrowShutterScopeError(gladys, err);
+    }
+    scheduleRefresh?.();
+    return;
   }
 
   // Camera monitoring: setstate on the module itself, no room involved.

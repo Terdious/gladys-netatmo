@@ -207,7 +207,10 @@ export function setupIntegration(
   // --- Command: the user acts on a controllable feature ----------------------
   gladys.onSetValue(async (device, feature, value) => {
     logger.info(`onSetValue <- ${feature.external_id} = ${value}`);
-    await setDeviceValue({ gladys, client }, { device, feature, value });
+    await setDeviceValue(
+      { gladys, client, scheduleRefresh: () => telemetry.scheduleRefresh(config) },
+      { device, feature, value },
+    );
   });
 
   // --- Camera: Gladys asks for a fresh snapshot ------------------------------
@@ -244,7 +247,8 @@ export function setupIntegration(
     const togglesChanged =
       previous.energy_api !== config.energy_api ||
       previous.weather_api !== config.weather_api ||
-      previous.security_api !== config.security_api;
+      previous.security_api !== config.security_api ||
+      previous.shutter_api !== config.shutter_api;
     if (togglesChanged) {
       telemetry.resetDedup();
     }

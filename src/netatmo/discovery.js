@@ -25,6 +25,7 @@ import {
   ENERGY_MODULE_TYPES,
   WEATHER_MODULE_TYPES,
   SECURITY_MODULE_TYPES,
+  SHUTTER_MODULE_TYPES,
   HOMES_CONCURRENCY,
 } from './constants.js';
 
@@ -62,6 +63,13 @@ export function getModuleCategory(model, config) {
       moduleSupported: true,
       categoryAPI: SUPPORTED_CATEGORY_TYPE.SECURITY,
       apiNotConfigured: !config.security_api,
+    };
+  }
+  if (SHUTTER_MODULE_TYPES.includes(model)) {
+    return {
+      moduleSupported: true,
+      categoryAPI: SUPPORTED_CATEGORY_TYPE.SHUTTER,
+      apiNotConfigured: !config.shutter_api,
     };
   }
   return {
@@ -233,13 +241,13 @@ export async function loadAccount(client, config) {
   let listDevices = [];
   let partial = false;
 
-  // Cameras ride in the same homesdata/homestatus payloads as the Energy
-  // modules (no dedicated API call), so the topology load also runs when only
-  // the Security API is enabled. NOTE — divergence from the core `loadDevices`
+  // Cameras and roller shutters ride in the same homesdata/homestatus
+  // payloads as the Energy modules (no dedicated API call), so the topology
+  // load also runs when only the Security or the shutter API is enabled. NOTE — divergence from the core `loadDevices`
   // gating, on purpose: the core treats "no API configured at all" as "load
   // everything" (its variables may simply be unset); the manifest toggles are
   // always defined with sensible defaults, so here OFF means OFF.
-  if (config.energy_api || config.security_api) {
+  if (config.energy_api || config.security_api || config.shutter_api) {
     try {
       const homes = await client.getHomesData();
       const results = await mapWithConcurrency(homes, HOMES_CONCURRENCY, async (home) =>

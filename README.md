@@ -51,6 +51,11 @@ capabilities land (Home + Security cameras, webhooks, …).
   smoke alarm (`NSD`) is discovered with battery + signal — its smoke state is
   webhook-driven and lands with the webhooks milestone. Net-new vs the core
   service.
+- **Roller shutters** (opt-in via the `shutter_api` toggle): Bubendorff
+  shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`) with open / close /
+  stop, a writable position and RF quality (`/api/setstate` through the
+  gateway; new `read_bubendorff` / `write_bubendorff` scopes — existing users
+  reconnect once).
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required).
 

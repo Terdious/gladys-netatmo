@@ -21,6 +21,8 @@ import {
   FAKE_CLIENT_ID,
   FAKE_CLIENT_SECRET,
   FAKE_AUTH_CODE,
+  addShutterFixtures,
+  SHUTTER_BRIDGE_ID,
 } from './helpers/fakeNetatmo.js';
 
 const { EXTERNAL_INTEGRATION } = WEBSOCKET_MESSAGE_TYPES;
@@ -205,4 +207,36 @@ test('saving the configuration re-runs the discovery automatically', async () =>
   assert.equal(republished.length, 12);
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:camera-1'));
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:doortag-1'));
+});
+
+test('enabling the roller shutters surfaces them, and a command reaches setstate', async () => {
+  addShutterFixtures(netatmo.state);
+  core.send(EXTERNAL_INTEGRATION.CONFIG_UPDATED, {
+    config: {
+      ...core.state.config,
+      client_id: FAKE_CLIENT_ID,
+      client_secret: FAKE_CLIENT_SECRET,
+      security_api: 'true',
+      shutter_api: 'true',
+    },
+  });
+  // Wait for THE publish carrying the shutters: a refresh cycle of the
+  // previous configuration may still re-publish the discovery meanwhile.
+  const shutter = await waitFor(() =>
+    core.state.discovered.at(-1)?.find((device) => device.external_id === 'ext:netatmo:0009999992'),
+  );
+  const state = shutter.features.find((f) => f.external_id.endsWith(':state'));
+
+  const result = await sendAndWaitResult(EXTERNAL_INTEGRATION.DEVICE_SET_VALUE, {
+    device: shutter,
+    device_feature: state,
+    value: 1,
+  });
+  assert.equal(result.success, true);
+  assert.deepEqual(netatmo.state.setStateRequests.at(-1), {
+    home: {
+      id: 'home-1',
+      modules: [{ id: '0009999992', target_position: 100, bridge: SHUTTER_BRIDGE_ID }],
+    },
+  });
 });
