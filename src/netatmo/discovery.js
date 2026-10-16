@@ -231,17 +231,36 @@ export async function loadWeatherStationDetails(client, config) {
 /**
  * Summary of one homesdata home for the features that are not device states
  * (issue #39 scene triggers and actions, issue #40 widgets): its name, its
- * known persons (face recognition, homesdata `persons`), its modules and its
- * heating mode — live from homestatus through the home's devices, homesdata
+ * known persons (face recognition, homesdata `persons`), its modules, its
+ * heated rooms and its heating mode — live from homestatus through the home's devices, homesdata
  * snapshot otherwise.
  * @param {object} homeData one entry of the homesdata `homes` array
  * @param {Array} devices raw devices loaded for this home
  * @returns {{id: string, name: string, persons: Array<{id: string, pseudo: string}>,
- *   modules: Array<{id: string, name: string, type: string}>, therm_mode: string|undefined,
- *   therm_mode_endtime: number|undefined}} the home summary
+ *   modules: Array<{id: string, name: string, type: string}>, rooms: Array<object>,
+ *   therm_mode: string|undefined, therm_mode_endtime: number|undefined}} the home summary
  */
 export function summarizeHome(homeData, devices = []) {
   const withMode = devices.find((device) => device.therm_mode !== undefined);
+  // Heated rooms (issue #40 heating widget): the rooms of the thermostats and
+  // valves, with their live homestatus values, once per room.
+  const rooms = new Map();
+  for (const device of devices) {
+    const room = device.room ?? {};
+    const heated = [SUPPORTED_MODULE_TYPE.THERMOSTAT, SUPPORTED_MODULE_TYPE.NRV].includes(
+      device.type,
+    );
+    if (heated && room.id && !rooms.has(room.id)) {
+      rooms.set(room.id, {
+        id: room.id,
+        name: room.name || room.id,
+        therm_measured_temperature: room.therm_measured_temperature,
+        therm_setpoint_temperature: room.therm_setpoint_temperature,
+        heating_power_request: room.heating_power_request,
+        open_window: room.open_window,
+      });
+    }
+  }
   return {
     id: homeData.id,
     name: homeData.name || homeData.id,
@@ -253,6 +272,7 @@ export function summarizeHome(homeData, devices = []) {
       name: module.name,
       type: module.type,
     })),
+    rooms: [...rooms.values()],
     therm_mode: withMode ? withMode.therm_mode : homeData.therm_mode,
     therm_mode_endtime: withMode ? withMode.therm_mode_endtime : homeData.therm_mode_endtime,
   };

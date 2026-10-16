@@ -38,6 +38,9 @@ capabilities land (Home + Security cameras, webhooks, …).
   person, camera and home names; "change the heating mode" (optional
   duration) and "mark a person as away / at home" (`setpersonsaway` /
   `setpersonshome`).
+- **Dashboard widgets** (Gladys 5.1+): Netatmo weather (live tiles + module
+  health), Netatmo heating (rooms, mode, mode buttons) and Netatmo cameras
+  (latest picture served by the integration, monitoring toggle).
 - **Cameras** (opt-in via the `security_api` toggle, like the core): indoor
   `NACamera` and outdoor `NOC` cameras are discovered from the same
   homesdata/homestatus payloads, with WiFi quality, a **writable monitoring
@@ -152,6 +155,7 @@ never appear on the configuration form.
 │  │  ├─ telemetry.js                # 120s refresh loop, dedup, transport badges
 │  │  ├─ camera.js                   # snapshots: local-first URL, ≤150KB pipeline
 │  │  ├─ scenes.js                   # scene actions (heating mode, persons)
+│  │  ├─ widgets.js                  # dashboard widgets (weather, heating, cameras)
 │  │  └─ setValue.js                 # setpoint, heating mode, camera monitoring
 │  └─ config.js                      # config defaults + normalization
 ├─ gladys-assistant-integration.json # manifest (name, config schema, image…)

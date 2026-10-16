@@ -481,6 +481,155 @@
       ]
     }
   ],
+  "widgets": [
+    {
+      "key": "netatmo_weather",
+      "label": {
+        "en": "Netatmo weather",
+        "fr": "Météo Netatmo",
+        "de": "Netatmo-Wetter",
+        "es": "Tiempo Netatmo"
+      },
+      "description": {
+        "en": "Live readings of your weather station and the health of its modules.",
+        "fr": "Les mesures en direct de votre station météo et l'état de ses modules.",
+        "de": "Live-Messwerte deiner Wetterstation und der Zustand ihrer Module.",
+        "es": "Las mediciones en directo de su estación meteorológica y el estado de sus módulos."
+      },
+      "icon": "cloud-drizzle",
+      "settings": [
+        {
+          "key": "station",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Weather station",
+            "fr": "Station météo",
+            "de": "Wetterstation",
+            "es": "Estación meteorológica"
+          },
+          "description": {
+            "en": "Leave empty to show your first station.",
+            "fr": "Laissez vide pour afficher votre première station.",
+            "de": "Leer lassen, um deine erste Station anzuzeigen.",
+            "es": "Déjela vacía para mostrar su primera estación."
+          }
+        },
+        {
+          "key": "view",
+          "type": "select",
+          "default": "overview",
+          "label": {
+            "en": "Readings shown",
+            "fr": "Mesures affichées",
+            "de": "Angezeigte Messwerte",
+            "es": "Mediciones mostradas"
+          },
+          "options": [
+            {
+              "value": "overview",
+              "label": {
+                "en": "Overview",
+                "fr": "Vue d'ensemble",
+                "de": "Übersicht",
+                "es": "Resumen"
+              }
+            },
+            {
+              "value": "indoor",
+              "label": {
+                "en": "Indoor",
+                "fr": "Intérieur",
+                "de": "Innen",
+                "es": "Interior"
+              }
+            },
+            {
+              "value": "outdoor",
+              "label": {
+                "en": "Outdoor, rain and wind",
+                "fr": "Extérieur, pluie et vent",
+                "de": "Außen, Regen und Wind",
+                "es": "Exterior, lluvia y viento"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "netatmo_heating",
+      "label": {
+        "en": "Netatmo heating",
+        "fr": "Chauffage Netatmo",
+        "de": "Netatmo-Heizung",
+        "es": "Calefacción Netatmo"
+      },
+      "description": {
+        "en": "Room temperatures and setpoints, and the heating mode of the home.",
+        "fr": "Températures et consignes des pièces, et le mode du chauffage de la maison.",
+        "de": "Raumtemperaturen und Sollwerte sowie der Heizmodus des Zuhauses.",
+        "es": "Temperaturas y consignas de las habitaciones, y el modo de calefacción de la casa."
+      },
+      "icon": "thermometer",
+      "settings": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Thermostat or valve",
+            "fr": "Thermostat ou vanne",
+            "de": "Thermostat oder Ventil",
+            "es": "Termostato o válvula"
+          },
+          "description": {
+            "en": "Any thermostat or valve of the home. Leave empty if your account has a single home.",
+            "fr": "N'importe quel thermostat ou vanne de la maison. Laissez vide si votre compte n'a qu'une maison.",
+            "de": "Ein beliebiges Thermostat oder Ventil des Zuhauses. Leer lassen, wenn dein Konto nur ein Zuhause hat.",
+            "es": "Cualquier termostato o válvula de la casa. Déjelo vacío si su cuenta tiene una sola casa."
+          }
+        }
+      ],
+      "action_timeout_seconds": 30
+    },
+    {
+      "key": "netatmo_cameras",
+      "label": {
+        "en": "Netatmo cameras",
+        "fr": "Caméras Netatmo",
+        "de": "Netatmo-Kameras",
+        "es": "Cámaras Netatmo"
+      },
+      "description": {
+        "en": "The latest picture of your cameras and their monitoring.",
+        "fr": "La dernière image de vos caméras et leur surveillance.",
+        "de": "Das letzte Bild deiner Kameras und ihre Überwachung.",
+        "es": "La última imagen de sus cámaras y su vigilancia."
+      },
+      "icon": "camera",
+      "settings": [
+        {
+          "key": "camera",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          },
+          "description": {
+            "en": "Leave empty to list every camera.",
+            "fr": "Laissez vide pour lister toutes les caméras.",
+            "de": "Leer lassen, um alle Kameras aufzulisten.",
+            "es": "Déjela vacía para listar todas las cámaras."
+          }
+        }
+      ],
+      "action_timeout_seconds": 30
+    }
+  ],
   "transports": ["cloud"],
   "config_schema": [
     {

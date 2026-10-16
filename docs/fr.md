@@ -271,6 +271,26 @@ l'information **Personne**. Chaque action renvoie le nom de la **Maison** aux
 
 ---
 
+## Widgets de tableau de bord
+
+Trois widgets rejoignent le choix des widgets du tableau de bord (Gladys **5.1**
+ou plus récent) : **Éditer le tableau de bord**, ajoutez un widget et cherchez «
+Netatmo ».
+
+| Widget                | Affiche                                                                                                                                                           | Réglages                                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Météo Netatmo**     | les tuiles en direct de la station (températures, humidité, CO2, bruit, pression, pluie, vent) et une ligne d'état par module à la batterie faible ou injoignable | la station (vide : la première) et les mesures affichées : Vue d'ensemble, Intérieur, ou Extérieur, pluie et vent |
+| **Chauffage Netatmo** | le mode du chauffage de la maison, une ligne par pièce (température mesurée → consigne) et les boutons Planning / Hors-gel / Absence                              | un thermostat ou une vanne de la maison (vide : votre unique maison)                                              |
+| **Caméras Netatmo**   | la dernière image de chaque caméra, sa surveillance, et des boutons pour l'activer / la couper                                                                    | une caméra affichée en grand (vide : toutes les caméras en liste)                                                 |
+
+Les tuiles suivent les valeurs en direct ; le reste se rafraîchit avec
+l'intégration (2 minutes, ou dès que le mode du chauffage, la surveillance ou
+une image change). Les images des caméras sont servies par l'intégration
+elle-même — le tableau de bord ne charge jamais d'image depuis les serveurs
+Netatmo. Un widget n'affiche que les appareils créés dans Gladys.
+
+---
+
 ## Accessoires de sécurité (bridgés par caméra)
 
 Quand la famille Sécurité est activée, les accessoires liés à vos caméras sont
