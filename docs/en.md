@@ -63,13 +63,13 @@ expires beyond repair, the Configuration screen tells you to reconnect.
 
 Under **Devices to discover**, enable the families you own:
 
-| Toggle              | Discovers                                                                                                                                |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`) |
-| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                                        |
-| **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons                        |
-| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                                         |
-| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                                    |
+| Toggle              | Discovers                                                                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)         |
+| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                                                |
+| **Security**        | Indoor (`NACamera`), Indoor Camera Advance (`NPC`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
+| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                                                 |
+| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                                            |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -171,6 +171,25 @@ When the Security family is enabled, each camera is created with:
   enable the Microphone_. If it is off there, no client (Gladys, Netatmo web,
   Netatmo app) gets audio. Gladys transports the audio whenever the stream
   carries it — there is nothing to configure on the Gladys side.
+
+### Indoor Camera Advance (`NPC`)
+
+The Indoor Camera Advance is created like the indoor camera: a **dashboard
+image**, a **monitoring** switch, the **Motion** and **Person detected**
+detections (Gladys Plus webhooks), and it shows up in the **Netatmo cameras**
+widget. Two differences, both on Netatmo's side:
+
+- its snapshot is fetched through the Netatmo VPN URL: like the video doorbell,
+  this camera does not serve it on the local network;
+- there is no live stream button: it streams over WebRTC only, which the Gladys
+  camera live view cannot play.
+
+> ⚠️ **Netatmo account connected before this version?** This camera needs three
+> new Netatmo permissions (`read_camerapro`, `write_camerapro`,
+> `access_camerapro`): click **Connect** again on the Configuration screen and
+> accept them. Until then the connection status shows a "click Connect again"
+> hint, the camera may be missing or unreachable, and a monitoring command
+> refused by Netatmo fails with a "reconnect" message.
 
 ---
 
@@ -518,7 +537,7 @@ moves what is left.
   authorization predates the shutter support — click Connect again.
 - **No camera sound:** see the microphone tip in the Cameras section above.
 - **"Some Netatmo permissions are missing" status:** a newer version added
-  permissions (video doorbell) — click Connect again and accept them. The
+  permissions (video doorbell, Indoor Camera Advance) — click Connect again and accept them. The
   integration **Logs** list the missing ones.
 - **Still stuck, or a device is missing?** Ask on the forum topic
   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),

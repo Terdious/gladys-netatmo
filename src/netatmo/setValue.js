@@ -25,15 +25,13 @@ import {
 
 import {
   PARAMS,
-  SUPPORTED_MODULE_TYPE,
+  MONITORING_CAMERA_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
   CONNECTION_MESSAGES,
 } from './constants.js';
 import { writeValues } from './deviceMapping.js';
 
 const logger = createLogger({ name: 'netatmo-set-value' });
-
-const CAMERA_MODELS = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
 
 /** Read a device param value by name. */
 export function getDeviceParam(device, name) {
@@ -103,7 +101,8 @@ export async function setDeviceValue(
 ) {
   const transform = writeValues[feature.category]?.[feature.type];
   const isCameraMonitoring =
-    CAMERA_MODELS.includes(device.model) && feature.external_id.endsWith(':monitoring');
+    MONITORING_CAMERA_MODULE_TYPES.includes(device.model) &&
+    feature.external_id.endsWith(':monitoring');
   const isThermostatSetpoint = feature.category === DEVICE_FEATURE_CATEGORIES.THERMOSTAT;
   const isShutter =
     SHUTTER_MODULE_TYPES.includes(device.model) &&

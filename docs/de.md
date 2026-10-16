@@ -70,13 +70,13 @@ Konfiguration auf, dich erneut zu verbinden.
 
 Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
-| Schalter         | Erkennt                                                                                                                                   |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`), modulierendes Thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`) |
-| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                                                    |
-| **Sicherheit**   | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör und die bekannten Personen                     |
-| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                                        |
-| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                                            |
+| Schalter         | Erkennt                                                                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`), modulierendes Thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)                |
+| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                                                                   |
+| **Sicherheit**   | Innenkameras (`NACamera`), Innenkamera Advance (`NPC`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör und die bekannten Personen |
+| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                                                       |
+| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                                                           |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -184,6 +184,26 @@ Wenn die Familie Sicherheit aktiviert ist, wird jede Kamera erstellt mit:
   Client (Gladys, Netatmo-Web, Netatmo-App) Ton. Gladys überträgt den Ton,
   sobald der Stream ihn enthält — auf der Seite von Gladys ist nichts zu
   konfigurieren.
+
+### Innenkamera Advance (`NPC`)
+
+Die Innenkamera Advance wird wie die Innenkamera erstellt: ein
+**Dashboard-Bild**, ein Schalter **Überwachung**, die Erkennungen **Bewegung**
+und **Person erkannt** (Gladys-Plus-Webhooks), und sie erscheint im Widget
+**Netatmo-Kameras**. Zwei Unterschiede, beide auf Netatmo-Seite:
+
+- ihr Schnappschuss wird über die Netatmo-VPN-URL abgerufen: Wie die
+  Video-Türklingel liefert diese Kamera ihn nicht im lokalen Netzwerk;
+- es gibt keine Livestream-Schaltfläche: Sie streamt nur per WebRTC, was die
+  Kamera-Liveansicht von Gladys nicht abspielen kann.
+
+> ⚠️ **Netatmo-Konto vor dieser Version verbunden?** Diese Kamera benötigt drei
+> neue Netatmo-Berechtigungen (`read_camerapro`, `write_camerapro`,
+> `access_camerapro`): Klicke auf dem Konfigurationsbildschirm erneut auf
+> **Verbinden** und akzeptiere sie. Bis dahin zeigt der Verbindungsstatus einen
+> Hinweis, erneut auf Verbinden zu klicken, die Kamera kann fehlen oder
+> unerreichbar sein, und ein von Netatmo abgelehnter Überwachungsbefehl schlägt
+> mit einer Meldung „erneut verbinden“ fehl.
 
 ---
 
@@ -557,7 +577,7 @@ verschiebt nur, was noch übrig ist.
   Rollladen-Unterstützung — klicke erneut auf Verbinden.
 - **Kein Kameraton:** Siehe den Mikrofon-Tipp im Abschnitt Kameras oben.
 - **Status „einige Netatmo-Berechtigungen fehlen“:** Eine neuere Version hat
-  Berechtigungen hinzugefügt (Video-Türklingel) — klicke erneut auf Verbinden
+  Berechtigungen hinzugefügt (Video-Türklingel, Innenkamera Advance) — klicke erneut auf Verbinden
   und akzeptiere sie. Die **Logs** der Integration nennen die fehlenden.
 - **Immer noch nicht gelöst oder fehlt ein Gerät?** Frag im Forumsthema
   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308)

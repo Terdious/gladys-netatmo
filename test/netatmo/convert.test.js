@@ -462,3 +462,51 @@ test('skips the known persons while the security_api toggle is off (issue #57)',
     null,
   );
 });
+
+test('converts an Indoor Camera Advance (NPC) like NACamera, without a live URL (issue #55)', () => {
+  // homesdata + homestatus shape of pyatmo's fixtures (NPC 12:34:56:00:f1:63).
+  const device = convertDevice(
+    gladys,
+    {
+      id: '12:34:56:00:f1:63',
+      type: 'NPC',
+      name: 'Hall',
+      home: '91763b24c43d3e344f424e8b',
+      room: { id: '3688132631', name: 'Entrée' },
+      modules_bridged: ['12:34:56:00:86:99', '12:34:56:00:e3:9b'],
+      monitoring: 'on',
+      sd_status: 4,
+      alim_status: 2,
+      locked: false,
+      vpn_url:
+        'https://prodvpn-eu-2.netatmo.net/restricted/10.255.123.45/9fb1814609e27de5697ab47d06846631/MTRPn_BeWCav5RBq4U1OMDruTW4dkQ0NuMwNDAw11g,,',
+      is_local: true,
+    },
+    // Even if a live URL were resolved, the WebRTC camera must not get one.
+    new Map([
+      ['12:34:56:00:f1:63', { liveUrl: 'https://x/live/files/high/index.m3u8', quality: 'high' }],
+    ]),
+  );
+  assert.equal(device.model, 'NPC');
+  assert.deepEqual(suffixesOf(device), [
+    'wifi_strength',
+    'monitoring',
+    'camera',
+    'motion',
+    'human',
+  ]);
+  const monitoring = device.features.find((f) => f.external_id.endsWith(':monitoring'));
+  assert.equal(monitoring.read_only, false); // command through /api/setstate
+  assert.equal(monitoring.category, 'switch');
+  const camera = device.features.find((f) => f.external_id.endsWith(':camera'));
+  assert.equal(camera.category, 'camera');
+  assert.equal(camera.type, 'image');
+  assert.equal(paramValue(device, 'CAMERA_URL'), undefined);
+  assert.equal(paramValue(device, 'camera_quality'), undefined);
+  assert.equal(paramValue(device, 'home_id'), '91763b24c43d3e344f424e8b');
+  assert.equal(paramValue(device, 'room_id'), '3688132631');
+  assert.equal(
+    paramValue(device, 'modules_bridge_id'),
+    JSON.stringify(['12:34:56:00:86:99', '12:34:56:00:e3:9b']),
+  );
+});

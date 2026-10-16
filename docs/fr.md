@@ -66,13 +66,13 @@ vous invite à vous reconnecter.
 
 Sous **Appareils à découvrir**, activez les familles que vous possédez :
 
-| Interrupteur         | Découvre                                                                                                                               |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`), thermostat modulant (`OTM` + `OTH`), BTicino Smarther (`BNS`) |
-| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                                                      |
-| **Sécurité**         | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires et les personnes connues         |
-| **Volets roulants**  | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                                                      |
-| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                                                       |
+| Interrupteur         | Découvre                                                                                                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`), thermostat modulant (`OTM` + `OTH`), BTicino Smarther (`BNS`)                     |
+| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                                                                          |
+| **Sécurité**         | Caméras intérieure (`NACamera`), intérieure Advance (`NPC`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires et les personnes connues |
+| **Volets roulants**  | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                                                                          |
+| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                                                                           |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -182,6 +182,26 @@ Quand la famille Sécurité est activée, chaque caméra est créée avec :
   là, aucun client (Gladys, web Netatmo, app Netatmo) n'a de son. Gladys
   transporte l'audio dès que le flux en contient — il n'y a rien à configurer
   côté Gladys.
+
+### Caméra intérieure Advance (`NPC`)
+
+La caméra intérieure Advance est créée comme la caméra intérieure : une **image
+de tableau de bord**, un interrupteur **monitoring**, les détections
+**Mouvement** et **Personne détectée** (webhooks Gladys Plus), et elle apparaît
+dans le widget **Caméras Netatmo**. Deux différences, toutes deux côté Netatmo :
+
+- son instantané est récupéré via l'URL VPN Netatmo : comme la sonnette vidéo,
+  cette caméra ne le sert pas sur le réseau local ;
+- il n'y a pas de bouton de flux en direct : elle ne diffuse qu'en WebRTC, que
+  la vue en direct des caméras de Gladys ne sait pas lire.
+
+> ⚠️ **Compte Netatmo connecté avant cette version ?** Cette caméra demande
+> trois nouvelles autorisations Netatmo (`read_camerapro`, `write_camerapro`,
+> `access_camerapro`) : cliquez à nouveau sur **Connecter** sur l'écran
+> Configuration et acceptez-les. D'ici là, le statut de connexion affiche une
+> invitation à recliquer sur Connecter, la caméra peut manquer ou être
+> injoignable, et une commande de monitoring refusée par Netatmo échoue avec un
+> message « reconnecter ».
 
 ---
 
@@ -560,7 +580,7 @@ peut être relancée : elle ne déplace que ce qui reste.
 - **Pas de son sur la caméra :** voir l'astuce microphone dans la section
   Caméras ci-dessus.
 - **Statut « des autorisations Netatmo manquent » :** une version plus récente
-  a ajouté des autorisations (sonnette vidéo) — recliquez sur Connecter et
+  a ajouté des autorisations (sonnette vidéo, caméra intérieure Advance) — recliquez sur Connecter et
   acceptez-les. Les **Journaux** de l'intégration listent celles qui manquent.
 - **Toujours bloqué, ou un appareil manque ?** Posez votre question sur le
   sujet du forum [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),

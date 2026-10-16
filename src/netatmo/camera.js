@@ -169,7 +169,8 @@ export function createCameraImages({ fetchImpl = fetch, now = Date.now } = {}) {
     if (!vpnUrl) {
       return undefined;
     }
-    // WebRTC cameras (video doorbell) serve nothing on their local URL.
+    // WebRTC cameras (video doorbell, Indoor Camera Advance) serve nothing on
+    // their local URL.
     if (!isLocal || VPN_ONLY_CAMERA_MODULE_TYPES.includes(rawDevice.type)) {
       return vpnUrl;
     }

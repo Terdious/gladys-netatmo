@@ -523,7 +523,7 @@ export function createTelemetry({
     const enrichments = new Map();
     for (const [id, rawDevice] of rawCamerasById) {
       if (!HLS_CAMERA_MODULE_TYPES.includes(rawDevice.type)) {
-        continue; // no HLS live stream (video doorbell: WebRTC only)
+        continue; // no HLS live stream (doorbell, Indoor Camera Advance: WebRTC only)
       }
       try {
         const baseUrl = await cameras.resolveBaseUrl(rawDevice);

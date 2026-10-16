@@ -91,3 +91,22 @@ test('the video doorbell (WebRTC) snapshots on its VPN URL only, never pinging t
   assert.equal(image, `image/jpg;base64,${Buffer.from('doorbell-jpeg').toString('base64')}`);
   assert.deepEqual(requests, [`${vpnUrl}/live/snapshot_720.jpg`]);
 });
+
+test('the Indoor Camera Advance (WebRTC) snapshots on its VPN URL only (issue #55)', async () => {
+  const requests = [];
+  const fetchImpl = async (url) => {
+    requests.push(url);
+    return new Response(Buffer.from('npc-jpeg'), { status: 200 });
+  };
+  const cameras = createCameraImages({ fetchImpl });
+  const vpnUrl =
+    'https://prodvpn-eu-2.netatmo.net/restricted/10.255.123.45/9fb1814609e27de5697ab47d06846631/MTRPn_BeWCav5RBq4U1OMDruTW4dkQ0NuMwNDAw11g,,';
+  // pyatmo fixture: `is_local: true`, yet pyatmo forces the VPN URL of every
+  // WebRTC camera (`WebRTCCameraMixin`).
+  const npc = { id: '12:34:56:00:f1:63', type: 'NPC', vpn_url: vpnUrl, is_local: true };
+
+  assert.equal(await cameras.resolveBaseUrl(npc), vpnUrl);
+  const image = await cameras.getImage(npc);
+  assert.equal(image, `image/jpg;base64,${Buffer.from('npc-jpeg').toString('base64')}`);
+  assert.deepEqual(requests, [`${vpnUrl}/live/snapshot_720.jpg`]);
+});

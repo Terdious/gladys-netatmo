@@ -435,6 +435,40 @@ export function addSmartherFixtures(state) {
   });
 }
 
+// -----------------------------------------------------------------------------
+// Indoor Camera Advance (NPC, issue #55), shaped like the pyatmo fixtures
+// (homesdata.json + homestatus_91763b24c43d3e344f424e8b.json): monitoring,
+// SD/power status, a VPN URL and `is_local: true` — which must NOT lead to a
+// LAN resolution, the NPC being a WebRTC camera. No wifi field in the pyatmo
+// homestatus: one is added so the WiFi quality path is exercised too. Opt-in,
+// like the shutters, so the default fixtures (and their counts) stay intact.
+// -----------------------------------------------------------------------------
+
+export const NPC_ID = '12:34:56:00:f1:63';
+
+export function addIndoorCameraAdvance(state, homeId = 'home-1') {
+  const home = state.homes.find((h) => h.id === homeId);
+  home.modules.push({
+    id: NPC_ID,
+    type: 'NPC',
+    name: 'Hall',
+    setup_date: 1544828430,
+    room_id: 'room-1',
+    modules_bridged: [],
+  });
+  state.homeStatuses[homeId].home.modules.push({
+    id: NPC_ID,
+    type: 'NPC',
+    monitoring: 'on',
+    sd_status: 4,
+    alim_status: 2,
+    locked: false,
+    vpn_url: `${state.baseUrl}/vpn/${NPC_ID}`,
+    is_local: true,
+    wifi_strength: 58,
+  });
+}
+
 // Home Coach / Smart Indoor Air Quality Monitors (issue #37), shaped like the
 // pyatmo fixture gethomecoachsdata.json: one UNREACHABLE device without
 // dashboard_data, one reachable device whose generic `module_name` ("Indoor")

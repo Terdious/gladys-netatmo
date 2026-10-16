@@ -23,7 +23,7 @@ import {
   refreshWidgets,
   requestRefresh,
 } from '../../src/netatmo/widgets.js';
-import { startFakeNetatmo } from '../helpers/fakeNetatmo.js';
+import { startFakeNetatmo, addIndoorCameraAdvance, NPC_ID } from '../helpers/fakeNetatmo.js';
 
 const config = normalizeConfig({ security_api: 'true' });
 
@@ -448,6 +448,25 @@ test('several cameras: one row each with its thumbnail and monitoring badge', as
     componentsOf(content, 'button').map((button) => button.action.key),
     ['monitoring_on', 'monitoring_off'],
   );
+});
+
+test('the Indoor Camera Advance joins the cameras widget, with its picture (issue #55)', async () => {
+  addIndoorCameraAdvance(netatmo.state);
+  gladys.devices = await telemetry.syncDiscovery(config);
+  await telemetry.refreshValues(config);
+  const content = await getContent(WIDGET_KEYS.CAMERAS);
+  assertRenderedAsSent(content);
+  const [list] = componentsOf(content, 'card-list');
+  assert.deepEqual(
+    list.items.map((item) => [item.title, item.badge.text.en, /^cam-/.test(item.image)]),
+    [
+      ['Caméra salon', 'Off', true],
+      ['Caméra jardin', 'On', true],
+      ['Hall', 'On', true],
+    ],
+  );
+  const [allOn] = componentsOf(content, 'button');
+  assert.ok(allOn.action.params.cameras.includes(NPC_ID));
 });
 
 test('every camera button is handled: setstate on each camera, then a toast', async () => {

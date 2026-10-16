@@ -1085,10 +1085,10 @@
         "es": "Dispositivos de Seguridad (cámaras)"
       },
       "description": {
-        "en": "Discover the Netatmo Security devices: indoor (NACamera) and outdoor (NOC) cameras.",
-        "fr": "Découvrir les appareils Netatmo Sécurité : caméras intérieure (NACamera) et extérieure (NOC).",
-        "de": "Netatmo-Sicherheits-Geräte erkennen: Innen- (NACamera) und Außenkameras (NOC).",
-        "es": "Descubrir los dispositivos Netatmo Seguridad: cámaras de interior (NACamera) y de exterior (NOC)."
+        "en": "Discover the Netatmo Security devices: indoor (NACamera), Indoor Camera Advance (NPC) and outdoor (NOC) cameras.",
+        "fr": "Découvrir les appareils Netatmo Sécurité : caméras intérieure (NACamera), intérieure Advance (NPC) et extérieure (NOC).",
+        "de": "Netatmo-Sicherheits-Geräte erkennen: Innenkameras (NACamera), Innenkamera Advance (NPC) und Außenkameras (NOC).",
+        "es": "Descubrir los dispositivos Netatmo Seguridad: cámaras de interior (NACamera), de interior Advance (NPC) y de exterior (NOC)."
       },
       "required": false,
       "default": false

@@ -130,6 +130,9 @@ export const SUPPORTED_MODULE_TYPE = {
   // Smart video doorbell (issue #35): a camera of its own (snapshot + wifi),
   // plus the ring, which only exists in the webhook event stream.
   NDB: 'NDB',
+  // Indoor Camera Advance (issue #55): an indoor camera like NACamera
+  // (monitoring, snapshot, detections), with its own `camerapro` scopes.
+  NPC: 'NPC',
   // Bubendorff roller shutters, bridged by the iDiamant gateway (NBG, not
   // exposed as a device): NBR (radio), NBO (wired), NBS (solar), issue #34.
   NBR: 'NBR',
@@ -205,23 +208,34 @@ export const WEATHER_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NAMODULE4,
 ];
 
-// Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621, and
-// the video doorbell (NDB, issue #35).
+// Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621, the
+// video doorbell (NDB, issue #35) and the Indoor Camera Advance (NPC, issue
+// #55).
 export const CAMERA_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NACAMERA,
   SUPPORTED_MODULE_TYPE.NOC,
   SUPPORTED_MODULE_TYPE.NDB,
+  SUPPORTED_MODULE_TYPE.NPC,
+];
+
+// Cameras with a monitoring switch, written through /api/setstate
+// `monitoring` (the doorbell has none).
+export const MONITORING_CAMERA_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.NACAMERA,
+  SUPPORTED_MODULE_TYPE.NOC,
+  SUPPORTED_MODULE_TYPE.NPC,
 ];
 
 // Cameras streaming over HLS: the only ones whose live stream the core
-// rtsp-camera service can play through the CAMERA_URL param. The doorbell
-// streams over WebRTC only (pyatmo `WebRTCCameraMixin`): it gets no CAMERA_URL
-// rather than a live button that cannot work.
+// rtsp-camera service can play through the CAMERA_URL param. The doorbell and
+// the Indoor Camera Advance stream over WebRTC only (pyatmo
+// `WebRTCCameraMixin`): they get no CAMERA_URL rather than a live button that
+// cannot work.
 export const HLS_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
 
 // WebRTC cameras do not serve their snapshot on the local URL (pyatmo forces
 // the VPN URL for them): no `/command/ping` resolution, VPN URL only.
-export const VPN_ONLY_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NDB];
+export const VPN_ONLY_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NDB, SUPPORTED_MODULE_TYPE.NPC];
 
 // Camera-bridged security accessories (radio-linked to a camera): door/window
 // tag (NACamDoorTag) and indoor siren (NIS). Net-new vs the core service — the
@@ -437,6 +451,11 @@ export const OAUTH_SCOPES = [
   // before must click Connect again to grant them (see OAuth missingScopes).
   'read_doorbell',
   'access_doorbell',
+  // Indoor Camera Advance (issue #55) — added after 2.0.1, same reconnection
+  // rule as the doorbell scopes.
+  'read_camerapro',
+  'write_camerapro',
+  'access_camerapro',
   // Aircare
   'read_homecoach',
   // Bubendorff / iDiamant roller shutters (issue #34)
@@ -493,12 +512,13 @@ export const CONNECTION_MESSAGES = {
     es: 'La sesión de Netatmo ha caducado, vuelva a conectar su cuenta Netatmo.',
   },
   // Connected, but the token lacks requested scopes (typically scopes added by
-  // a newer release, like the Smarther ones): the exact list is logged.
+  // a newer release, like the Smarther or the Indoor Camera Advance ones): the
+  // exact list is logged.
   MISSING_SCOPES: {
-    en: 'Connected, but some Netatmo permissions are missing (for example the BTicino Smarther thermostat, added in a recent version): click Connect again to grant them.',
-    fr: 'Connecté, mais des autorisations Netatmo manquent (par exemple le thermostat BTicino Smarther, ajouté dans une version récente) : cliquez à nouveau sur Connecter pour les accorder.',
-    de: 'Verbunden, aber einige Netatmo-Berechtigungen fehlen (zum Beispiel für das Thermostat BTicino Smarther, in einer neueren Version hinzugefügt): Klicke erneut auf Verbinden, um sie zu erteilen.',
-    es: 'Conectado, pero faltan algunos permisos de Netatmo (por ejemplo, el termostato BTicino Smarther, añadido en una versión reciente): vuelva a hacer clic en Conectar para concederlos.',
+    en: 'Connected, but some Netatmo permissions added in a recent version are missing (e.g. Smarther thermostat, Indoor Camera Advance): click Connect again to grant them.',
+    fr: 'Connecté, mais des autorisations Netatmo ajoutées récemment manquent (ex. thermostat Smarther, caméra intérieure Advance) : cliquez à nouveau sur Connecter pour les accorder.',
+    de: 'Verbunden, aber neu hinzugekommene Netatmo-Berechtigungen fehlen (z. B. Thermostat Smarther, Innenkamera Advance): Klicke erneut auf Verbinden, um sie zu erteilen.',
+    es: 'Conectado, pero faltan permisos de Netatmo añadidos recientemente (p. ej. termostato Smarther, cámara de interior Advance): vuelva a hacer clic en Conectar para concederlos.',
   },
   NETATMO_UNREACHABLE: {
     en: 'Netatmo cloud is unreachable, retrying automatically.',

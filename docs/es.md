@@ -67,13 +67,13 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor               | Descubre                                                                                                                               |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`), termostato modulante (`OTM` + `OTH`), BTicino Smarther (`BNS`) |
-| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                                                        |
-| **Seguridad**             | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios y las personas conocidas          |
-| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                                                    |
-| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                                                     |
+| Interruptor               | Descubre                                                                                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`), termostato modulante (`OTM` + `OTH`), BTicino Smarther (`BNS`)                     |
+| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                                                                            |
+| **Seguridad**             | Cámaras de interior (`NACamera`), de interior Advance (`NPC`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios y las personas conocidas |
+| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                                                                        |
+| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                                                                         |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -186,6 +186,26 @@ Cuando la familia Seguridad está activada, cada cámara se crea con:
   ningún cliente (Gladys, web de Netatmo, aplicación Netatmo) recibe audio.
   Gladys transmite el audio siempre que la transmisión lo incluya — no hay nada
   que configurar del lado de Gladys.
+
+### Cámara de interior Advance (`NPC`)
+
+La cámara de interior Advance se crea como la cámara de interior: una **imagen
+para el panel**, un interruptor de **vigilancia**, las detecciones
+**Movimiento** y **Persona detectada** (webhooks de Gladys Plus), y aparece en
+el widget **Cámaras Netatmo**. Dos diferencias, ambas del lado de Netatmo:
+
+- su captura se obtiene a través de la URL VPN de Netatmo: como el timbre con
+  vídeo, esta cámara no la sirve en la red local;
+- no hay botón de transmisión en directo: solo transmite por WebRTC, que la
+  vista en directo de las cámaras de Gladys no puede reproducir.
+
+> ⚠️ **¿Cuenta Netatmo conectada antes de esta versión?** Esta cámara necesita
+> tres nuevos permisos de Netatmo (`read_camerapro`, `write_camerapro`,
+> `access_camerapro`): vuelva a hacer clic en **Conectar** en la pantalla
+> Configuración y acéptelos. Mientras tanto, el estado de la conexión muestra
+> una invitación a volver a hacer clic en Conectar, la cámara puede faltar o
+> aparecer inaccesible, y una orden de vigilancia rechazada por Netatmo falla
+> con un mensaje «volver a conectar».
 
 ---
 
@@ -560,7 +580,7 @@ relanzarse: solo mueve lo que queda.
 - **No hay sonido en la cámara:** consulte el consejo sobre el micrófono en la
   sección Cámaras más arriba.
 - **Estado "faltan algunos permisos de Netatmo":** una versión más reciente
-  añadió permisos (timbre con vídeo) — vuelva a hacer clic en Conectar y
+  añadió permisos (timbre con vídeo, cámara de interior Advance) — vuelva a hacer clic en Conectar y
   acéptelos. Los **Registros** de la integración indican cuáles faltan.
 - **¿Sigue bloqueado, o falta un dispositivo?** Pregunte en el tema del foro
   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308)
