@@ -29,6 +29,7 @@ import { createNetatmoClient } from './src/netatmo/client.js';
 import { createTelemetry } from './src/netatmo/telemetry.js';
 import { createWebhooks } from './src/netatmo/webhooks.js';
 import { createEvents } from './src/netatmo/events.js';
+import { createWebRtc } from './src/netatmo/webrtc.js';
 import { setDeviceValue } from './src/netatmo/setValue.js';
 import { SCENE_ACTIONS } from './src/netatmo/scenes.js';
 import {
@@ -100,10 +101,19 @@ export function setupIntegration(
     await reportConnectionStatus(gladys, isConnected, shown ?? undefined);
   }
 
+  // WebRTC live view of the doorbell and the Indoor Camera Advance (issue
+  // #70): inert with an SDK or a Gladys core that cannot relay it yet.
+  const webRtc = createWebRtc({
+    gladys,
+    client,
+    getRawDevice: (id) => telemetry.getRawDevice(id),
+  });
+
   telemetry = createTelemetry({
     gladys,
     client,
     fetchImpl,
+    webRtc,
     ...(refreshIntervalMs ? { refreshIntervalMs } : {}),
     onDegradedChange: async () => {
       if (connected) {
@@ -317,6 +327,11 @@ export function setupIntegration(
     return telemetry.getCameraSnapshot(config, device);
   });
 
+  // --- Camera: WebRTC live view (doorbell, Indoor Camera Advance) -----------
+  // Registered only when the SDK has the handlers (feature detection): the
+  // released SDK 0.15 does not, and the dashboard keeps the still image.
+  webRtc.register();
+
   // --- Webhooks: a Netatmo event was relayed by Gladys Plus ------------------
   // fire_and_forget: the resolved value is ignored. Two complementary paths:
   // momentary detections are published from the payload (they exist nowhere
@@ -363,6 +378,8 @@ export function setupIntegration(
   // --- Connection lifecycle --------------------------------------------------
   gladys.on('connected', async () => {
     logger.info('WebSocket connected to Gladys');
+    // Possibly an upgraded core: offer the WebRTC param again (issue #70).
+    webRtc.resetCoreSupport();
     try {
       config = normalizeConfig(await gladys.getConfig());
       oauth.loadFromConfig(config);
@@ -380,7 +397,7 @@ export function setupIntegration(
     events.stop();
   });
 
-  return { oauth, client, telemetry, webhooks, events, getConfig: () => config };
+  return { oauth, client, telemetry, webhooks, events, webRtc, getConfig: () => config };
 }
 
 // --- Startup (container entry point only) ------------------------------------

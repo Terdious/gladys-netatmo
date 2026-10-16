@@ -28,6 +28,10 @@ export const API_PATHS = {
   SET_STATE: '/api/setstate',
   ADD_WEBHOOK: '/api/addwebhook',
   DROP_WEBHOOK: '/api/dropwebhook',
+  // WebRTC live view of the doorbell and the Indoor Camera Advance (issue #70,
+  // pyatmo `WebRTCCameraMixin`): SDP offer in, SDP answer out, then terminate.
+  WEBRTC_OFFER: '/api/webrtc/offer',
+  WEBRTC_TERMINATE: '/api/webrtc/terminate',
 };
 
 // The manifest declares ONE webhook (`events`): Netatmo pushes every event
@@ -245,6 +249,11 @@ export const FLOODLIGHT_MODES = {
 // WebRTC cameras do not serve their snapshot on the local URL (pyatmo forces
 // the VPN URL for them): no `/command/ping` resolution, VPN URL only.
 export const VPN_ONLY_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NDB, SUPPORTED_MODULE_TYPE.NPC];
+
+// Cameras whose live view is negotiated in WebRTC through the Netatmo cloud
+// (issue #70): published with the reserved GLADYS_CAMERA_STREAM_PROTOCOL
+// device param, their SDP offer relayed to /api/webrtc/offer.
+export const WEBRTC_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NDB, SUPPORTED_MODULE_TYPE.NPC];
 
 // Camera-bridged security accessories (radio-linked to a camera): door/window
 // tag (NACamDoorTag) and indoor siren (NIS). Net-new vs the core service — the
