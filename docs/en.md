@@ -63,13 +63,13 @@ expires beyond repair, the Configuration screen tells you to reconnect.
 
 Under **Devices to discover**, enable the families you own:
 
-| Toggle              | Discovers                                                                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`)                                                        |
-| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                              |
-| **Security**        | Indoor (`NACamera`), Indoor Camera Advance (`NPC`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories |
-| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                               |
-| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                          |
+| Toggle              | Discovers                                                                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)         |
+| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                                                |
+| **Security**        | Indoor (`NACamera`), Indoor Camera Advance (`NPC`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
+| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                                                 |
+| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                                            |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -84,8 +84,9 @@ Values refresh every **2 minutes** (Netatmo rate limits).
 
 ## Heating mode (schedule / away / frost protection)
 
-Each thermostat (`NATherm1`) and radiator valve (`NRV`) carries a **Heating
-mode** feature (a thermostat _preset_ in Gladys) with three choices:
+Each thermostat (`NATherm1`, modulating `OTM`, BTicino Smarther `BNS`) and
+radiator valve (`NRV`) carries a **Heating mode** feature (a thermostat _preset_
+in Gladys) with three choices:
 
 | In Gladys            | In the Netatmo app         |
 | -------------------- | -------------------------- |
@@ -106,6 +107,47 @@ Use it in a scene ("everybody left → heating to Away") with the standard
 > appear on its own: go to the **Discovery** screen and click **Update** on each
 > thermostat and valve. Gladys **5.2** or later is required (the thermostat
 > preset does not exist before).
+
+---
+
+## Modulating thermostat (OpenTherm)
+
+The current Netatmo thermostat, the **modulating** (OpenTherm) model, comes
+with the Energy family. Its two modules are each created as a device:
+
+- the **thermostat** (`OTM`): room temperature, a writable **setpoint**, the
+  **Heating mode** (see above), the **Boiler status** (on while the boiler
+  heats), battery and RF signal, like the older `NATherm1`;
+- the **OpenTherm relay** (`OTH`) wired to the boiler: its WiFi quality, the
+  **outdoor temperature** Netatmo modulates the heating on, and a **Boiler
+  fault** feature: 1 while the boiler reports a fault to Netatmo (water
+  pressure, flame, maintenance…), 0 otherwise. The Netatmo app tells which
+  fault it is.
+
+The thermostat's room shows up in the **Netatmo heating** widget, and the
+thermostat can be chosen in the **Change the heating mode** scene action. A
+thermostat out of reach gets the **unreachable** badge and its battery and
+signal are no longer published. No reconnection is needed: the thermostat
+permissions have been part of the connection since the first version.
+
+---
+
+## BTicino Smarther thermostat
+
+The **BTicino Smarther with Netatmo** thermostat (`BNS`) comes with the Energy
+family. It is created with its room temperature, a writable **setpoint**, the
+**Heating mode** (see above), the **Boiler status** (on while it heats), a
+**Cooler status** (on while the air conditioning runs), a read-only **Comfort
+boost** state (the Netatmo `boiler_valve_comfort_boost` field, as reported)
+and its WiFi quality. Its room shows up in the **Netatmo heating** widget and
+the thermostat can be chosen in the **Change the heating mode** scene action.
+
+> ⚠️ **Netatmo account connected before this version?** The Smarther needs two
+> new Netatmo permissions (`read_smarther`, `write_smarther`): click
+> **Connect** again on the Configuration screen and accept them — your devices
+> and settings are kept. Until then the connection status shows a "click
+> Connect again" hint, and a setpoint or heating mode command on the Smarther
+> fails with a "reconnect your Netatmo account" message.
 
 ---
 
@@ -259,17 +301,28 @@ detected** feature of the camera covers every person.
 
 ### Actions
 
-| Action                       | What it does                                                                                                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Change the heating mode**  | Schedule, Away or Frost protection for the whole home; optional duration in minutes (Away and Frost protection: back to the schedule afterwards) |
-| **Mark a person as away**    | one known person, or — person left empty — the whole home empty (re-arms the camera monitoring set to follow the presence)                       |
-| **Mark a person as at home** | one known person, or — person left empty — every known person                                                                                    |
+| Action                          | What it does                                                                                                                                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Change the heating mode**     | Schedule, Away or Frost protection for the whole home; optional duration in minutes (Away and Frost protection: back to the schedule afterwards)                                                          |
+| **Mark a person as away**       | one known person, or — person left empty — the whole home empty (re-arms the camera monitoring set to follow the presence)                                                                                |
+| **Mark a person as at home**    | one known person, or — person left empty — every known person                                                                                                                                             |
+| **Set a room setpoint**         | manual setpoint (7 to 30 °C) of the room of the chosen thermostat or valve; optional duration in minutes, then back to the schedule (empty: the default duration of a manual setpoint in the Netatmo app) |
+| **Boost a room**                | full-power heating (boost) of the room of the chosen thermostat or valve; optional duration in minutes (empty: the default boost duration of the Netatmo app)                                             |
+| **Back to the schedule**        | ends the manual setpoint or the boost of the room: it follows the schedule again                                                                                                                          |
+| **Choose the heating schedule** | makes one of the heating schedules of the home the active one                                                                                                                                             |
 
 The **home** is the one of the device you choose in the action (a thermostat or
 valve for the heating, a camera for the persons). Leave it empty when your
 account has a single home. The person field accepts a scene variable: "A known
 person arrives → Mark a person as at home" with the **Person** information.
 Each action returns the **Home** name to the following steps.
+
+The three **room** actions apply to the room of the thermostat or valve you
+choose (required) and also return the **Room** name. **Choose the heating
+schedule** takes the schedule **name exactly as shown in the Netatmo app**
+(upper / lower case ignored): the scene editor cannot list the Netatmo
+schedules. A name that does not exist fails the action, and the scene logs name
+the schedules of the home. It also returns the **Schedule** name.
 
 ---
 
@@ -278,11 +331,11 @@ Each action returns the **Home** name to the following steps.
 Three widgets join the dashboard widget picker (Gladys **5.1** or later): **Edit
 dashboard**, add a widget and search for "Netatmo".
 
-| Widget              | Shows                                                                                                                                               | Settings                                                                                               |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Netatmo weather** | live tiles of the station (temperatures, humidity, CO2, noise, pressure, rain, wind) and a health row per module with a low battery or out of reach | the station (empty: the first one) and the readings shown: Overview, Indoor, or Outdoor, rain and wind |
-| **Netatmo heating** | the heating mode of the home, one row per room (measured → setpoint temperature) and the Schedule / Frost protection / Away buttons                 | a thermostat or valve of the home (empty: your single home)                                            |
-| **Netatmo cameras** | the latest picture of each camera, its monitoring, and buttons to turn it on / off                                                                  | one camera shown large (empty: every camera in a list)                                                 |
+| Widget              | Shows                                                                                                                                                                                                                                                                                                     | Settings                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Netatmo weather** | live tiles of the station (temperatures, humidity, CO2, noise, pressure, rain, wind) and a health row per module with a low battery or out of reach                                                                                                                                                       | the station (empty: the first one) and the readings shown: Overview, Indoor, or Outdoor, rain and wind |
+| **Netatmo heating** | the heating mode and the active schedule of the home, one row per room (measured → setpoint temperature, marked Manual or Boost when the setpoint does not come from the schedule), the Schedule / Frost protection / Away buttons and, with several schedules, a **Change schedule** button listing them | a thermostat or valve of the home (empty: your single home)                                            |
+| **Netatmo cameras** | the latest picture of each camera, its monitoring, and buttons to turn it on / off                                                                                                                                                                                                                        | one camera shown large (empty: every camera in a list)                                                 |
 
 The tiles follow the values live; the rest refreshes with the integration (2
 minutes, or as soon as the heating mode, the monitoring or a picture changes).
@@ -306,6 +359,27 @@ discovered too:
 - **Carbon monoxide alarm** (`NCO`) — same as the smoke alarm: battery and
   signal (when Netatmo reports them), plus a **Carbon monoxide** feature fed by
   the webhooks.
+
+---
+
+## Known persons
+
+When the Security family is enabled, each home whose cameras recognize faces
+gets a **"<home> - Known persons"** device, with one **Presence** feature per
+person named in the Netatmo app: **Presence detected** when Netatmo considers
+the person at home, **No presence** when away — the state the Netatmo app shows.
+Use it in your scenes like any presence sensor.
+
+- Only **named** persons get a feature: an unrecognized face (no name in the
+  Netatmo app) is ignored.
+- The presence refreshes every 2 minutes, and **at once** with the Gladys Plus
+  webhooks (a known person arrives / leaves) or after the **Mark a person as
+  away / at home** scene actions.
+- When Netatmo does not report a person's presence, nothing is published: the
+  last known value stays.
+- A person added, renamed or deleted in the Netatmo app: click **Update** on
+  the device in the **Discovery** screen to add, rename or remove the feature.
+  The feature follows the Netatmo person id, so a rename keeps its history.
 
 ---
 

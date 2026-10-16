@@ -12,6 +12,40 @@ the notes of the version's GitHub Release.
 
 ### Added
 
+- Netatmo modulating / OpenTherm thermostat, in the Energy family: the `OTM`
+  thermostat gets the room temperature, the writable setpoint
+  (`setroomthermpoint`), the heating mode preset (`therm_preset`), the boiler
+  status, battery and RF quality, like the `NATherm1`, with the
+  **unreachable** badge when out of reach; the `OTH` OpenTherm relay gets its
+  WiFi quality, the outdoor temperature (`outdoor_temperature`) and a
+  **Boiler fault** binary (`boiler_fault`: 1 while homestatus reports a
+  `boiler_error`, 0 when it reports the relay without one). The thermostat's
+  room joins the heating widget and the heating mode scene action. No
+  reconnection needed ([#53](https://github.com/Terdious/gladys-netatmo/issues/53)).
+- Advanced heating: four new scene actions — "Set a room setpoint" (7 to 30 °C,
+  optional duration), "Boost a room" (optional duration), "Back to the
+  schedule" (room of the chosen thermostat or valve, setroomthermpoint `manual`
+  / `max` / `home` with `endtime`) and "Choose the heating schedule" (by its
+  Netatmo name, switchhomeschedule; an unknown name lists the available ones).
+  The Netatmo heating widget shows the active schedule, marks the rooms whose
+  setpoint is manual or a boost, and gets a "Change schedule" button listing the
+  heating schedules of the home
+  ([#58](https://github.com/Terdious/gladys-netatmo/issues/58)).
+- Presence of the persons known to the Netatmo cameras: with the Security
+  family enabled, each home gets a "<home> - Known persons" device with one
+  presence feature per person named in the Netatmo app (Presence detected =
+  at home, from the homestatus `out_of_sight`). Unnamed faces are skipped, a
+  person Netatmo does not report publishes nothing, and the state refreshes
+  every cycle and at once on the webhook events
+  ([#57](https://github.com/Terdious/gladys-netatmo/issues/57)).
+- BTicino Smarther with Netatmo thermostat (`BNS`), in the Energy family:
+  room temperature, writable setpoint, heating mode preset, boiler status,
+  cooler status (`cooler_status`), the reported comfort boost
+  (`boiler_valve_comfort_boost`, read-only) and WiFi quality; its room joins
+  the heating widget and the heating mode scene action. It needs the new
+  `read_smarther` / `write_smarther` scopes: **an account connected before
+  must click Connect again** (the Configuration screen says so until then)
+  ([#54](https://github.com/Terdious/gladys-netatmo/issues/54)).
 - Netatmo Indoor Camera Advance (`NPC`), discovered with the Security family:
   the same features as the indoor camera — **dashboard image**, writable
   **monitoring** switch (`/api/setstate`), **Motion** and **Person detected**
@@ -22,6 +56,18 @@ the notes of the version's GitHub Release.
   `write_camerapro`, `access_camerapro`): an account connected before must
   click **Connect** again, which the connection status asks for
   ([#55](https://github.com/Terdious/gladys-netatmo/issues/55)).
+
+### Changed
+
+- The "some Netatmo permissions are missing" connection message now gives the
+  BTicino Smarther and the Indoor Camera Advance as examples
+  ([#54](https://github.com/Terdious/gladys-netatmo/issues/54)).
+
+### Fixed
+
+- A webhook-triggered refresh now always starts from a fresh Netatmo load: a
+  cycle in flight or a load still in the 10 s burst cache could hide the state
+  the event announced ([#57](https://github.com/Terdious/gladys-netatmo/issues/57)).
 
 ## [2.0.1] - 2026-10-16
 

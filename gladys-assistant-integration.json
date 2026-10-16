@@ -479,6 +479,310 @@
           }
         }
       ]
+    },
+    {
+      "key": "set_room_setpoint",
+      "label": {
+        "en": "Set a room setpoint",
+        "fr": "Régler la consigne d'une pièce",
+        "de": "Sollwert eines Raums einstellen",
+        "es": "Ajustar la consigna de una habitación"
+      },
+      "description": {
+        "en": "Manual setpoint of the room of a Netatmo thermostat or valve, optionally for a set time.",
+        "fr": "Consigne manuelle de la pièce d'un thermostat ou d'une vanne Netatmo, éventuellement pour une durée.",
+        "de": "Manueller Sollwert des Raums eines Netatmo-Thermostats oder -Ventils, optional für eine bestimmte Dauer.",
+        "es": "Consigna manual de la habitación de un termostato o una válvula Netatmo, opcionalmente durante un tiempo."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "required": true,
+          "label": {
+            "en": "Thermostat or valve",
+            "fr": "Thermostat ou vanne",
+            "de": "Thermostat oder Ventil",
+            "es": "Termostato o válvula"
+          },
+          "description": {
+            "en": "The thermostat or valve of the room.",
+            "fr": "Le thermostat ou la vanne de la pièce.",
+            "de": "Das Thermostat oder Ventil des Raums.",
+            "es": "El termostato o la válvula de la habitación."
+          }
+        },
+        {
+          "key": "temperature",
+          "type": "number",
+          "required": true,
+          "min": 7,
+          "max": 30,
+          "default": 20,
+          "label": {
+            "en": "Setpoint (°C)",
+            "fr": "Consigne (°C)",
+            "de": "Sollwert (°C)",
+            "es": "Consigna (°C)"
+          },
+          "description": {
+            "en": "From 7 to 30 °C, rounded to 0.5 °C.",
+            "fr": "De 7 à 30 °C, arrondie à 0,5 °C.",
+            "de": "Von 7 bis 30 °C, auf 0,5 °C gerundet.",
+            "es": "De 7 a 30 °C, redondeada a 0,5 °C."
+          }
+        },
+        {
+          "key": "duration_minutes",
+          "type": "number",
+          "min": 1,
+          "max": 43200,
+          "label": {
+            "en": "Duration (minutes)",
+            "fr": "Durée (minutes)",
+            "de": "Dauer (Minuten)",
+            "es": "Duración (minutos)"
+          },
+          "description": {
+            "en": "Back to the schedule after this time. Empty = the default duration of a manual setpoint in the Netatmo app.",
+            "fr": "Retour au planning après cette durée. Vide = la durée par défaut d'une consigne manuelle dans l'application Netatmo.",
+            "de": "Nach dieser Dauer zurück zum Zeitplan. Leer = die Standarddauer eines manuellen Sollwerts in der Netatmo-App.",
+            "es": "Vuelta a la programación tras este tiempo. Vacío = la duración por defecto de una consigna manual en la aplicación Netatmo."
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        },
+        {
+          "key": "room_name",
+          "type": "string",
+          "label": {
+            "en": "Room",
+            "fr": "Pièce",
+            "de": "Raum",
+            "es": "Habitación"
+          }
+        }
+      ]
+    },
+    {
+      "key": "boost_room",
+      "label": {
+        "en": "Boost a room",
+        "fr": "Booster une pièce",
+        "de": "Raum boosten",
+        "es": "Potenciar una habitación"
+      },
+      "description": {
+        "en": "Heat the room of a Netatmo thermostat or valve at full power (boost) for a set time.",
+        "fr": "Chauffe la pièce d'un thermostat ou d'une vanne Netatmo à pleine puissance (boost) pendant une durée.",
+        "de": "Heizt den Raum eines Netatmo-Thermostats oder -Ventils mit voller Leistung (Boost) für eine bestimmte Dauer.",
+        "es": "Calienta la habitación de un termostato o una válvula Netatmo a plena potencia (boost) durante un tiempo."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "required": true,
+          "label": {
+            "en": "Thermostat or valve",
+            "fr": "Thermostat ou vanne",
+            "de": "Thermostat oder Ventil",
+            "es": "Termostato o válvula"
+          },
+          "description": {
+            "en": "The thermostat or valve of the room.",
+            "fr": "Le thermostat ou la vanne de la pièce.",
+            "de": "Das Thermostat oder Ventil des Raums.",
+            "es": "El termostato o la válvula de la habitación."
+          }
+        },
+        {
+          "key": "duration_minutes",
+          "type": "number",
+          "min": 1,
+          "max": 43200,
+          "label": {
+            "en": "Duration (minutes)",
+            "fr": "Durée (minutes)",
+            "de": "Dauer (Minuten)",
+            "es": "Duración (minutos)"
+          },
+          "description": {
+            "en": "Back to the schedule after this time. Empty = the default boost duration of the Netatmo app.",
+            "fr": "Retour au planning après cette durée. Vide = la durée par défaut du boost dans l'application Netatmo.",
+            "de": "Nach dieser Dauer zurück zum Zeitplan. Leer = die Standarddauer des Boosts in der Netatmo-App.",
+            "es": "Vuelta a la programación tras este tiempo. Vacío = la duración por defecto del boost en la aplicación Netatmo."
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        },
+        {
+          "key": "room_name",
+          "type": "string",
+          "label": {
+            "en": "Room",
+            "fr": "Pièce",
+            "de": "Raum",
+            "es": "Habitación"
+          }
+        }
+      ]
+    },
+    {
+      "key": "room_back_to_schedule",
+      "label": {
+        "en": "Back to the schedule",
+        "fr": "Revenir au planning",
+        "de": "Zurück zum Zeitplan",
+        "es": "Volver a la programación"
+      },
+      "description": {
+        "en": "End the manual setpoint or the boost of a room: it follows the heating schedule again.",
+        "fr": "Met fin à la consigne manuelle ou au boost d'une pièce : elle suit à nouveau le planning de chauffage.",
+        "de": "Beendet den manuellen Sollwert oder den Boost eines Raums: Er folgt wieder dem Heizzeitplan.",
+        "es": "Termina la consigna manual o el boost de una habitación: vuelve a seguir la programación de calefacción."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "required": true,
+          "label": {
+            "en": "Thermostat or valve",
+            "fr": "Thermostat ou vanne",
+            "de": "Thermostat oder Ventil",
+            "es": "Termostato o válvula"
+          },
+          "description": {
+            "en": "The thermostat or valve of the room.",
+            "fr": "Le thermostat ou la vanne de la pièce.",
+            "de": "Das Thermostat oder Ventil des Raums.",
+            "es": "El termostato o la válvula de la habitación."
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        },
+        {
+          "key": "room_name",
+          "type": "string",
+          "label": {
+            "en": "Room",
+            "fr": "Pièce",
+            "de": "Raum",
+            "es": "Habitación"
+          }
+        }
+      ]
+    },
+    {
+      "key": "set_heating_schedule",
+      "label": {
+        "en": "Choose the heating schedule",
+        "fr": "Choisir le planning de chauffage",
+        "de": "Heizzeitplan auswählen",
+        "es": "Elegir la programación de calefacción"
+      },
+      "description": {
+        "en": "Make one of the heating schedules of the Netatmo home the active one.",
+        "fr": "Active l'un des plannings de chauffage de la maison Netatmo.",
+        "de": "Aktiviert einen der Heizzeitpläne des Netatmo-Zuhauses.",
+        "es": "Activa una de las programaciones de calefacción de la casa Netatmo."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Thermostat or valve",
+            "fr": "Thermostat ou vanne",
+            "de": "Thermostat oder Ventil",
+            "es": "Termostato o válvula"
+          },
+          "description": {
+            "en": "Any thermostat or valve of the home. Leave empty if your account has a single home.",
+            "fr": "N'importe quel thermostat ou vanne de la maison. Laissez vide si votre compte n'a qu'une maison.",
+            "de": "Ein beliebiges Thermostat oder Ventil des Zuhauses. Leer lassen, wenn dein Konto nur ein Zuhause hat.",
+            "es": "Cualquier termostato o válvula de la casa. Déjelo vacío si su cuenta tiene una sola casa."
+          }
+        },
+        {
+          "key": "schedule",
+          "type": "string",
+          "required": true,
+          "label": {
+            "en": "Schedule (Netatmo name)",
+            "fr": "Planning (nom Netatmo)",
+            "de": "Zeitplan (Netatmo-Name)",
+            "es": "Programación (nombre Netatmo)"
+          },
+          "description": {
+            "en": "The name of the schedule as shown in the Netatmo app (upper/lower case ignored).",
+            "fr": "Le nom du planning comme dans l'application Netatmo (majuscules/minuscules ignorées).",
+            "de": "Der Name des Zeitplans wie in der Netatmo-App (Groß-/Kleinschreibung egal).",
+            "es": "El nombre de la programación como aparece en la aplicación Netatmo (sin distinguir mayúsculas)."
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        },
+        {
+          "key": "schedule_name",
+          "type": "string",
+          "label": {
+            "en": "Schedule",
+            "fr": "Planning",
+            "de": "Zeitplan",
+            "es": "Programación"
+          }
+        }
+      ]
     }
   ],
   "widgets": [

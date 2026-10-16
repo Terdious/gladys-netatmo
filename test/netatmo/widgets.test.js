@@ -159,7 +159,7 @@ test('the weather widget shows the chosen station, or explains that none exists'
 
 // --- Heating -------------------------------------------------------------------
 
-test('the heating content: mode, one row per room, one button per mode', async () => {
+test('the heating content: mode, schedule, one row per room, mode and schedule buttons', async () => {
   const content = await getContent(WIDGET_KEYS.HEATING, {}, { language: 'fr' });
   assertRenderedAsSent(content);
   const [status] = componentsOf(content, 'status');
@@ -169,12 +169,18 @@ test('the heating content: mode, one row per room, one button per mode', async (
     de: 'Zeitplan',
     es: 'Programación',
   });
-  // Rooms: measured → setpoint, in the user's language (decimal comma).
+  // The active heating schedule (issue #58).
   assert.deepEqual(
-    status.items.slice(1).map((item) => [item.label, item.value, item.color]),
+    [status.items[1].label.fr, status.items[1].value],
+    ['Planning actif', 'Semaine'],
+  );
+  // Rooms: measured → setpoint, in the user's language (decimal comma),
+  // tagged when the setpoint is manual (issue #58).
+  assert.deepEqual(
+    status.items.slice(2).map((item) => [item.label, item.value, item.color]),
     [
       ['Salon', '19,5 °C → 21 °C', 'neutral'],
-      ['Chambre', '17 °C → 19 °C', 'warning'], // heating (power request 42)
+      ['Chambre', '17 °C → 19 °C · Manuel', 'warning'], // heating (power request 42)
     ],
   );
   const buttons = componentsOf(content, 'button');
@@ -184,20 +190,136 @@ test('the heating content: mode, one row per room, one button per mode', async (
       ['mode_schedule', 'primary'],
       ['mode_hg', 'secondary'],
       ['mode_away', 'secondary'],
+      ['switch_schedule', 'secondary'],
     ],
+  );
+  // The schedule button opens a form listing the heating schedules only, the
+  // active one pre-selected.
+  const [field] = buttons[3].action.fields;
+  assert.equal(field.default, 'schedule-week');
+  assert.deepEqual(
+    field.options.map((option) => [option.value, option.label.en]),
+    [
+      ['schedule-week', 'Semaine'],
+      ['schedule-holidays', 'Vacances'],
+    ],
+  );
+});
+
+test('the heating rows tag a boost, and the room rows fill the status budget', async () => {
+  const status = netatmo.state.homeStatuses['home-1'].home;
+  status.rooms[0].therm_setpoint_mode = 'max';
+  // Twelve heated rooms: the status component holds 10 rows (mode, schedule, 8 rooms).
+  const home = netatmo.state.homes[0];
+  for (let index = 3; index <= 12; index += 1) {
+    home.rooms.push({ id: `room-${index}`, name: `Pièce ${index}` });
+    home.modules.push({
+      id: `valve-${index}`,
+      type: 'NRV',
+      name: `Vanne ${index}`,
+      room_id: `room-${index}`,
+      bridge: 'plug-1',
+    });
+    status.modules.push({ id: `valve-${index}`, type: 'NRV', battery_state: 'high' });
+    status.rooms.push({
+      id: `room-${index}`,
+      therm_measured_temperature: 20,
+      therm_setpoint_temperature: 20,
+      therm_setpoint_mode: 'schedule',
+    });
+  }
+  await telemetry.refreshValues(config);
+  const content = await getContent(WIDGET_KEYS.HEATING);
+  assertRenderedAsSent(content);
+  const [rows] = componentsOf(content, 'status');
+  assert.equal(rows.items.length, 10);
+  assert.deepEqual([rows.items[2].value, rows.items[2].icon], ['19.5 °C → 21 °C · Boost', 'zap']);
+});
+
+test('a home with one schedule shows it without the schedule button, none without schedules', async () => {
+  netatmo.state.homes[0].schedules = [{ id: 's1', name: 'Hiver', type: 'therm', selected: true }];
+  await telemetry.refreshValues(config);
+  let content = await getContent(WIDGET_KEYS.HEATING);
+  assertRenderedAsSent(content);
+  assert.equal(componentsOf(content, 'status')[0].items[1].value, 'Hiver');
+  assert.equal(componentsOf(content, 'button').length, 3);
+  netatmo.state.homes[0].schedules = [];
+  await telemetry.refreshValues(config);
+  content = await getContent(WIDGET_KEYS.HEATING);
+  assert.equal(componentsOf(content, 'status')[0].items[1].label, 'Salon');
+});
+
+test('the schedule button switches the schedule, then a toast and a refresh', async () => {
+  const content = await getContent(WIDGET_KEYS.HEATING);
+  const button = componentsOf(content, 'button').find((b) => b.action.key === 'switch_schedule');
+  let refreshes = 0;
+  const message = await WIDGETS[WIDGET_KEYS.HEATING].action(
+    ctx({ refresh: async () => (refreshes += 1) }),
+    {
+      actionKey: button.action.key,
+      params: button.action.params,
+      settings: {},
+      values: { schedule_id: 'schedule-holidays' },
+    },
+  );
+  assert.deepEqual(message, {
+    en: 'Active schedule: Vacances',
+    fr: 'Planning actif: Vacances',
+    de: 'Aktiver Zeitplan: Vacances',
+    es: 'Programación activa: Vacances',
+  });
+  assert.deepEqual(netatmo.state.switchScheduleRequests, [
+    { home_id: 'home-1', schedule_id: 'schedule-holidays' },
+  ]);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(refreshes, 1);
+  // The next content shows the new active schedule, pre-selected in the form.
+  await telemetry.refreshValues(config);
+  const after = await getContent(WIDGET_KEYS.HEATING);
+  assert.equal(componentsOf(after, 'status')[0].items[1].value, 'Vacances');
+  const field = componentsOf(after, 'button')[3].action.fields[0];
+  assert.equal(field.default, 'schedule-holidays');
+});
+
+test('the schedule action refuses a missing form, an unknown schedule, and explains the scope', async () => {
+  const { action } = WIDGETS[WIDGET_KEYS.HEATING];
+  const params = { home_id: 'home-1' };
+  await assert.rejects(action(ctx(), { actionKey: 'switch_schedule', params }), /Update Gladys/);
+  await assert.rejects(
+    action(ctx(), { actionKey: 'switch_schedule', params: {}, values: { schedule_id: 'x' } }),
+    /Unknown widget action/,
+  );
+  await assert.rejects(
+    action(ctx(), { actionKey: 'switch_schedule', params, values: { schedule_id: 'nope' } }),
+    /Unknown heating schedule nope/,
+  );
+  netatmo.state.failSwitchScheduleWith = {
+    status: 403,
+    body: { error: { code: 13, message: 'scope' } },
+  };
+  await assert.rejects(
+    action(ctx(), {
+      actionKey: 'switch_schedule',
+      params,
+      values: { schedule_id: 'schedule-holidays' },
+    }),
+    /reconnect your Netatmo/,
   );
 });
 
 test('the heating rows follow the user unit system', async () => {
   const content = await getContent(WIDGET_KEYS.HEATING, {}, { units: 'us' });
   const [status] = componentsOf(content, 'status');
-  assert.equal(status.items[1].value, '67.1 °F → 69.8 °F');
+  assert.equal(status.items[2].value, '67.1 °F → 69.8 °F');
 });
 
 test('every heating button is handled: setthermmode, then a toast and a refresh', async () => {
   const content = await getContent(WIDGET_KEYS.HEATING);
   let refreshes = 0;
-  for (const { action } of componentsOf(content, 'button')) {
+  const modeButtons = componentsOf(content, 'button').filter(
+    (b) => b.action.key !== 'switch_schedule',
+  );
+  for (const { action } of modeButtons) {
     const message = await WIDGETS[WIDGET_KEYS.HEATING].action(
       ctx({ refresh: async () => (refreshes += 1) }),
       { actionKey: action.key, params: action.params, settings: {} },

@@ -6,9 +6,17 @@
 // Key order drives the emission order of the states. A value extractor
 // returning undefined/null means "no value available, skip the emission"
 // (core PR #2617: legitimate zeros are values, absences are not).
+//
+// A device whose features depend on its own payload (the known persons of a
+// home, issue #57) maps to a FUNCTION of the raw device returning that table.
 // -----------------------------------------------------------------------------
 
-import { SUPPORTED_MODULE_TYPE, COVER_STATE } from './constants.js';
+import {
+  SUPPORTED_MODULE_TYPE,
+  COVER_STATE,
+  VIRTUAL_DEVICE_TYPE,
+  PERSON_PRESENCE_SUFFIX_PREFIX,
+} from './constants.js';
 import { healthIndexToAqi, healthIndexToLevel } from './deviceMapping.js';
 
 /**
@@ -40,6 +48,36 @@ const SHUTTER_MAPPING = {
   position: shutterPosition,
   rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
 };
+
+/**
+ * Boiler fault of an OpenTherm relay (issue #53): homestatus carries
+ * `boiler_error` (e.g. "water_pressure") only while the boiler reports one.
+ * A module present in this homestatus without it has no fault (false); a
+ * module homestatus did not carry says nothing (undefined, not published).
+ * "none" is read as no fault, should Netatmo ever send it.
+ */
+function boilerFault(deviceNetatmo) {
+  const error = deviceNetatmo.boiler_error;
+  if (typeof error === 'string' && error !== '' && error !== 'none') {
+    return true;
+  }
+  return deviceNetatmo.homestatus ? false : undefined;
+}
+
+/**
+ * Presence table of the known persons of a home (issue #57): one suffix per
+ * named person, at home (true) when homestatus says `out_of_sight: false`,
+ * away (false) when true. A person homestatus does not report has no
+ * boolean there: no value, nothing published.
+ */
+function knownPersonsMapping(deviceNetatmo) {
+  return Object.fromEntries(
+    (deviceNetatmo.persons ?? []).map((person) => [
+      `${PERSON_PRESENCE_SUFFIX_PREFIX}${person.id}`,
+      () => (typeof person.out_of_sight === 'boolean' ? !person.out_of_sight : undefined),
+    ]),
+  );
+}
 
 export const UPDATE_MAPPINGS = {
   [SUPPORTED_MODULE_TYPE.PLUG]: {
@@ -76,6 +114,35 @@ export const UPDATE_MAPPINGS = {
         ? undefined
         : heatingPowerRequest > 0;
     },
+    therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
+  },
+  // Modulating / OpenTherm thermostat (issue #53), modelled on the NATherm1:
+  // battery as a percent or the `battery_state` string (`battery_level` is in
+  // millivolts, not used), room values, RF, boiler status, heating mode.
+  [SUPPORTED_MODULE_TYPE.OTM]: {
+    battery_percent: (deviceNetatmo) =>
+      deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
+    therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
+    therm_setpoint_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_setpoint_temperature,
+    rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
+    boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
+    therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
+  },
+  // OpenTherm relay (issue #53): WiFi, outdoor temperature, boiler fault.
+  [SUPPORTED_MODULE_TYPE.OTH]: {
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength,
+    outdoor_temperature: (deviceNetatmo) => deviceNetatmo.outdoor_temperature,
+    boiler_fault: boilerFault,
+  },
+  // BTicino Smarther with Netatmo (issue #54): WiFi, room values, heating /
+  // cooling states, comfort boost, heating mode.
+  [SUPPORTED_MODULE_TYPE.BNS]: {
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength,
+    therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
+    therm_setpoint_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_setpoint_temperature,
+    boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
+    cooler_status: (deviceNetatmo) => deviceNetatmo.cooler_status,
+    boiler_valve_comfort_boost: (deviceNetatmo) => deviceNetatmo.boiler_valve_comfort_boost,
     therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
   },
   [SUPPORTED_MODULE_TYPE.NAMAIN]: {
@@ -228,4 +295,5 @@ export const UPDATE_MAPPINGS = {
     health_level: (deviceNetatmo) => healthIndexToLevel(deviceNetatmo.dashboard_data?.health_idx),
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
+  [VIRTUAL_DEVICE_TYPE.KNOWN_PERSONS]: knownPersonsMapping,
 };

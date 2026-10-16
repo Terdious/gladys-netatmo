@@ -67,13 +67,13 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor               | Descubre                                                                                                                          |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)                                                            |
-| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                                                   |
-| **Seguridad**             | Cámaras de interior (`NACamera`), de interior Advance (`NPC`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios |
-| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                                               |
-| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                                                |
+| Interruptor               | Descubre                                                                                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`), termostato modulante (`OTM` + `OTH`), BTicino Smarther (`BNS`)                     |
+| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                                                                            |
+| **Seguridad**             | Cámaras de interior (`NACamera`), de interior Advance (`NPC`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios y las personas conocidas |
+| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                                                                        |
+| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                                                                         |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -90,9 +90,9 @@ Netatmo).
 
 ## Modo de calefacción (programación / ausencia / antihielo)
 
-Cada termostato (`NATherm1`) y válvula de radiador (`NRV`) incluye una
-funcionalidad **Modo de calefacción** (un _preajuste_ de termostato en Gladys)
-con tres opciones:
+Cada termostato (`NATherm1`, modulante `OTM`, BTicino Smarther `BNS`) y válvula
+de radiador (`NRV`) incluye una funcionalidad **Modo de calefacción** (un
+_preajuste_ de termostato en Gladys) con tres opciones:
 
 | En Gladys        | En la aplicación Netatmo       |
 | ---------------- | ------------------------------ |
@@ -113,6 +113,52 @@ acción estándar «Establecer valor del dispositivo».
 > sola: vaya a la pantalla **Descubrimiento** y haga clic en **Actualizar** en
 > cada termostato y válvula. Se requiere Gladys **5.2** o posterior (el
 > preajuste de termostato no existe antes).
+
+---
+
+## Termostato modulante (OpenTherm)
+
+El termostato Netatmo actual, el modelo **modulante** (OpenTherm), forma parte
+de la familia Energía. Sus dos módulos se crean cada uno como un dispositivo:
+
+- el **termostato** (`OTM`): temperatura de la habitación, una **consigna**
+  ajustable, el **Modo de calefacción** (ver arriba), el **estado de la
+  caldera** (encendido mientras la caldera calienta), batería y señal de
+  radio, como el antiguo `NATherm1`;
+- el **relé OpenTherm** (`OTH`) conectado a la caldera: su calidad WiFi, la
+  **temperatura exterior** con la que Netatmo modula la calefacción, y una
+  funcionalidad **Fallo de la caldera**: 1 mientras la caldera indica un fallo
+  a Netatmo (presión del agua, llama, mantenimiento…), 0 en caso contrario. La
+  aplicación Netatmo indica de qué fallo se trata.
+
+La habitación del termostato aparece en el widget **Calefacción Netatmo**, y el
+termostato puede elegirse en la acción de escena **Cambiar el modo de
+calefacción**. Un termostato inaccesible recibe la insignia **inaccesible** y
+su batería y su señal dejan de publicarse. No es necesario volver a conectar:
+los permisos de los termostatos forman parte de la conexión desde la primera
+versión.
+
+---
+
+## Termostato BTicino Smarther
+
+El termostato **BTicino Smarther with Netatmo** (`BNS`) forma parte de la
+familia Energía. Se crea con la temperatura de su habitación, una **consigna**
+ajustable, el **Modo de calefacción** (ver arriba), el **estado de la
+caldera** (encendido mientras calienta), el **estado de la climatización**
+(encendido mientras funciona el aire acondicionado), un estado **Boost de
+confort** de solo lectura (el campo Netatmo `boiler_valve_comfort_boost`, tal
+como se reporta) y su calidad WiFi. Su habitación aparece en el widget
+**Calefacción Netatmo** y el termostato puede elegirse en la acción de escena
+**Cambiar el modo de calefacción**.
+
+> ⚠️ **¿Cuenta Netatmo conectada antes de esta versión?** El Smarther necesita
+> dos nuevos permisos de Netatmo (`read_smarther`, `write_smarther`): vuelva a
+> hacer clic en **Conectar** en la pantalla Configuración y acéptelos — sus
+> dispositivos y ajustes se conservan. Mientras tanto, el estado de la conexión
+> muestra el aviso «vuelva a hacer clic en Conectar», y una orden de consigna o
+> de modo de calefacción en el Smarther falla con un mensaje «vuelva a conectar
+> su cuenta Netatmo».
 
 ---
 
@@ -277,11 +323,15 @@ cámara cubre a todas las personas.
 
 ### Acciones
 
-| Acción                                 | Qué hace                                                                                                                                    |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Cambiar el modo de calefacción**     | Programación, Ausencia o Antihielo para toda la casa; duración opcional en minutos (Ausencia y Antihielo: vuelta a la programación después) |
-| **Marcar a una persona como ausente**  | una persona conocida o — persona vacía — toda la casa vacía (reactiva la vigilancia de las cámaras configurada para seguir la presencia)    |
-| **Marcar a una persona como presente** | una persona conocida o — persona vacía — todas las personas conocidas                                                                       |
+| Acción                                    | Qué hace                                                                                                                                                                                                                         |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cambiar el modo de calefacción**        | Programación, Ausencia o Antihielo para toda la casa; duración opcional en minutos (Ausencia y Antihielo: vuelta a la programación después)                                                                                      |
+| **Marcar a una persona como ausente**     | una persona conocida o — persona vacía — toda la casa vacía (reactiva la vigilancia de las cámaras configurada para seguir la presencia)                                                                                         |
+| **Marcar a una persona como presente**    | una persona conocida o — persona vacía — todas las personas conocidas                                                                                                                                                            |
+| **Ajustar la consigna de una habitación** | consigna manual (7 a 30 °C) de la habitación del termostato o la válvula elegidos; duración opcional en minutos, luego vuelta a la programación (vacío: la duración por defecto de una consigna manual en la aplicación Netatmo) |
+| **Potenciar una habitación**              | calienta a plena potencia (boost) la habitación del termostato o la válvula elegidos; duración opcional en minutos (vacío: la duración por defecto del boost en la aplicación Netatmo)                                           |
+| **Volver a la programación**              | termina la consigna manual o el boost de la habitación: vuelve a seguir la programación                                                                                                                                          |
+| **Elegir la programación de calefacción** | activa una de las programaciones de calefacción de la casa                                                                                                                                                                       |
 
 La **casa** es la del dispositivo que elija en la acción (un termostato o una
 válvula para la calefacción, una cámara para las personas). Déjelo vacío si su
@@ -290,6 +340,15 @@ cuenta tiene una sola casa. El campo persona acepta una variable de escena:
 información **Persona**. Cada acción devuelve el nombre de la **Casa** a los
 pasos siguientes.
 
+Las tres acciones de **habitación** se aplican a la habitación del termostato o
+la válvula elegidos (obligatorio) y también devuelven el nombre de la
+**Habitación**. **Elegir la programación de calefacción** espera el **nombre de
+la programación exactamente como aparece en la aplicación Netatmo** (sin
+distinguir mayúsculas): el editor de escenas no puede listar las programaciones
+de Netatmo. Un nombre inexistente hace fallar la acción, y los registros de la
+escena citan las programaciones de la casa. También devuelve el nombre de la
+**Programación**.
+
 ---
 
 ## Widgets del panel
@@ -297,11 +356,11 @@ pasos siguientes.
 Tres widgets se suman al selector de widgets del panel (Gladys **5.1** o
 posterior): **Editar panel**, añada un widget y busque «Netatmo».
 
-| Widget                  | Muestra                                                                                                                                                          | Ajustes                                                                                                    |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Tiempo Netatmo**      | las fichas en directo de la estación (temperaturas, humedad, CO2, ruido, presión, lluvia, viento) y una fila de estado por módulo con batería baja o inaccesible | la estación (vacío: la primera) y las mediciones mostradas: Resumen, Interior, o Exterior, lluvia y viento |
-| **Calefacción Netatmo** | el modo de calefacción de la casa, una fila por habitación (temperatura medida → consigna) y los botones Programación / Antihielo / Ausencia                     | un termostato o una válvula de la casa (vacío: su única casa)                                              |
-| **Cámaras Netatmo**     | la última imagen de cada cámara, su vigilancia y botones para activarla / desactivarla                                                                           | una cámara mostrada en grande (vacío: todas las cámaras en lista)                                          |
+| Widget                  | Muestra                                                                                                                                                                                                                                                                                                                   | Ajustes                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Tiempo Netatmo**      | las fichas en directo de la estación (temperaturas, humedad, CO2, ruido, presión, lluvia, viento) y una fila de estado por módulo con batería baja o inaccesible                                                                                                                                                          | la estación (vacío: la primera) y las mediciones mostradas: Resumen, Interior, o Exterior, lluvia y viento |
+| **Calefacción Netatmo** | el modo de calefacción y la programación activa de la casa, una fila por habitación (temperatura medida → consigna, marcada Manual o Boost cuando la consigna no viene de la programación), los botones Programación / Antihielo / Ausencia y, con varias programaciones, un botón **Cambiar programación** que las lista | un termostato o una válvula de la casa (vacío: su única casa)                                              |
+| **Cámaras Netatmo**     | la última imagen de cada cámara, su vigilancia y botones para activarla / desactivarla                                                                                                                                                                                                                                    | una cámara mostrada en grande (vacío: todas las cámaras en lista)                                          |
 
 Las fichas siguen los valores en directo; el resto se actualiza con la
 integración (2 minutos, o en cuanto cambian el modo de calefacción, la
@@ -326,6 +385,30 @@ vinculados a sus cámaras:
 - **Detector de monóxido de carbono** (`NCO`) — igual que el detector de humo:
   batería y señal (cuando Netatmo las reporta), más una funcionalidad
   **Monóxido de carbono** alimentada por los webhooks.
+
+---
+
+## Personas conocidas
+
+Cuando la familia Seguridad está activada, cada casa cuyas cámaras reconocen
+rostros obtiene un dispositivo **«<casa> - Known persons»**, con una
+funcionalidad **Presence** por cada persona con nombre en la aplicación Netatmo:
+**Presencia detectada** cuando Netatmo considera que la persona está en casa,
+**Sin presencia** cuando está ausente — el estado que muestra la aplicación
+Netatmo. Úsela en sus escenas como cualquier sensor de presencia.
+
+- Solo las personas **con nombre** tienen una funcionalidad: un rostro
+  desconocido (sin nombre en la aplicación Netatmo) se ignora.
+- La presencia se actualiza cada 2 minutos, e **inmediatamente** con los
+  webhooks de Gladys Plus (una persona conocida llega / se va) o después de las
+  acciones de escena **Marcar a una persona como ausente / presente**.
+- Cuando Netatmo no reporta la presencia de una persona, no se publica nada: se
+  conserva el último valor conocido.
+- Una persona añadida, renombrada o eliminada en la aplicación Netatmo: haga
+  clic en **Actualizar** en el dispositivo en la pestaña **Descubrir**
+  para añadir, renombrar o quitar la funcionalidad. La funcionalidad sigue el
+  identificador Netatmo de la persona: un cambio de nombre conserva su
+  historial.
 
 ---
 

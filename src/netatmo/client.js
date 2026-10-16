@@ -8,9 +8,10 @@
 // Endpoints mirror the core service: homesdata/homestatus (Energy topology +
 // live status), getthermostatsdata (legacy Energy details), getstationsdata
 // (Weather stations), gethomecoachsdata (Home Coach air quality monitors,
-// issue #37), setroomthermpoint (thermostat setpoint), setthermmode (heating
-// mode of a home) and setpersonsaway / setpersonshome (presence of the
-// persons known to the cameras).
+// issue #37), setroomthermpoint (room setpoint: manual, boost or back to the
+// schedule), switchhomeschedule (active heating schedule, issue #58),
+// setthermmode (heating mode of a home) and setpersonsaway / setpersonshome
+// (presence of the persons known to the cameras).
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
@@ -138,14 +139,40 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
   }
 
   /**
-   * Set a room thermostat setpoint (mode `manual`, like the core).
-   * @param {{homeId: string, roomId: string, temp: number}} setpoint target
+   * Set the setpoint of a room (POST /api/setroomthermpoint). Without a
+   * `mode`, a manual setpoint like the core does (the device setpoint
+   * feature). Issue #58 adds the other modes: `max` (boost) and `home` (back
+   * to the schedule), and an optional `endtime` bounding a manual setpoint or
+   * a boost. Like pyatmo, `temp` and `endtime` only travel when they mean
+   * something: `temp` for `manual`, `endtime` for `manual` and `max`.
+   * @param {{homeId: string, roomId: string, temp?: number, mode?: string,
+   *   endtime?: number}} setpoint target, temperature (°C), mode
+   *   (`manual` | `max` | `home`) and end (UNIX seconds)
    * @returns {Promise<object>} parsed response body
    */
-  async function setRoomThermpoint({ homeId, roomId, temp }) {
-    return request(API_PATHS.SET_ROOM_THERMPOINT, {
+  async function setRoomThermpoint({ homeId, roomId, temp, mode = 'manual', endtime }) {
+    const form = { home_id: homeId, room_id: roomId, mode };
+    if (mode === 'manual' && temp !== undefined && temp !== null) {
+      form.temp = temp;
+    }
+    if (mode !== 'home' && endtime !== undefined && endtime !== null) {
+      form.endtime = String(Math.round(endtime));
+    }
+    return request(API_PATHS.SET_ROOM_THERMPOINT, { method: 'POST', form });
+  }
+
+  /**
+   * Switch the active heating schedule of a home (issue #58, pyatmo
+   * `Home.async_switch_schedule`): the schedule ids are the homesdata
+   * `homes[].schedules[].id`.
+   * @param {string} homeId Netatmo home id
+   * @param {string} scheduleId Netatmo schedule id
+   * @returns {Promise<object>} parsed response body
+   */
+  async function switchHomeSchedule(homeId, scheduleId) {
+    return request(API_PATHS.SWITCH_HOME_SCHEDULE, {
       method: 'POST',
-      form: { home_id: homeId, room_id: roomId, mode: 'manual', temp },
+      form: { home_id: homeId, schedule_id: scheduleId },
     });
   }
 
@@ -236,6 +263,7 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     getStationsData,
     getHomeCoachsData,
     setRoomThermpoint,
+    switchHomeSchedule,
     setThermMode,
     setPersonsAway,
     setPersonsHome,
