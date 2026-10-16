@@ -227,6 +227,20 @@ export function buildFeatureSmoke(name, externalId) {
   });
 }
 
+// Carbon monoxide alarm (NCO, issue #36): like the smoke alarm, the CO state
+// is webhook-only (`co_detected` event) — the homestatus payload never reports it.
+export function buildFeatureCarbonMonoxide(name, externalId) {
+  return feature({
+    name: `Carbon monoxide - ${name}`,
+    external_id: `${externalId}:carbon_monoxide`,
+    selector: `${externalId}:carbon_monoxide`,
+    category: DEVICE_FEATURE_CATEGORIES.CO_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
 // Door/window tag (NACamDoorTag): open/closed contact, read from homestatus
 // `status` (issue #9). Distinct suffix from the thermostat `open_window`.
 export function buildFeatureOpeningSensor(name, externalId) {

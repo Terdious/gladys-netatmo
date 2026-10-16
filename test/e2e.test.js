@@ -201,8 +201,8 @@ test('saving the configuration re-runs the discovery automatically', async () =>
   });
   await waitFor(() => core.state.discovered.length > discoveredCount);
   const republished = core.state.discovered.at(-1);
-  // 7 devices + 2 cameras + siren + door tag + smoke alarm.
-  assert.equal(republished.length, 12);
+  // 7 devices + 2 cameras + siren + door tag + smoke alarm + CO alarm.
+  assert.equal(republished.length, 13);
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:camera-1'));
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:doortag-1'));
 });

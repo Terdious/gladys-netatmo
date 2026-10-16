@@ -150,13 +150,14 @@ d'événements, aucune interrogation de l'API ne peut les remonter. Ils sont
 publiés comme des fonctionnalités dédiées, utilisables comme **déclencheurs de
 scène** :
 
-| Appareil                        | Fonctionnalité        | Déclenchée par                   |
-| ------------------------------- | --------------------- | -------------------------------- |
-| Caméra intérieure et extérieure | **Mouvement**         | un mouvement détecté             |
-| Caméra intérieure et extérieure | **Personne détectée** | une personne détectée / reconnue |
-| Caméra extérieure (Presence)    | **Animal détecté**    | un animal détecté                |
-| Caméra extérieure (Presence)    | **Véhicule détecté**  | un véhicule détecté              |
-| Détecteur de fumée              | **Fumée**             | une détection de fumée           |
+| Appareil                         | Fonctionnalité          | Déclenchée par                       |
+| -------------------------------- | ----------------------- | ------------------------------------ |
+| Caméra intérieure et extérieure  | **Mouvement**           | un mouvement détecté                 |
+| Caméra intérieure et extérieure  | **Personne détectée**   | une personne détectée / reconnue     |
+| Caméra extérieure (Presence)     | **Animal détecté**      | un animal détecté                    |
+| Caméra extérieure (Presence)     | **Véhicule détecté**    | un véhicule détecté                  |
+| Détecteur de fumée               | **Fumée**               | une détection de fumée               |
+| Détecteur de monoxyde de carbone | **Monoxyde de carbone** | une détection de monoxyde de carbone |
 
 Chaque détection passe à **Oui** puis revient automatiquement à **Non** au bout
 d'une minute (Netatmo n'envoie pas d'événement de « fin de détection »). Dans
@@ -182,6 +183,9 @@ Quand la famille Sécurité est activée, les accessoires liés à vos caméras 
 - **Détecteur de fumée** (`NSD`) — découvert avec sa batterie et son signal,
   plus la fonctionnalité **Fumée** alimentée par les webhooks (voir la section
   ci-dessus) : le polling seul ne peut pas remonter cet état.
+- **Détecteur de monoxyde de carbone** (`NCO`) — comme le détecteur de fumée :
+  batterie et signal (quand Netatmo les remonte), plus la fonctionnalité
+  **Monoxyde de carbone** alimentée par les webhooks.
 
 ---
 

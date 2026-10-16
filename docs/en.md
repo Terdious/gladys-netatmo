@@ -148,6 +148,7 @@ triggers**:
 | Outdoor camera (Presence)  | **Animal detected**  | an animal detected             |
 | Outdoor camera (Presence)  | **Vehicle detected** | a vehicle detected             |
 | Smoke alarm                | **Smoke**            | a smoke detection              |
+| Carbon monoxide alarm      | **Carbon monoxide**  | a carbon monoxide detection    |
 
 Each detection goes to **Yes** and returns to **No** by itself after one minute
 (Netatmo sends no "detection over" event). In a scene, use the "value becomes
@@ -171,6 +172,9 @@ discovered too:
 - **Smoke alarm** (`NSD`) — discovered with its battery and signal, plus a
   **Smoke** feature fed by the webhooks (see the section above): polling alone
   cannot report that state.
+- **Carbon monoxide alarm** (`NCO`) — same as the smoke alarm: battery and
+  signal (when Netatmo reports them), plus a **Carbon monoxide** feature fed by
+  the webhooks.
 
 ---
 

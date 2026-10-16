@@ -152,13 +152,14 @@ Algunos eventos son **momentáneos**: solo existen en el flujo de eventos, y
 ninguna consulta a la API puede reportarlos. Se publican como funcionalidades
 dedicadas, utilizables como **disparadores de escena**:
 
-| Dispositivo                    | Funcionalidad          | Activada por                       |
-| ------------------------------ | ---------------------- | ---------------------------------- |
-| Cámaras de interior y exterior | **Movimiento**         | movimiento detectado               |
-| Cámaras de interior y exterior | **Persona detectada**  | una persona detectada / reconocida |
-| Cámara de exterior (Presence)  | **Animal detectado**   | un animal detectado                |
-| Cámara de exterior (Presence)  | **Vehículo detectado** | un vehículo detectado              |
-| Detector de humo               | **Humo**               | una detección de humo              |
+| Dispositivo                     | Funcionalidad           | Activada por                         |
+| ------------------------------- | ----------------------- | ------------------------------------ |
+| Cámaras de interior y exterior  | **Movimiento**          | movimiento detectado                 |
+| Cámaras de interior y exterior  | **Persona detectada**   | una persona detectada / reconocida   |
+| Cámara de exterior (Presence)   | **Animal detectado**    | un animal detectado                  |
+| Cámara de exterior (Presence)   | **Vehículo detectado**  | un vehículo detectado                |
+| Detector de humo                | **Humo**                | una detección de humo                |
+| Detector de monóxido de carbono | **Monóxido de carbono** | una detección de monóxido de carbono |
 
 Cada detección pasa a **Sí** y vuelve a **No** por sí sola al cabo de un minuto
 (Netatmo no envía ningún evento de "fin de detección"). En una escena, utilice
@@ -183,6 +184,9 @@ vinculados a sus cámaras:
 - **Detector de humo** (`NSD`) — descubierto con su batería y su señal, más una
   funcionalidad **Humo** alimentada por los webhooks (ver la sección anterior):
   la consulta periódica por sí sola no puede reportar ese estado.
+- **Detector de monóxido de carbono** (`NCO`) — igual que el detector de humo:
+  batería y señal (cuando Netatmo las reporta), más una funcionalidad
+  **Monóxido de carbono** alimentada por los webhooks.
 
 ---
 

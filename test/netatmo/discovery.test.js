@@ -40,6 +40,7 @@ test('loadDevices merges the three API families', async () => {
   const ids = devices.map((device) => netatmoId(device)).sort();
   assert.deepEqual(ids, [
     'camera-1',
+    'co-1',
     'doortag-1',
     'noc-1',
     'outdoor-1',
@@ -85,6 +86,9 @@ test('loadDevices merges the three API families', async () => {
   assert.equal(byId(devices, 'siren-1').not_handled, undefined);
   assert.equal(byId(devices, 'doortag-1').not_handled, undefined);
   assert.equal(byId(devices, 'smoke-1').not_handled, undefined);
+  // The carbon monoxide alarm rides along (issue #36).
+  assert.equal(byId(devices, 'co-1').categoryAPI, 'Security');
+  assert.equal(byId(devices, 'co-1').not_handled, undefined);
 });
 
 test('security-only config still loads homesdata and exposes the cameras (core #2621)', async () => {
