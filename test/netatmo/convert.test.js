@@ -42,6 +42,7 @@ test('converts a NATherm1 with the core feature set and params', () => {
     'therm_setpoint_temperature',
     'open_window',
     'boiler_status',
+    'therm_preset',
   ]);
   const setpoint = device.features.find((f) =>
     f.external_id.endsWith(':therm_setpoint_temperature'),
@@ -67,8 +68,40 @@ test('converts a NRV without room: no measured temperature feature, no room para
     'therm_setpoint_temperature',
     'open_window',
     'heating_power_request',
+    'therm_preset',
   ]);
   assert.equal(paramValue(device, 'room_id'), undefined);
+});
+
+test('the heating mode is a writable thermostat preset limited to the Netatmo modes', () => {
+  const device = convertDevice(gladys, {
+    id: 'therm-1',
+    type: 'NATherm1',
+    name: 'Thermostat',
+    home: 'home-1',
+    room: { id: 'room-1', name: 'Salon' },
+  });
+  const preset = device.features.find((f) => f.external_id === 'ext:netatmo:therm-1:therm_preset');
+  assert.equal(preset.category, 'thermostat');
+  assert.equal(preset.type, 'preset');
+  assert.equal(preset.read_only, false);
+  assert.equal(preset.min, 0);
+  assert.equal(preset.max, 2);
+  // Gladys THERMOSTAT_PRESET values: SCHEDULE 0, FROST 1, AWAY 2 — nothing else.
+  assert.deepEqual(preset.supported_options, [
+    { value: 0, label: 'Schedule', sort_order: 0 },
+    { value: 1, label: 'Frost protection', sort_order: 1 },
+    { value: 2, label: 'Away', sort_order: 2 },
+  ]);
+});
+
+test('a legacy-only thermostat (no homesdata home) gets no heating mode feature', () => {
+  const device = convertDevice(gladys, {
+    _id: 'therm-legacy',
+    type: 'NATherm1',
+    module_name: 'Thermostat',
+  });
+  assert.ok(!suffixesOf(device).includes('therm_preset'));
 });
 
 test('converts a NAPlug with wifi+rf and the bridged modules param', () => {
@@ -157,6 +190,74 @@ test('converts cameras (NACamera/NOC) with wifi, writable monitoring and image',
     assert.equal(paramValue(device, 'room_id'), 'room-1');
     assert.equal(paramValue(device, 'modules_bridge_id'), '[]');
   }
+});
+
+test('converts a smoke alarm (NSD) and a CO alarm (NCO) with battery, signal and alarm', () => {
+  const smoke = convertDevice(gladys, {
+    id: 'smoke-1',
+    type: 'NSD',
+    name: 'Fumée',
+    home: 'home-1',
+  });
+  assert.deepEqual(suffixesOf(smoke), ['battery_percent', 'wifi_strength', 'smoke']);
+
+  // Issue #36: same shape as the smoke alarm, the alarm being carbon monoxide.
+  const co = convertDevice(gladys, {
+    id: 'co-1',
+    type: 'NCO',
+    name: 'CO',
+    home: 'home-1',
+    room: { id: 'room-1', name: 'Salon' },
+  });
+  assert.equal(co.model, 'NCO');
+  assert.deepEqual(suffixesOf(co), ['battery_percent', 'wifi_strength', 'carbon_monoxide']);
+  const alarm = co.features.find((f) => f.external_id.endsWith(':carbon_monoxide'));
+  assert.equal(alarm.name, 'Carbon monoxide - CO');
+  assert.equal(alarm.category, 'co-sensor');
+  assert.equal(alarm.type, 'binary');
+  assert.equal(alarm.read_only, true);
+  assert.equal(alarm.min, 0);
+  assert.equal(alarm.max, 1);
+  assert.equal(paramValue(co, 'home_id'), 'home-1');
+  assert.equal(paramValue(co, 'room_id'), 'room-1');
+});
+
+test('converts a video doorbell (NDB): wifi, image and ring, no monitoring nor live URL', () => {
+  // homesdata + homestatus shape of pyatmo's fixtures (issue #35).
+  const device = convertDevice(
+    gladys,
+    {
+      id: '12:34:56:10:f1:66',
+      type: 'NDB',
+      name: 'Netatmo-Doorbell',
+      home: 'home-1',
+      room: { id: '3688132631', name: 'Entrée' },
+      reachable: true,
+      vpn_url: 'https://prodvpn-eu-6.netatmo.net/10.20.30.40/1111111111111/2222222222222,,',
+      is_local: false,
+      wifi_strength: 66,
+    },
+    // Even if a live URL were resolved, the WebRTC doorbell must not get one.
+    new Map([
+      ['12:34:56:10:f1:66', { liveUrl: 'https://x/live/files/high/index.m3u8', quality: 'high' }],
+    ]),
+  );
+  assert.equal(device.model, 'NDB');
+  assert.deepEqual(suffixesOf(device), ['wifi_strength', 'camera', 'ring']);
+  const ring = device.features.find((f) => f.external_id.endsWith(':ring'));
+  assert.equal(ring.name, 'Doorbell - Netatmo-Doorbell');
+  assert.equal(ring.category, 'doorbell');
+  assert.equal(ring.type, 'ring');
+  assert.equal(ring.read_only, true);
+  assert.equal(ring.min, 0);
+  assert.equal(ring.max, 1);
+  const camera = device.features.find((f) => f.external_id.endsWith(':camera'));
+  assert.equal(camera.category, 'camera');
+  assert.equal(camera.type, 'image');
+  assert.equal(paramValue(device, 'CAMERA_URL'), undefined);
+  assert.equal(paramValue(device, 'camera_quality'), undefined);
+  assert.equal(paramValue(device, 'home_id'), 'home-1');
+  assert.equal(paramValue(device, 'room_id'), '3688132631');
 });
 
 test('skips devices whose API is disabled (apiNotConfigured)', () => {

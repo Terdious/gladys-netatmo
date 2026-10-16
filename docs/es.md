@@ -1,8 +1,8 @@
 # Integración Netatmo para Gladys Assistant
 
 Conecte sus dispositivos **Netatmo** — estación meteorológica, termostatos y
-válvulas de radiador, cámaras de interior/exterior y sus accesorios, monitores
-de calidad del aire — a Gladys Assistant.
+válvulas de radiador, cámaras de interior/exterior y sus accesorios, persianas
+enrollables Bubendorff, monitores de calidad del aire — a Gladys Assistant.
 
 Esta integración se comunica con la nube de Netatmo en su nombre: usted crea una
 sola vez su propia aplicación Netatmo Connect, conecta su cuenta, y Gladys
@@ -15,7 +15,7 @@ descubre sus dispositivos y mantiene sus valores actualizados.
 - Una **cuenta Netatmo**, con sus dispositivos ya instalados y funcionando en la
   aplicación Netatmo (Gladys lee lo que Netatmo expone — un dispositivo debe
   estar primero en línea en Netatmo).
-- Gladys Assistant **4.86 o posterior**.
+- Gladys Assistant **5.2 o posterior**.
 
 ---
 
@@ -36,8 +36,9 @@ cuenta Netatmo.
 
 **No** necesita configurar permisos (scopes) ni una URI de redirección en el
 portal: Gladys solicita automáticamente los permisos necesarios (lectura +
-escritura, que cubren Energía, Meteorología y Seguridad, cámaras incluidas)
-durante la conexión, y gestiona por sí mismo la redirección OAuth2.
+escritura, que cubren Energía, Meteorología, Seguridad, cámaras y timbre con
+vídeo incluidos, y las persianas enrollables) durante la conexión, y gestiona
+por sí mismo la redirección OAuth2.
 
 ---
 
@@ -66,12 +67,13 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor          | Descubre                                                                           |
-| -------------------- | ---------------------------------------------------------------------------------- |
-| **Energía**          | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)             |
-| **Meteorología**     | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales    |
-| **Seguridad**        | Cámaras de interior (`NACamera`) y de exterior (`NOC`), más sus accesorios         |
-| **Calidad del aire** | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto |
+| Interruptor               | Descubre                                                                                             |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)                               |
+| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                      |
+| **Seguridad**             | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios |
+| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                  |
+| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                   |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -83,6 +85,34 @@ directo de las cámaras.
 
 Los valores se actualizan cada **2 minutos** (límites de uso de la API de
 Netatmo).
+
+---
+
+## Modo de calefacción (programación / ausencia / antihielo)
+
+Cada termostato (`NATherm1`) y válvula de radiador (`NRV`) incluye una
+funcionalidad **Modo de calefacción** (un _preajuste_ de termostato en Gladys)
+con tres opciones:
+
+| En Gladys        | En la aplicación Netatmo       |
+| ---------------- | ------------------------------ |
+| **Programación** | seguir la programación semanal |
+| **Ausencia**     | modo ausente                   |
+| **Antihielo**    | antihielo (`hg`)               |
+
+En Netatmo, el modo es el de **toda la casa**: cambiarlo en un dispositivo
+cambia toda la vivienda, y cada termostato y válvula de la casa muestra el
+nuevo modo justo después (la integración se actualiza de inmediato). Un modo
+cambiado desde la aplicación Netatmo aparece en la siguiente actualización (2
+minutos, o 2-3 segundos con los webhooks de Gladys Plus).
+
+Úselo en una escena («todos se han ido → calefacción en Ausencia») con la
+acción estándar «Establecer valor del dispositivo».
+
+> ⚠️ **Si sus termostatos ya existían en Gladys**, la funcionalidad no aparece
+> sola: vaya a la pantalla **Descubrimiento** y haga clic en **Actualizar** en
+> cada termostato y válvula. Se requiere Gladys **5.2** o posterior (el
+> preajuste de termostato no existe antes).
 
 ---
 
@@ -110,6 +140,32 @@ Cuando la familia Seguridad está activada, cada cámara se crea con:
   ningún cliente (Gladys, web de Netatmo, aplicación Netatmo) recibe audio.
   Gladys transmite el audio siempre que la transmisión lo incluya — no hay nada
   que configurar del lado de Gladys.
+
+---
+
+## Timbre con vídeo
+
+Cuando la familia Seguridad está activada, el timbre con vídeo Netatmo (`NDB`)
+se crea con:
+
+- una **imagen para el panel** (una captura, actualizada automáticamente) —
+  obtenida a través de la URL VPN de Netatmo: el timbre no la sirve en la red
+  local;
+- una funcionalidad **Timbre** que muestra **Sonando** cuando alguien pulsa el
+  botón, utilizable como disparador de escena (**Si suena el timbre**) —
+  necesita los webhooks de Gladys Plus (ver más abajo): la consulta periódica
+  por sí sola no puede reportar un timbrazo;
+- la calidad de su enlace **Wifi**.
+
+No hay interruptor de vigilancia (Netatmo no ofrece ninguno para el timbre) ni
+botón de transmisión en directo: el timbre solo transmite por WebRTC, que la
+vista en directo de las cámaras de Gladys no puede reproducir.
+
+> ⚠️ **¿Cuenta Netatmo conectada antes de esta versión?** El timbre necesita dos
+> nuevos permisos de Netatmo (`read_doorbell`, `access_doorbell`): vuelva a
+> hacer clic en **Conectar** en la pantalla Configuración y acéptelos. Mientras
+> tanto, el estado de la conexión muestra una invitación a volver a hacer clic
+> en Conectar.
 
 ---
 
@@ -153,22 +209,85 @@ Algunos eventos son **momentáneos**: solo existen en el flujo de eventos, y
 ninguna consulta a la API puede reportarlos. Se publican como funcionalidades
 dedicadas, utilizables como **disparadores de escena**:
 
-| Dispositivo                    | Funcionalidad          | Activada por                       |
-| ------------------------------ | ---------------------- | ---------------------------------- |
-| Cámaras de interior y exterior | **Movimiento**         | movimiento detectado               |
-| Cámaras de interior y exterior | **Persona detectada**  | una persona detectada / reconocida |
-| Cámara de exterior (Presence)  | **Animal detectado**   | un animal detectado                |
-| Cámara de exterior (Presence)  | **Vehículo detectado** | un vehículo detectado              |
-| Detector de humo               | **Humo**               | una detección de humo              |
+| Dispositivo                     | Funcionalidad           | Activada por                         |
+| ------------------------------- | ----------------------- | ------------------------------------ |
+| Cámaras de interior y exterior  | **Movimiento**          | movimiento detectado                 |
+| Cámaras de interior y exterior  | **Persona detectada**   | una persona detectada / reconocida   |
+| Cámara de exterior (Presence)   | **Animal detectado**    | un animal detectado                  |
+| Cámara de exterior (Presence)   | **Vehículo detectado**  | un vehículo detectado                |
+| Detector de humo                | **Humo**                | una detección de humo                |
+| Detector de monóxido de carbono | **Monóxido de carbono** | una detección de monóxido de carbono |
+| Timbre con vídeo                | **Timbre**              | alguien llama al timbre              |
 
 Cada detección pasa a **Sí** y vuelve a **No** por sí sola al cabo de un minuto
-(Netatmo no envía ningún evento de "fin de detección"). En una escena, utilice
-el disparador "el valor pasa a Sí".
+(Netatmo no envía ningún evento de "fin de detección", salvo para el humo y el
+monóxido de carbono: el evento "humo disipado" / "vuelta a la normalidad" la
+devuelve a **No** de inmediato). En una escena, utilice el disparador "el valor
+pasa a Sí" — para el timbre, el disparador **Si suena el timbre**. Un timbrazo
+dispara una sola vez: los eventos posteriores "llamada aceptada" / "llamada
+perdida" de la aplicación Netatmo no son disparadores aparte.
 
 > ⚠️ **Si sus cámaras ya existían en Gladys**, estas nuevas funcionalidades no
 > aparecen por sí solas: vaya a la pestaña **Descubrir** y haga clic en
 > **Actualizar** en cada cámara (o detector de humo) para añadirlas. Sin webhooks
 > configurados, estas funcionalidades simplemente permanecen en "No".
+
+---
+
+## Escenas: activadores y acciones de Netatmo
+
+La integración añade sus propias tarjetas al editor de escenas (Gladys **5.1** o
+posterior): elija **Activador de integración** o **Acción de integración** y
+luego la entrada de Netatmo.
+
+### Activadores (requieren los webhooks de Gladys Plus)
+
+| Activador                      | Se activa cuando                                  | Información transmitida a las acciones |
+| ------------------------------ | ------------------------------------------------- | -------------------------------------- |
+| **Llega una persona conocida** | una cámara de interior reconoce una cara conocida | Persona, Cámara, Casa                  |
+| **Se va una persona conocida** | Netatmo marca a una persona conocida como ausente | Persona, Cámara, Casa                  |
+| **La sirena suena**            | una sirena de interior empieza a sonar            | Sirena, Casa                           |
+
+Filtros opcionales: la **cámara** (o la sirena) — vacío = cualquiera — y la
+**persona**: escriba el nombre **exactamente como aparece en la aplicación
+Netatmo** (el editor de escenas no puede listar las personas de Netatmo; un
+campo vacío = cualquier persona conocida). Una cara no reconocida nunca activa
+«Llega una persona conocida»: la funcionalidad **Persona detectada** de la
+cámara cubre a todas las personas.
+
+### Acciones
+
+| Acción                                 | Qué hace                                                                                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cambiar el modo de calefacción**     | Programación, Ausencia o Antihielo para toda la casa; duración opcional en minutos (Ausencia y Antihielo: vuelta a la programación después) |
+| **Marcar a una persona como ausente**  | una persona conocida o — persona vacía — toda la casa vacía (reactiva la vigilancia de las cámaras configurada para seguir la presencia)    |
+| **Marcar a una persona como presente** | una persona conocida o — persona vacía — todas las personas conocidas                                                                       |
+
+La **casa** es la del dispositivo que elija en la acción (un termostato o una
+válvula para la calefacción, una cámara para las personas). Déjelo vacío si su
+cuenta tiene una sola casa. El campo persona acepta una variable de escena:
+«Llega una persona conocida → Marcar a una persona como presente» con la
+información **Persona**. Cada acción devuelve el nombre de la **Casa** a los
+pasos siguientes.
+
+---
+
+## Widgets del panel
+
+Tres widgets se suman al selector de widgets del panel (Gladys **5.1** o
+posterior): **Editar panel**, añada un widget y busque «Netatmo».
+
+| Widget                  | Muestra                                                                                                                                                          | Ajustes                                                                                                    |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Tiempo Netatmo**      | las fichas en directo de la estación (temperaturas, humedad, CO2, ruido, presión, lluvia, viento) y una fila de estado por módulo con batería baja o inaccesible | la estación (vacío: la primera) y las mediciones mostradas: Resumen, Interior, o Exterior, lluvia y viento |
+| **Calefacción Netatmo** | el modo de calefacción de la casa, una fila por habitación (temperatura medida → consigna) y los botones Programación / Antihielo / Ausencia                     | un termostato o una válvula de la casa (vacío: su única casa)                                              |
+| **Cámaras Netatmo**     | la última imagen de cada cámara, su vigilancia y botones para activarla / desactivarla                                                                           | una cámara mostrada en grande (vacío: todas las cámaras en lista)                                          |
+
+Las fichas siguen los valores en directo; el resto se actualiza con la
+integración (2 minutos, o en cuanto cambian el modo de calefacción, la
+vigilancia o una imagen). Las imágenes de las cámaras las sirve la propia
+integración: el panel nunca carga una imagen desde los servidores de Netatmo.
+Un widget solo muestra los dispositivos creados en Gladys.
 
 ---
 
@@ -184,6 +303,39 @@ vinculados a sus cámaras:
 - **Detector de humo** (`NSD`) — descubierto con su batería y su señal, más una
   funcionalidad **Humo** alimentada por los webhooks (ver la sección anterior):
   la consulta periódica por sí sola no puede reportar ese estado.
+- **Detector de monóxido de carbono** (`NCO`) — igual que el detector de humo:
+  batería y señal (cuando Netatmo las reporta), más una funcionalidad
+  **Monóxido de carbono** alimentada por los webhooks.
+
+---
+
+## Persianas enrollables (Bubendorff / iDiamant)
+
+Active **Persianas enrollables (Bubendorff / iDiamant)** en **Dispositivos a
+descubrir** (desactivado por defecto) para descubrir las persianas Bubendorff
+conectadas a su pasarela iDiamant: modelos por radio (`NBR`), cableados
+(`NBO`) y solares (`NBS`). Cada persiana se crea con:
+
+- un control **abrir / cerrar / parar**;
+- una **posición** (0 % = cerrada, 100 % = abierta), que también puede ajustar;
+- la calidad de su **señal RF**.
+
+La pasarela iDiamant no se crea como dispositivo: su identificador se guarda en
+el parámetro `plug_id` de la persiana, y cada orden pasa por ella. Tras una
+orden, Gladys actualiza los valores unos 30 segundos después para que la nueva
+posición aparezca sin esperar al siguiente ciclo de 2 minutos.
+
+> ⚠️ **¿Ya estaba conectado antes de la compatibilidad con las persianas?** Las
+> persianas necesitan dos nuevos permisos de Netatmo. Vuelva a hacer clic en
+> **Conectar** en la pantalla de configuración y autorice a Gladys — sus
+> dispositivos y ajustes se conservan. Hasta entonces, una orden de persiana
+> falla y la pantalla de configuración le pide que vuelva a conectarse.
+
+**Posiciones intermedias:** según el modelo y el motor, algunas persianas
+Bubendorff solo se abren o se cierran por completo. Una posición intermedia
+puede entonces ser ignorada o redondeada por la persiana, y la posición
+reportada puede reflejar solo la última orden — use abrir / cerrar / parar en
+esos modelos.
 
 ---
 
@@ -217,8 +369,7 @@ Una funcionalidad **Air quality level** muestra el mismo nivel en palabras en el
 panel. Gladys aún no traduce las etiquetas de opciones: están en francés (Sain,
 Correct, Moyen, Mauvais, Malsain — saludable, bueno, regular, malo, insalubre).
 No guarda historial: la funcionalidad numérica **Calidad del
-aire** conserva el historial, los colores y HomeKit. Requiere Gladys 5.1.1 o
-posterior.
+aire** conserva el historial, los colores y HomeKit.
 
 Un Home Coach sin conexión recibe la insignia **inaccesible** y sus últimos
 valores conocidos no se publican. No hace falta volver a conectarse: el permiso
@@ -309,8 +460,22 @@ relanzarse: solo mueve lo que queda.
   desconectado (batería agotada, apagado, fuera de alcance). Gladys deja de
   publicar sus últimos valores conocidos para que no le induzcan a error datos
   obsoletos; la insignia desaparece cuando el dispositivo vuelve.
+- **Un dispositivo muestra una insignia "Degradado", o el estado muestra un
+  mensaje estando Conectado:** una parte de la nube de Netatmo falla desde hace
+  varios minutos (por ejemplo el servicio meteorológico). Gladys sigue
+  publicando lo que el resto de la nube proporciona — las medidas de la estación
+  y de sus módulos también proceden del estado de la casa — y marca los
+  dispositivos que se quedan sin valores recientes. No hay nada que hacer: ambos
+  desaparecen solos en la primera actualización completa. Si persiste, los
+  **Logs** de la integración indican la API que falla.
 - **Un valor de cámara o un comando de vigilancia falla una vez con un mensaje
   de "reconectar":** a su autorización Netatmo le falta el permiso de cámara —
   vuelva a conectar su cuenta.
+- **Una orden de persiana falla con un mensaje de "reconectar":** su
+  autorización Netatmo es anterior a la compatibilidad con las persianas —
+  vuelva a hacer clic en Conectar.
 - **No hay sonido en la cámara:** consulte el consejo sobre el micrófono en la
   sección Cámaras más arriba.
+- **Estado "faltan algunos permisos de Netatmo":** una versión más reciente
+  añadió permisos (timbre con vídeo) — vuelva a hacer clic en Conectar y
+  acéptelos. Los **Registros** de la integración indican cuáles faltan.

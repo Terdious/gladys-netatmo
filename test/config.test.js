@@ -17,6 +17,7 @@ test('normalizeConfig trims strings and coerces form values', () => {
     energy_api: 'false',
     weather_api: '1',
     security_api: 'true',
+    shutter_api: 'on',
     aircare_api: 'on',
     expires_at: '1700000000000',
   });
@@ -25,8 +26,14 @@ test('normalizeConfig trims strings and coerces form values', () => {
   assert.equal(config.energy_api, false);
   assert.equal(config.weather_api, true);
   assert.equal(config.security_api, true);
+  assert.equal(config.shutter_api, true);
   assert.equal(config.aircare_api, true);
   assert.equal(config.expires_at, 1700000000000);
+});
+
+test('the roller shutters are opt-in (shutter_api defaults to false)', () => {
+  assert.equal(normalizeConfig().shutter_api, false);
+  assert.equal(normalizeConfig({ shutter_api: 'false' }).shutter_api, false);
 });
 
 test('normalizeConfig keeps the internal token keys', () => {

@@ -1,8 +1,8 @@
 # Netatmo-Integration für Gladys Assistant
 
 Verbinde deine **Netatmo**-Geräte — Wetterstation, Thermostate und
-Heizkörperventile, Innen- und Außenkameras samt Zubehör, Raumluftsensoren — mit
-Gladys Assistant.
+Heizkörperventile, Innen- und Außenkameras samt Zubehör, Bubendorff-Rollläden,
+Raumluftsensoren — mit Gladys Assistant.
 
 Diese Integration kommuniziert in deinem Namen mit der Netatmo-Cloud: Du
 erstellst einmalig deine eigene Netatmo-Connect-Anwendung, verbindest dein
@@ -15,7 +15,7 @@ Konto, und Gladys erkennt deine Geräte und hält ihre Werte aktuell.
 - Ein **Netatmo-Konto**, bei dem deine Geräte bereits in der Netatmo-App
   installiert sind und funktionieren (Gladys liest, was Netatmo bereitstellt —
   ein Gerät muss zuerst in Netatmo online sein).
-- Gladys Assistant **4.86 oder neuer**.
+- Gladys Assistant **5.2 oder neuer**.
 
 ---
 
@@ -37,8 +37,9 @@ Gladys und deinem Netatmo-Konto bleiben.
 
 Du musst im Portal **keine** Berechtigungen (Scopes) und keine Redirect-URI
 konfigurieren: Gladys fordert die benötigten Berechtigungen (Lesen + Schreiben,
-für Energie, Wetter und Sicherheit einschließlich Kameras) beim Verbinden
-automatisch an und kümmert sich selbst um die OAuth2-Weiterleitung.
+für Energie, Wetter, Sicherheit einschließlich Kameras und Video-Türklingel
+sowie die Rollläden) beim Verbinden automatisch an und kümmert sich selbst um
+die OAuth2-Weiterleitung.
 
 ---
 
@@ -69,12 +70,13 @@ Konfiguration auf, dich erneut zu verbinden.
 
 Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
-| Schalter         | Erkennt                                                                |
-| ---------------- | ---------------------------------------------------------------------- |
-| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)  |
-| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule |
-| **Sicherheit**   | Innen- (`NACamera`) und Außenkameras (`NOC`) sowie deren Zubehör       |
-| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert         |
+| Schalter         | Erkennt                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)                      |
+| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                     |
+| **Sicherheit**   | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör |
+| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                         |
+| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                             |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -84,6 +86,34 @@ erscheinen im Tab **Entdecken**, wo du diejenigen erstellst, die du möchtest.
 Standard `high`) legt die Qualität des Kamera-Livestreams fest.
 
 Die Werte werden alle **2 Minuten** aktualisiert (Ratenbegrenzung von Netatmo).
+
+---
+
+## Heizmodus (Zeitplan / abwesend / Frostschutz)
+
+Jedes Thermostat (`NATherm1`) und jedes Heizkörperventil (`NRV`) hat eine
+Funktion **Heizmodus** (ein Thermostat-_Preset_ in Gladys) mit drei
+Möglichkeiten:
+
+| In Gladys       | In der Netatmo-App        |
+| --------------- | ------------------------- |
+| **Zeitplan**    | dem Wochenzeitplan folgen |
+| **Abwesend**    | Abwesenheitsmodus         |
+| **Frostschutz** | Frostschutz (`hg`)        |
+
+Bei Netatmo gehört der Modus zum **ganzen Zuhause**: Änderst du ihn an einem
+Gerät, wechselt das ganze Zuhause, und jedes Thermostat und Ventil des Zuhauses
+zeigt den neuen Modus gleich danach an (die Integration aktualisiert sofort).
+Ein in der Netatmo-App geänderter Modus erscheint bei der nächsten
+Aktualisierung (2 Minuten, oder 2-3 Sekunden mit den Gladys-Plus-Webhooks).
+
+Nutze ihn in einer Szene („alle sind weg → Heizung auf Abwesend“) mit der
+Standardaktion „Gerätewert setzen“.
+
+> ⚠️ **Wenn deine Thermostate bereits in Gladys existierten**, erscheint die
+> Funktion nicht von selbst: Öffne den Bildschirm **Erkennung** und klicke bei
+> jedem Thermostat und Ventil auf **Aktualisieren**. Gladys **5.2** oder neuer
+> ist erforderlich (das Thermostat-Preset gibt es vorher nicht).
 
 ---
 
@@ -109,6 +139,32 @@ Wenn die Familie Sicherheit aktiviert ist, wird jede Kamera erstellt mit:
   Client (Gladys, Netatmo-Web, Netatmo-App) Ton. Gladys überträgt den Ton,
   sobald der Stream ihn enthält — auf der Seite von Gladys ist nichts zu
   konfigurieren.
+
+---
+
+## Video-Türklingel
+
+Wenn die Familie Sicherheit aktiviert ist, wird die Netatmo-Video-Türklingel
+(`NDB`) erstellt mit:
+
+- einem **Dashboard-Bild** (ein Schnappschuss, automatisch aktualisiert) —
+  abgerufen über die Netatmo-VPN-URL: Die Türklingel stellt es nicht im lokalen
+  Netzwerk bereit;
+- einer Funktion **Türklingel**, die **Klingelt** anzeigt, wenn jemand den
+  Knopf drückt, nutzbar als Szenen-Auslöser (**Wenn die Türklingel klingelt**)
+  — sie benötigt die Gladys-Plus-Webhooks (siehe unten): Die Abfrage allein kann
+  kein Klingeln melden;
+- der Qualität ihrer **WLAN**-Verbindung.
+
+Es gibt keinen Überwachungsschalter (Netatmo bietet keinen für die Türklingel)
+und keine Livestream-Schaltfläche: Die Türklingel streamt nur über WebRTC, das
+die Kamera-Liveansicht von Gladys nicht abspielen kann.
+
+> ⚠️ **Netatmo-Konto vor dieser Version verbunden?** Die Türklingel benötigt
+> zwei neue Netatmo-Berechtigungen (`read_doorbell`, `access_doorbell`): Klicke
+> auf dem Konfigurationsbildschirm erneut auf **Verbinden** und akzeptiere sie.
+> Bis dahin zeigt der Verbindungsstatus einen Hinweis, erneut auf Verbinden zu
+> klicken.
 
 ---
 
@@ -160,16 +216,79 @@ die als **Szenen-Auslöser** nutzbar sind:
 | Außenkamera (Presence)  | **Tier erkannt**     | ein erkanntes Tier                    |
 | Außenkamera (Presence)  | **Fahrzeug erkannt** | ein erkanntes Fahrzeug                |
 | Rauchmelder             | **Rauch**            | eine Raucherkennung                   |
+| Kohlenmonoxidmelder     | **Kohlenmonoxid**    | eine Kohlenmonoxid-Erkennung          |
+| Video-Türklingel        | **Türklingel**       | jemand klingelt                       |
 
 Jede Erkennung wechselt auf **Ja** und kehrt nach einer Minute von selbst auf
-**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“). Verwende in
-einer Szene den Auslöser „Wert wird Ja“.
+**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“, außer bei
+Rauch und Kohlenmonoxid: Das Ereignis „Rauch verschwunden“ / „wieder normal“
+setzt sie sofort auf **Nein**). Verwende in einer Szene den Auslöser „Wert wird
+Ja“ — für die Türklingel den Auslöser **Wenn die Türklingel klingelt**. Ein
+Klingeln löst einmal aus: Die Folgeereignisse „Anruf angenommen“ / „Anruf
+verpasst“ der Netatmo-App sind keine eigenen Auslöser.
 
 > ⚠️ **Wenn deine Kameras bereits in Gladys existierten**, erscheinen diese
 > neuen Funktionen nicht von selbst: Gehe in den Tab **Entdecken** und klicke
 > bei jeder Kamera (oder jedem Rauchmelder) auf **Aktualisieren**, um sie
 > hinzuzufügen. Ohne konfigurierte Webhooks bleiben diese Funktionen einfach
 > auf „Nein“.
+
+---
+
+## Szenen: Netatmo-Auslöser und -Aktionen
+
+Die Integration fügt dem Szenen-Editor eigene Karten hinzu (Gladys **5.1** oder
+neuer): Wähle **Integrations-Auslöser** oder **Integrations-Aktion** und dann
+den Netatmo-Eintrag.
+
+### Auslöser (erfordern die Gladys-Plus-Webhooks)
+
+| Auslöser                          | Löst aus, wenn                                     | An die Aktionen weitergegebene Informationen |
+| --------------------------------- | -------------------------------------------------- | -------------------------------------------- |
+| **Eine bekannte Person kommt an** | eine Innenkamera ein bekanntes Gesicht erkennt     | Person, Kamera, Zuhause                      |
+| **Eine bekannte Person geht**     | Netatmo eine bekannte Person als abwesend markiert | Person, Kamera, Zuhause                      |
+| **Die Sirene ertönt**             | eine Innensirene zu ertönen beginnt                | Sirene, Zuhause                              |
+
+Optionale Filter: die **Kamera** (oder Sirene) — leer = jede — und die
+**Person**: Gib den Namen **genau wie in der Netatmo-App** ein (der
+Szenen-Editor kann die Netatmo-Personen nicht auflisten; ein leeres Feld = jede
+bekannte Person). Ein unbekanntes Gesicht löst „Eine bekannte Person kommt an“
+nie aus — die Funktion **Person erkannt** der Kamera deckt alle Personen ab.
+
+### Aktionen
+
+| Aktion                            | Was sie tut                                                                                                                                  |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Heizmodus ändern**              | Zeitplan, Abwesend oder Frostschutz für das ganze Zuhause; optionale Dauer in Minuten (Abwesend und Frostschutz: danach zurück zum Zeitplan) |
+| **Person als abwesend markieren** | eine bekannte Person oder — Person leer gelassen — das ganze Zuhause leer (aktiviert die anwesenheitsabhängige Kameraüberwachung wieder)     |
+| **Person als anwesend markieren** | eine bekannte Person oder — Person leer gelassen — alle bekannten Personen                                                                   |
+
+Das **Zuhause** ist das des Geräts, das du in der Aktion wählst (ein Thermostat
+oder Ventil für die Heizung, eine Kamera für die Personen). Lass es leer, wenn
+dein Konto nur ein Zuhause hat. Das Personenfeld akzeptiert eine
+Szenen-Variable: „Eine bekannte Person kommt an → Person als anwesend
+markieren“ mit der Information **Person**. Jede Aktion gibt den Namen des
+**Zuhauses** an die folgenden Schritte weiter.
+
+---
+
+## Dashboard-Widgets
+
+Drei Widgets erscheinen in der Widget-Auswahl des Dashboards (Gladys **5.1**
+oder neuer): **Dashboard bearbeiten**, ein Widget hinzufügen und nach „Netatmo“
+suchen.
+
+| Widget              | Zeigt                                                                                                                                                      | Einstellungen                                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind |
+| **Netatmo-Heizung** | den Heizmodus des Zuhauses, eine Zeile pro Raum (gemessene Temperatur → Sollwert) und die Schaltflächen Zeitplan / Frostschutz / Abwesend                  | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause)                                     |
+| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                    | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                |
+
+Die Kacheln folgen den Werten live; der Rest wird mit der Integration
+aktualisiert (2 Minuten, oder sobald sich der Heizmodus, die Überwachung oder
+ein Bild ändert). Die Kamerabilder liefert die Integration selbst — das
+Dashboard lädt nie ein Bild von den Netatmo-Servern. Ein Widget zeigt nur die in
+Gladys angelegten Geräte.
 
 ---
 
@@ -185,6 +304,40 @@ verknüpfte Zubehör erkannt:
 - **Rauchmelder** (`NSD`) — erkannt mit Batterie und Signal, dazu eine Funktion
   **Rauch**, die von den Webhooks gespeist wird (siehe Abschnitt oben): Die
   Abfrage allein kann diesen Zustand nicht melden.
+- **Kohlenmonoxidmelder** (`NCO`) — wie der Rauchmelder: Batterie und Signal
+  (sofern Netatmo sie meldet), dazu eine Funktion **Kohlenmonoxid**, die von
+  den Webhooks gespeist wird.
+
+---
+
+## Rollläden (Bubendorff / iDiamant)
+
+Aktiviere **Rollläden (Bubendorff / iDiamant)** unter **Zu erkennende Geräte**
+(standardmäßig aus), um die Bubendorff-Rollläden zu erkennen, die mit deinem
+iDiamant-Gateway verbunden sind: Funk- (`NBR`), kabelgebundene (`NBO`) und
+Solarmodelle (`NBS`). Jeder Rollladen wird erstellt mit:
+
+- einer Steuerung **öffnen / schließen / stoppen**;
+- einer **Position** (0 % = geschlossen, 100 % = offen), die du auch einstellen
+  kannst;
+- der Qualität seines **Funksignals (RF)**.
+
+Das iDiamant-Gateway selbst wird nicht als Gerät erstellt: Seine ID wird im
+Parameter `plug_id` des Rollladens gespeichert, jeder Befehl läuft darüber.
+Nach einem Befehl aktualisiert Gladys die Werte etwa 30 Sekunden später, damit
+die neue Position erscheint, ohne auf den nächsten 2-Minuten-Zyklus zu warten.
+
+> ⚠️ **Schon vor der Rollladen-Unterstützung verbunden?** Die Rollläden
+> benötigen zwei neue Netatmo-Berechtigungen. Klicke im Konfigurationsbildschirm
+> erneut auf **Verbinden** und autorisiere Gladys — deine Geräte und
+> Einstellungen bleiben erhalten. Bis dahin schlägt ein Rollladenbefehl fehl,
+> und der Konfigurationsbildschirm fordert dich auf, dich erneut zu verbinden.
+
+**Zwischenpositionen:** Je nach Modell und Motor können manche
+Bubendorff-Rollläden nur ganz öffnen oder ganz schließen. Eine Zwischenposition
+kann dann vom Rollladen ignoriert oder gerundet werden, und die gemeldete
+Position spiegelt eventuell nur den letzten Befehl wider — nutze bei diesen
+Modellen öffnen / schließen / stoppen.
 
 ---
 
@@ -217,7 +370,7 @@ Eine Funktion **Air quality level** zeigt dieselbe Stufe im Dashboard in Worten.
 Gladys übersetzt Optionsbezeichnungen noch nicht: Sie sind französisch (Sain,
 Correct, Moyen, Mauvais, Malsain — gesund, gut, mittel, schlecht, ungesund).
 Sie speichert keinen Verlauf: Die numerische Funktion **Luftqualität** behält den
-Verlauf, die Farben und HomeKit. Erfordert Gladys 5.1.1 oder neuer.
+Verlauf, die Farben und HomeKit.
 
 Ein Home Coach, der offline ist, erhält das Badge **nicht erreichbar**, und
 seine zuletzt bekannten Werte werden nicht veröffentlicht. Eine erneute
@@ -308,7 +461,21 @@ verschiebt nur, was noch übrig ist.
   veröffentlicht seine zuletzt bekannten Werte nicht mehr, damit du nicht durch
   veraltete Daten getäuscht wirst; das Badge verschwindet, sobald das Gerät
   wieder erreichbar ist.
+- **Ein Gerät zeigt ein Badge „Beeinträchtigt“, oder der Status zeigt trotz
+  Verbunden eine Meldung:** Ein Teil der Netatmo-Cloud fällt seit einigen
+  Minuten aus (zum Beispiel der Wetterdienst). Gladys veröffentlicht weiter,
+  was der Rest der Cloud liefert — die Messwerte der Station und ihrer Module
+  kommen auch aus dem Hausstatus — und markiert die Geräte, die keine frischen
+  Werte mehr erhalten. Nichts zu tun: Beides verschwindet von selbst bei der
+  ersten vollständigen Aktualisierung. Hält es an, nennen die **Logs** der
+  Integration die ausfallende API.
 - **Ein Kamerawert oder ein Überwachungsbefehl schlägt einmal mit einer Meldung
   „erneut verbinden“ fehl:** Deiner Netatmo-Autorisierung fehlt die
   Kamera-Berechtigung — verbinde dein Konto erneut.
+- **Ein Rollladenbefehl schlägt mit einer Meldung „erneut verbinden“ fehl:**
+  Deine Netatmo-Autorisierung stammt aus der Zeit vor der
+  Rollladen-Unterstützung — klicke erneut auf Verbinden.
 - **Kein Kameraton:** Siehe den Mikrofon-Tipp im Abschnitt Kameras oben.
+- **Status „einige Netatmo-Berechtigungen fehlen“:** Eine neuere Version hat
+  Berechtigungen hinzugefügt (Video-Türklingel) — klicke erneut auf Verbinden
+  und akzeptiere sie. Die **Logs** der Integration nennen die fehlenden.

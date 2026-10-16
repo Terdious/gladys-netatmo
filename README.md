@@ -30,6 +30,17 @@ capabilities land (Home + Security cameras, webhooks, …).
   kept, unchanged values deduped with a 30-minute keep-alive.
 - **Thermostat control**: the setpoint is writable (`setroomthermpoint`,
   mode `manual`), with a clear "reconnect" message on missing scope rights.
+- **Heating mode**: the home's mode (schedule / away / frost guard) as a
+  writable thermostat preset on every thermostat and valve (`setthermmode`,
+  then an immediate refresh).
+- **Scene triggers and actions** (Gladys 5.1+): "a known person arrives /
+  leaves" and "the siren sounds" fired from the webhook events with the
+  person, camera and home names; "change the heating mode" (optional
+  duration) and "mark a person as away / at home" (`setpersonsaway` /
+  `setpersonshome`).
+- **Dashboard widgets** (Gladys 5.1+): Netatmo weather (live tiles + module
+  health), Netatmo heating (rooms, mode, mode buttons) and Netatmo cameras
+  (latest picture served by the integration, monitoring toggle).
 - **Cameras** (opt-in via the `security_api` toggle, like the core): indoor
   `NACamera` and outdoor `NOC` cameras are discovered from the same
   homesdata/homestatus payloads, with WiFi quality, a **writable monitoring
@@ -45,21 +56,37 @@ capabilities land (Home + Security cameras, webhooks, …).
   rotation, local/VPN switch, user-edited quality) — the external-integrations
   framework silently upserts the params of created devices on every
   discovery publish.
+- **Video doorbell** (`NDB`, opt-in with the cameras): dashboard image
+  (snapshot on the VPN URL only — WebRTC cameras serve nothing locally),
+  WiFi quality and a **doorbell ring** feature fed by the webhooks
+  (`incoming_call`). No monitoring switch and no `CAMERA_URL` (WebRTC-only
+  stream). Requests the `read_doorbell` / `access_doorbell` scopes: a token
+  lacking them keeps working, with a "click Connect again" status.
 - **Camera-bridged security accessories** (opt-in with the cameras): the
   door/window tag (`NACamDoorTag`) as an opening sensor, the indoor siren
   (`NIS`) as a read-only sounding sensor, both with battery + RF quality; the
-  smoke alarm (`NSD`) is discovered with battery + signal — its smoke state is
-  webhook-driven and lands with the webhooks milestone. Net-new vs the core
-  service.
+  smoke alarm (`NSD`) and the carbon monoxide alarm (`NCO`) are discovered
+  with battery + signal — their smoke / CO state is webhook-driven. Net-new vs
+  the core service.
+- **Roller shutters** (opt-in via the `shutter_api` toggle): Bubendorff
+  shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`) with open / close /
+  stop, a writable position and RF quality (`/api/setstate` through the
+  gateway; new `read_bubendorff` / `write_bubendorff` scopes — existing users
+  reconnect once).
 - **Home Coach / Smart Indoor Air Quality Monitor** (`NHC`, opt-in via the
   `aircare_api` toggle): loaded from the legacy `gethomecoachsdata` API as an
   independent family, with temperature (+ min/max), humidity, CO2, noise,
   pressure, absolute pressure, WiFi quality and the Netatmo health index as an
   `airquality-sensor`/`aqi` feature — the 0-4 level is published as the middle
   of the matching AQI band (25 / 75 / 125 / 175 / 250) because Gladys reads
-  that feature on the 0-500 AQI scale (dashboard colours, HomeKit).
+  that feature on the 0-500 AQI scale (dashboard colours, HomeKit), plus the
+  same rating in words as a read-only `text`/`select` feature.
 - **Connection status** on the Configuration screen at every step (missing
-  credentials, not connected, connected, reconnect required).
+  credentials, not connected, connected, reconnect required), plus the
+  **degraded state**: an API family failing 3 cycles in a row is named under
+  the Connected status and the devices it leaves without fresh values get a
+  degraded badge — the weather measures fall back on homestatus, loaded
+  whenever any family is enabled (#33).
 
 - **Gladys Plus webhooks**: Netatmo events are relayed to the integration and
   trigger an immediate refresh (a setpoint change lands in ~2-3 s instead of
@@ -77,8 +104,9 @@ frame is never dropped.
 
 ## Installation & updates
 
-Requires **Gladys Assistant 4.86.0 or later** (`gladys_version` in the
-manifest).
+Requires **Gladys Assistant 5.2.0 or later** (`gladys_version` in the
+manifest): the heating mode is a thermostat preset, a feature type Gladys knows
+since 5.2.0.
 
 The integration is listed in the Gladys integration catalog (categories
 _Climate_, _Security_ and _Environment_): open
@@ -135,7 +163,9 @@ never appear on the configuration form.
 │  │  ├─ deviceMapping.js            # value transforms (read/write)
 │  │  ├─ telemetry.js                # 120s refresh loop, dedup, transport badges
 │  │  ├─ camera.js                   # snapshots: local-first URL, ≤150KB pipeline
-│  │  └─ setValue.js                 # thermostat setpoint + camera monitoring
+│  │  ├─ scenes.js                   # scene actions (heating mode, persons)
+│  │  ├─ widgets.js                  # dashboard widgets (weather, heating, cameras)
+│  │  └─ setValue.js                 # setpoint, heating mode, camera monitoring
 │  └─ config.js                      # config defaults + normalization
 ├─ gladys-assistant-integration.json # manifest (name, config schema, image…)
 ├─ Dockerfile                        # Node 24 Alpine, read-only rootfs ready

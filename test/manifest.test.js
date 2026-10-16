@@ -12,7 +12,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 import { DEFAULT_CONFIG } from '../src/config.js';
-import { WEBHOOK_KEY, CONNECTION_MESSAGES } from '../src/netatmo/constants.js';
+import { WEBHOOK_KEY, CONNECTION_MESSAGES, DEGRADED_MESSAGES } from '../src/netatmo/constants.js';
+import * as featureBuilders from '../src/netatmo/features.js';
+import { SCENE_ACTIONS } from '../src/netatmo/scenes.js';
+import { SCENE_TRIGGER_KEYS } from '../src/netatmo/events.js';
+import { WIDGETS, WIDGET_OF_UPDATE } from '../src/netatmo/widgets.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -38,6 +42,17 @@ const CATALOG_CATEGORIES = [
 // validator refuses a manifest whose `gladys_version` minimum is lower than
 // the first release accepting every field it declares.
 const CATEGORIES_MIN_GLADYS_VERSION = [4, 86, 0];
+// Feature types older Gladys releases do not know, with the first release
+// accepting them: an older core refuses the WHOLE discovery list (400) as
+// soon as one feature carries an unknown category/type.
+// Capability fields (scene triggers / actions, widgets): older cores reject
+// them as unknown manifest fields.
+const CAPABILITY_FIELDS = ['scene_triggers', 'scene_actions', 'widgets'];
+const CAPABILITY_MIN_GLADYS_VERSION = [5, 1, 0];
+const FEATURE_TYPE_MIN_GLADYS_VERSION = {
+  'thermostat/preset': [5, 2, 0],
+  'text/select': [5, 1, 1],
+};
 // The languages of the Gladys interface: every text the user reads ships in
 // all of them (Gladys falls back to English for a missing one).
 const GLADYS_LANGUAGES = ['en', 'fr', 'de', 'es'];
@@ -84,7 +99,7 @@ test('the manifest version is the package version, and the image is tagged with 
   );
 });
 
-test('catalog categories: 1 to 3 known keys, and Gladys >= 4.86.0', () => {
+test('catalog categories: 1 to 3 known keys, coupled to Gladys >= 4.86.0', () => {
   assert.ok(Array.isArray(manifest.categories), 'categories must be declared');
   assert.ok(manifest.categories.length >= 1 && manifest.categories.length <= 3);
   assert.equal(new Set(manifest.categories).size, manifest.categories.length, 'unique keys');
@@ -152,5 +167,115 @@ test('every manifest text ships in every Gladys language', () => {
 test('every connection status message ships in every Gladys language', () => {
   for (const [key, message] of Object.entries(CONNECTION_MESSAGES)) {
     assert.deepEqual(Object.keys(message).sort(), [...GLADYS_LANGUAGES].sort(), `${key} languages`);
+  }
+});
+
+test('every degraded reason ships in every Gladys language, within the 200-character bound', () => {
+  for (const [key, message] of Object.entries(DEGRADED_MESSAGES)) {
+    assert.deepEqual(Object.keys(message).sort(), [...GLADYS_LANGUAGES].sort(), `${key} languages`);
+    for (const [language, text] of Object.entries(message)) {
+      assert.ok(text.length <= 200, `${key}.${language} has ${text.length} characters`);
+    }
+  }
+});
+
+test('every feature type the code publishes is known to the minimum Gladys version', () => {
+  // Every builder of src/netatmo/features.js, called with placeholder
+  // arguments: the category/type pair does not depend on them.
+  const published = new Set(
+    Object.values(featureBuilders)
+      .filter((build) => typeof build === 'function')
+      .map((build) => {
+        const feature = build('name', 'ext:netatmo:id', 'suffix');
+        return `${feature.category}/${feature.type}`;
+      }),
+  );
+  assert.ok(published.has('thermostat/preset'), 'the heating mode is a thermostat preset');
+  for (const [featureType, minVersion] of Object.entries(FEATURE_TYPE_MIN_GLADYS_VERSION)) {
+    if (published.has(featureType)) {
+      assert.ok(
+        isAtLeast(minGladysVersion(), minVersion),
+        `${featureType} requires gladys_version >= ${minVersion.join('.')}, got "${manifest.gladys_version}"`,
+      );
+    }
+  }
+});
+
+const keysOf = (list) => (list ?? []).map((entry) => entry.key);
+
+test('declaring scene triggers, scene actions or widgets requires Gladys >= 5.1.0', () => {
+  const declared = CAPABILITY_FIELDS.filter((field) => manifest[field] !== undefined);
+  assert.ok(declared.length > 0, 'the manifest declares capability fields');
+  assert.ok(
+    isAtLeast(minGladysVersion(), CAPABILITY_MIN_GLADYS_VERSION),
+    `${declared.join(', ')} requires gladys_version >= 5.1.0, got "${manifest.gladys_version}"`,
+  );
+});
+
+test('every scene_actions key has an onSceneAction handler, and vice versa', () => {
+  const declared = keysOf(manifest.scene_actions);
+  for (const key of declared) {
+    assert.equal(typeof SCENE_ACTIONS[key], 'function', `scene action "${key}" has no handler`);
+  }
+  for (const key of Object.keys(SCENE_ACTIONS)) {
+    assert.ok(declared.includes(key), `handler "${key}" is not declared in scene_actions`);
+  }
+});
+
+test('every scene trigger the code fires is declared in scene_triggers, and vice versa', () => {
+  // An undeclared key is a 404 on publishSceneEvent; a declared key nobody
+  // fires is a dead card in the scene editor.
+  const declared = keysOf(manifest.scene_triggers);
+  assert.deepEqual([...SCENE_TRIGGER_KEYS].sort(), [...declared].sort());
+});
+
+test('scene declarations: unique keys, allowed field types, scalar variables and outputs', () => {
+  for (const list of ['scene_triggers', 'scene_actions']) {
+    const keys = keysOf(manifest[list]);
+    assert.equal(new Set(keys).size, keys.length, `${list} keys are unique`);
+    for (const entry of manifest[list]) {
+      assert.match(entry.key, /^[a-z0-9_]{1,40}$/);
+      // boolean has no "any" state: trigger filters cannot use it (spec §3).
+      const allowed = ['string', 'number', 'select', 'multi_select', 'section'];
+      if (list === 'scene_actions') {
+        allowed.push('boolean');
+      }
+      for (const field of entry.fields ?? []) {
+        assert.ok(allowed.includes(field.type), `${list}.${entry.key}.${field.key} type`);
+      }
+      for (const output of [...(entry.variables ?? []), ...(entry.outputs ?? [])]) {
+        assert.ok(['string', 'number', 'boolean'].includes(output.type));
+      }
+    }
+  }
+});
+
+test('every widgets key has an onWidgetGet handler, and vice versa', () => {
+  const declared = keysOf(manifest.widgets);
+  for (const key of declared) {
+    assert.equal(typeof WIDGETS[key]?.get, 'function', `widget "${key}" has no content handler`);
+  }
+  for (const key of Object.keys(WIDGETS)) {
+    assert.ok(declared.includes(key), `widget "${key}" is not declared in widgets`);
+  }
+  // Every telemetry nudge targets a declared widget (an undeclared key throws).
+  for (const key of Object.values(WIDGET_OF_UPDATE)) {
+    assert.ok(declared.includes(key), `nudged widget "${key}" is not declared`);
+  }
+});
+
+test('widget declarations: key, label and description bounds, allowed setting types', () => {
+  assert.ok(manifest.widgets.length <= 5);
+  for (const widget of manifest.widgets) {
+    assert.match(widget.key, /^[a-z0-9_]{2,32}$/);
+    for (const label of Object.values(widget.label)) {
+      assert.ok(label.length >= 3 && label.length <= 30, `${widget.key} label "${label}"`);
+    }
+    for (const description of Object.values(widget.description ?? {})) {
+      assert.ok(description.length <= 100, `${widget.key} description "${description}"`);
+    }
+    for (const setting of widget.settings ?? []) {
+      assert.ok(['string', 'number', 'boolean', 'select', 'multi_select'].includes(setting.type));
+    }
   }
 });

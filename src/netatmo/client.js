@@ -8,7 +8,9 @@
 // Endpoints mirror the core service: homesdata/homestatus (Energy topology +
 // live status), getthermostatsdata (legacy Energy details), getstationsdata
 // (Weather stations), gethomecoachsdata (Home Coach air quality monitors,
-// issue #37) and setroomthermpoint (thermostat setpoint).
+// issue #37), setroomthermpoint (thermostat setpoint), setthermmode (heating
+// mode of a home) and setpersonsaway / setpersonshome (presence of the
+// persons known to the cameras).
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
@@ -148,15 +150,62 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
   }
 
   /**
-   * Set the state of a module (camera monitoring on/off), through the JSON
-   * /api/setstate endpoint (core PR #2623).
-   * @param {{homeId: string, moduleId: string, monitoring: string}} state target
+   * Set the heating mode of a whole home (issue #38): follow the schedule,
+   * away or frost guard. `endtime` (UNIX seconds) bounds an away / frost
+   * guard period; Netatmo ignores it for the schedule.
+   * @param {string} homeId Netatmo home id
+   * @param {string} mode `schedule` | `away` | `hg`
+   * @param {number} [endtime] end of the away / frost guard period (UNIX seconds)
    * @returns {Promise<object>} parsed response body
    */
-  async function setState({ homeId, moduleId, monitoring }) {
+  async function setThermMode(homeId, mode, endtime) {
+    const form = { home_id: homeId, mode };
+    if (endtime !== undefined && endtime !== null && mode !== 'schedule') {
+      form.endtime = String(Math.round(endtime));
+    }
+    return request(API_PATHS.SET_THERM_MODE, { method: 'POST', form });
+  }
+
+  /**
+   * Mark one person as away, or the whole home as empty when no person is
+   * given (issue #39) — what re-arms the camera monitoring set to follow the
+   * presence.
+   * @param {string} homeId Netatmo home id
+   * @param {string} [personId] Netatmo person id; absent = everybody
+   * @returns {Promise<object>} parsed response body
+   */
+  async function setPersonsAway(homeId, personId) {
+    const form = { home_id: homeId };
+    if (personId) {
+      form.person_id = personId;
+    }
+    return request(API_PATHS.SET_PERSONS_AWAY, { method: 'POST', form });
+  }
+
+  /**
+   * Mark persons as at home (issue #39). The ids travel as a repeated
+   * `person_ids[]` form field, like pyatmo does.
+   * @param {string} homeId Netatmo home id
+   * @param {string[]} personIds Netatmo person ids
+   * @returns {Promise<object>} parsed response body
+   */
+  async function setPersonsHome(homeId, personIds) {
+    const form = [['home_id', homeId], ...personIds.map((id) => ['person_ids[]', id])];
+    return request(API_PATHS.SET_PERSONS_HOME, { method: 'POST', form });
+  }
+
+  /**
+   * Set the state of a module through the JSON /api/setstate endpoint: camera
+   * monitoring on/off (core PR #2623) or a roller shutter target_position +
+   * bridge (issue #34). Every field besides homeId/moduleId goes into the
+   * module entry as is.
+   * @param {{homeId: string, moduleId: string}} state target + module fields
+   * @returns {Promise<object>} parsed response body
+   */
+  async function setState({ homeId, moduleId, ...fields }) {
     return request(API_PATHS.SET_STATE, {
       method: 'POST',
-      json: { home: { id: homeId, modules: [{ id: moduleId, monitoring }] } },
+      json: { home: { id: homeId, modules: [{ id: moduleId, ...fields }] } },
     });
   }
 
@@ -187,6 +236,9 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     getStationsData,
     getHomeCoachsData,
     setRoomThermpoint,
+    setThermMode,
+    setPersonsAway,
+    setPersonsHome,
     setState,
     addWebhook,
     dropWebhook,

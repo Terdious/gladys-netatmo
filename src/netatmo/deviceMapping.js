@@ -7,9 +7,18 @@
 
 import { DEVICE_FEATURE_CATEGORIES, DEVICE_FEATURE_TYPES } from '@gladysassistant/integration-sdk';
 
+import { THERM_MODE_PRESETS, COVER_STATE, SHUTTER_POSITION } from './constants.js';
+
 const toBinary = (valueFromDevice) => (valueFromDevice === true || valueFromDevice === 1 ? 1 : 0);
 const toInteger = (valueFromDevice) => parseInt(valueFromDevice, 10);
 const identity = (valueFromDevice) => valueFromDevice;
+
+// Gladys cover state → /api/setstate target_position (pyatmo ShutterMixin).
+const SHUTTER_TARGET_BY_STATE = {
+  [COVER_STATE.OPEN]: SHUTTER_POSITION.OPEN,
+  [COVER_STATE.CLOSE]: SHUTTER_POSITION.CLOSE,
+  [COVER_STATE.STOP]: SHUTTER_POSITION.STOP,
+};
 
 // NRV modules report a `battery_state` string instead of a percentage.
 const BATTERY_LEVELS = {
@@ -60,23 +69,65 @@ export function healthIndexToLevel(healthIndex) {
   return Number.isInteger(level) ? HEALTH_LEVELS[level] : undefined;
 }
 
+/**
+ * Netatmo heating mode (`schedule` / `hg` / `away`) -> Gladys preset; any
+ * other mode (`off`, `manual`…) has no preset: undefined, never emitted.
+ */
+export function thermModeToPreset(mode) {
+  return THERM_MODE_PRESETS.find((entry) => entry.mode === mode)?.preset;
+}
+
+/**
+ * Gladys preset -> Netatmo heating mode. A preset Netatmo does not support
+ * (eco, night, comfort) is refused: the feature never declares it.
+ */
+export function presetToThermMode(preset) {
+  const mode = THERM_MODE_PRESETS.find((entry) => entry.preset === Number(preset))?.mode;
+  if (!mode) {
+    throw new Error(`Netatmo has no heating mode for the preset ${preset}`);
+  }
+  return mode;
+}
+
 export const writeValues = {
   [DEVICE_FEATURE_CATEGORIES.THERMOSTAT]: {
     [DEVICE_FEATURE_TYPES.THERMOSTAT.TARGET_TEMPERATURE]: identity,
+    [DEVICE_FEATURE_TYPES.THERMOSTAT.PRESET]: presetToThermMode,
   },
   [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
     /* camera monitoring: 'on' / 'off' */
     [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: (valueFromGladys) =>
       valueFromGladys === 1 || valueFromGladys === true ? 'on' : 'off',
   },
+  [DEVICE_FEATURE_CATEGORIES.SHUTTER]: {
+    [DEVICE_FEATURE_TYPES.SHUTTER.STATE]: (valueFromGladys) => {
+      const target = SHUTTER_TARGET_BY_STATE[Number(valueFromGladys)];
+      if (target === undefined) {
+        throw new Error(`Unknown shutter state ${valueFromGladys}`);
+      }
+      return target;
+    },
+    [DEVICE_FEATURE_TYPES.SHUTTER.POSITION]: (valueFromGladys) => {
+      const position = Math.round(Number(valueFromGladys));
+      if (Number.isNaN(position)) {
+        throw new Error(`Invalid shutter position ${valueFromGladys}`);
+      }
+      return Math.min(SHUTTER_POSITION.OPEN, Math.max(SHUTTER_POSITION.CLOSE, position));
+    },
+  },
 };
 
 export const readValues = {
   [DEVICE_FEATURE_CATEGORIES.THERMOSTAT]: {
     [DEVICE_FEATURE_TYPES.THERMOSTAT.TARGET_TEMPERATURE]: identity,
+    [DEVICE_FEATURE_TYPES.THERMOSTAT.PRESET]: thermModeToPreset,
   },
   [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
     [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: toBinary,
+  },
+  [DEVICE_FEATURE_CATEGORIES.SHUTTER]: {
+    [DEVICE_FEATURE_TYPES.SHUTTER.STATE]: identity,
+    [DEVICE_FEATURE_TYPES.SHUTTER.POSITION]: toInteger,
   },
   [DEVICE_FEATURE_CATEGORIES.BATTERY]: {
     [DEVICE_FEATURE_TYPES.BATTERY.INTEGER]: (valueFromDevice) =>

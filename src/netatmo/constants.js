@@ -21,6 +21,9 @@ export const API_PATHS = {
   GET_WEATHER_STATIONS: '/api/getstationsdata?get_favorites=false',
   GET_HOME_COACHS: '/api/gethomecoachsdata',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
+  SET_THERM_MODE: '/api/setthermmode',
+  SET_PERSONS_AWAY: '/api/setpersonsaway',
+  SET_PERSONS_HOME: '/api/setpersonshome',
   SET_STATE: '/api/setstate',
   ADD_WEBHOOK: '/api/addwebhook',
   DROP_WEBHOOK: '/api/dropwebhook',
@@ -41,8 +44,9 @@ export const WEBHOOK_DEBOUNCE_MS = 2 * 1000;
 // possible.
 //
 // Netatmo sends `push_type: "<module type>-<event>"` (e.g. "NACamera-movement",
-// "NOC-human", "NSD-smoke"). We key on the EVENT part so every module type is
-// handled by one table, and unknown events are ignored instead of guessed.
+// "NOC-human", "NSD-smoke", "NCO-co_detected"). We key on the EVENT part so
+// every module type is handled by one table, and unknown events are ignored
+// instead of guessed.
 export const EVENT_FEATURE_SUFFIXES = {
   movement: 'motion',
   human: 'human',
@@ -50,7 +54,44 @@ export const EVENT_FEATURE_SUFFIXES = {
   animal: 'animal',
   vehicle: 'vehicle',
   smoke: 'smoke',
+  co_detected: 'carbon_monoxide',
+  // Video doorbell (NDB, issue #35): someone pressed the button. The follow-up
+  // `accepted_call` / `missed_call` events describe the SAME ring (answered or
+  // not in the Netatmo app): they are deliberately not mapped, so one ring
+  // fires a scene once instead of twice.
+  incoming_call: 'ring',
 };
+
+// Webhook `sub_type` values that report the END of a detection rather than a
+// new one (Netatmo security webhook documentation: smoke 0 = cleared,
+// 1 = detected; co_detected 0 = OK, 1 = pre-alarm, 2 = alarm). Such an event
+// returns the feature to 0 at once — publishing it as a detection would raise
+// a false alarm right after a real one.
+export const EVENT_CLEARED_SUB_TYPES = {
+  smoke: ['0'],
+  co_detected: ['0'],
+};
+
+// Scene triggers (issue #39, manifest `scene_triggers`, Gladys 5.1+), fired
+// with publishSceneEvent from the webhook event stream. Keys are FOREVER:
+// scenes store them, a renamed key is a removed key.
+export const SCENE_TRIGGERS = {
+  KNOWN_PERSON_ARRIVED: 'known_person_arrived',
+  KNOWN_PERSON_LEFT: 'known_person_left',
+  SIREN_SOUNDING: 'siren_sounding',
+};
+
+// Scene actions (issue #39, manifest `scene_actions`), handled by
+// src/netatmo/scenes.js. Same rule: keys are never renamed.
+export const SCENE_ACTION_KEYS = {
+  SET_HEATING_MODE: 'set_heating_mode',
+  SET_PERSONS_AWAY: 'set_persons_away',
+  SET_PERSONS_HOME: 'set_persons_home',
+};
+
+// Webhooks may be re-delivered: the last scene events fired are remembered
+// (by Netatmo event id + person) so a duplicate never starts a scene twice.
+export const SCENE_EVENT_DEDUP_SIZE = 100;
 
 // A momentary event has no "cleared" counterpart in the Netatmo stream: the
 // feature is set to 1 then automatically back to 0 after this delay, like any
@@ -77,6 +118,17 @@ export const SUPPORTED_MODULE_TYPE = {
   // homestatus payload carries them); its SMOKE state is webhook-driven and
   // lands with the webhooks milestone (issue #5).
   NSD: 'NSD',
+  // Smart carbon monoxide alarm (issue #36): same shape as the smoke alarm —
+  // battery + signal when homestatus carries them, CO state webhook-driven.
+  NCO: 'NCO',
+  // Smart video doorbell (issue #35): a camera of its own (snapshot + wifi),
+  // plus the ring, which only exists in the webhook event stream.
+  NDB: 'NDB',
+  // Bubendorff roller shutters, bridged by the iDiamant gateway (NBG, not
+  // exposed as a device): NBR (radio), NBO (wired), NBS (solar), issue #34.
+  NBR: 'NBR',
+  NBO: 'NBO',
+  NBS: 'NBS',
   // Smart Indoor Air Quality Monitor (formerly "Healthy Home Coach"), served
   // by the legacy /api/gethomecoachsdata endpoint (issue #37).
   NHC: 'NHC',
@@ -86,6 +138,7 @@ export const SUPPORTED_CATEGORY_TYPE = {
   ENERGY: 'Energy',
   WEATHER: 'Weather',
   SECURITY: 'Security',
+  SHUTTER: 'Shutter',
   AIRCARE: 'Aircare',
   UNKNOWN: 'unknown',
 };
@@ -104,8 +157,23 @@ export const WEATHER_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NAMODULE4,
 ];
 
-// Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621.
-export const CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
+// Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621, and
+// the video doorbell (NDB, issue #35).
+export const CAMERA_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.NACAMERA,
+  SUPPORTED_MODULE_TYPE.NOC,
+  SUPPORTED_MODULE_TYPE.NDB,
+];
+
+// Cameras streaming over HLS: the only ones whose live stream the core
+// rtsp-camera service can play through the CAMERA_URL param. The doorbell
+// streams over WebRTC only (pyatmo `WebRTCCameraMixin`): it gets no CAMERA_URL
+// rather than a live button that cannot work.
+export const HLS_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
+
+// WebRTC cameras do not serve their snapshot on the local URL (pyatmo forces
+// the VPN URL for them): no `/command/ping` resolution, VPN URL only.
+export const VPN_ONLY_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NDB];
 
 // Camera-bridged security accessories (radio-linked to a camera): door/window
 // tag (NACamDoorTag) and indoor siren (NIS). Net-new vs the core service — the
@@ -123,7 +191,37 @@ export const SECURITY_MODULE_TYPES = [
   ...CAMERA_MODULE_TYPES,
   ...CAMERA_BRIDGED_SECURITY_TYPES,
   SUPPORTED_MODULE_TYPE.NSD,
+  SUPPORTED_MODULE_TYPE.NCO,
 ];
+
+// Bubendorff / iDiamant roller shutters (issue #34): homesdata/homestatus
+// modules like the Energy ones, gated by their own `shutter_api` toggle.
+export const SHUTTER_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.NBR,
+  SUPPORTED_MODULE_TYPE.NBO,
+  SUPPORTED_MODULE_TYPE.NBS,
+];
+
+// Gladys cover states (server/utils/constants.js COVER_STATE — not exported
+// by the SDK).
+export const COVER_STATE = {
+  STOP: 0,
+  OPEN: 1,
+  CLOSE: -1,
+};
+
+// /api/setstate `target_position` values of a roller shutter (pyatmo
+// ShutterMixin): fully open, fully closed, stop where it is.
+export const SHUTTER_POSITION = {
+  OPEN: 100,
+  CLOSE: 0,
+  STOP: -1,
+};
+
+// A shutter command moves a motor for a few dozen seconds: refresh the values
+// once after this delay so the position lands without waiting for the next
+// 120s cycle.
+export const SHUTTER_REFRESH_DELAY_MS = 30 * 1000;
 
 // Device params persisted on the Gladys device (same names as the core:
 // home_id/room_id are required by setroomthermpoint).
@@ -156,7 +254,58 @@ export const ROOM_DERIVED_SUFFIXES = [
   'therm_setpoint_temperature',
   'open_window',
   'heating_power_request',
+  // The heating mode belongs to the HOME (homestatus `home.therm_mode`): it
+  // stays true whatever the state of the module carrying the feature.
+  'therm_preset',
 ];
+
+// Heating mode of a Netatmo home (homestatus `home.therm_mode`, written with
+// POST /api/setthermmode). Netatmo also knows other modes on some setups
+// (`off`, `manual`…): they are not offered, and read as "no value".
+export const NETATMO_THERM_MODES = {
+  SCHEDULE: 'schedule',
+  AWAY: 'away',
+  FROST_GUARD: 'hg',
+};
+
+// Gladys THERMOSTAT_PRESET values (server/utils/constants.js), the enum of the
+// `thermostat/preset` feature type (Gladys 5.2.0+). The SDK does not export
+// it: only the three values Netatmo supports are mirrored.
+export const THERMOSTAT_PRESET = {
+  SCHEDULE: 0,
+  FROST: 1,
+  AWAY: 2,
+};
+
+// Netatmo heating mode <-> Gladys preset, in display order.
+export const THERM_MODE_PRESETS = [
+  { mode: NETATMO_THERM_MODES.SCHEDULE, preset: THERMOSTAT_PRESET.SCHEDULE },
+  { mode: NETATMO_THERM_MODES.FROST_GUARD, preset: THERMOSTAT_PRESET.FROST },
+  { mode: NETATMO_THERM_MODES.AWAY, preset: THERMOSTAT_PRESET.AWAY },
+];
+
+// Names of the heating modes, with the Gladys UI wording of the presets
+// (deviceFeatureAction.category.thermostat.preset in the front i18n files).
+export const THERM_MODE_LABELS = {
+  [NETATMO_THERM_MODES.SCHEDULE]: {
+    en: 'Schedule',
+    fr: 'Planning',
+    de: 'Zeitplan',
+    es: 'Programación',
+  },
+  [NETATMO_THERM_MODES.FROST_GUARD]: {
+    en: 'Frost protection',
+    fr: 'Hors-gel',
+    de: 'Frostschutz',
+    es: 'Antihielo',
+  },
+  [NETATMO_THERM_MODES.AWAY]: {
+    en: 'Away',
+    fr: 'Absence',
+    de: 'Abwesend',
+    es: 'Ausencia',
+  },
+};
 
 // Telemetry refresh cadence: one batched load of every home/station per cycle
 // (the core polls at the same rate). The devices are created with
@@ -176,6 +325,27 @@ export const HOMES_CONCURRENCY = 2;
 // request (host API contract; the SDK does not export the constant).
 export const MAX_ENTRIES_PER_REQUEST = 100;
 
+// An API family failing for this many loads in a row (~6 minutes at the
+// 120 s cadence) marks the account degraded: one failed cycle is a hiccup.
+export const DEGRADED_AFTER_FAILED_LOADS = 3;
+
+// Degraded reasons: shown as the connection status message and in the device
+// badge tooltip (at most 200 characters per language).
+export const DEGRADED_MESSAGES = {
+  WEATHER: {
+    en: 'The Netatmo weather service is not responding: values come from the home status when available, retrying automatically.',
+    fr: "Le service météo Netatmo ne répond pas : les valeurs viennent de l'état de la maison quand il les fournit, nouvelle tentative automatique.",
+    de: 'Der Netatmo-Wetterdienst antwortet nicht: Die Werte kommen, soweit verfügbar, aus dem Hausstatus, neuer Versuch erfolgt automatisch.',
+    es: 'El servicio meteorológico de Netatmo no responde: los valores proceden del estado de la casa cuando está disponible, se reintentará automáticamente.',
+  },
+  PARTIAL: {
+    en: 'Part of the Netatmo cloud is not responding: some values are no longer refreshed, retrying automatically.',
+    fr: 'Une partie du cloud Netatmo ne répond pas : certaines valeurs ne sont plus actualisées, nouvelle tentative automatique.',
+    de: 'Ein Teil der Netatmo-Cloud antwortet nicht: Einige Werte werden nicht mehr aktualisiert, neuer Versuch erfolgt automatisch.',
+    es: 'Una parte de la nube de Netatmo no responde: algunos valores ya no se actualizan, se reintentará automáticamente.',
+  },
+};
+
 // The full scope set is requested in one go — like the core, where a single
 // (re)connection covers every device family, including the camera scopes the
 // Security milestone needs (read/write/access on camera + presence).
@@ -194,8 +364,15 @@ export const OAUTH_SCOPES = [
   'access_presence',
   'read_carbonmonoxidedetector',
   'read_smokedetector',
+  // Video doorbell (issue #35) — added after 1.3.0: an account connected
+  // before must click Connect again to grant them (see OAuth missingScopes).
+  'read_doorbell',
+  'access_doorbell',
   // Aircare
   'read_homecoach',
+  // Bubendorff / iDiamant roller shutters (issue #34)
+  'read_bubendorff',
+  'write_bubendorff',
 ];
 
 // Refresh the access token at 80% of its lifetime (core PR #2618 hardening),
@@ -242,10 +419,26 @@ export const CONNECTION_MESSAGES = {
     de: 'Die Netatmo-Sitzung ist abgelaufen, bitte verbinde dein Netatmo-Konto erneut.',
     es: 'La sesión de Netatmo ha caducado, vuelva a conectar su cuenta Netatmo.',
   },
+  // Connected, but the token lacks requested scopes (typically scopes added by
+  // a newer release, like the video doorbell ones): the exact list is logged.
+  MISSING_SCOPES: {
+    en: 'Connected, but some Netatmo permissions are missing (for example the video doorbell, added in a recent version): click Connect again to grant them.',
+    fr: 'Connecté, mais des autorisations Netatmo manquent (par exemple la sonnette vidéo, ajoutée dans une version récente) : cliquez à nouveau sur Connecter pour les accorder.',
+    de: 'Verbunden, aber einige Netatmo-Berechtigungen fehlen (zum Beispiel für die Video-Türklingel, in einer neueren Version hinzugefügt): Klicke erneut auf Verbinden, um sie zu erteilen.',
+    es: 'Conectado, pero faltan algunos permisos de Netatmo (por ejemplo, el timbre con vídeo, añadido en una versión reciente): vuelva a hacer clic en Conectar para concederlos.',
+  },
   NETATMO_UNREACHABLE: {
     en: 'Netatmo cloud is unreachable, retrying automatically.',
     fr: 'Le cloud Netatmo est injoignable, nouvelle tentative automatique.',
     de: 'Die Netatmo-Cloud ist nicht erreichbar, neuer Versuch erfolgt automatisch.',
     es: 'La nube de Netatmo no está disponible, se reintentará automáticamente.',
+  },
+  // Connected, but the token predates the shutter scopes (issue #34): shown
+  // as an info line on the Configuration screen until the next connection.
+  SHUTTER_SCOPE_MISSING: {
+    en: 'Netatmo refused the roller shutter command: reconnect your Netatmo account (Connect button) to grant the shutter permissions.',
+    fr: 'Netatmo a refusé la commande du volet roulant : reconnectez votre compte Netatmo (bouton Connecter) pour accorder les autorisations des volets.',
+    de: 'Netatmo hat den Rollladenbefehl abgelehnt: Verbinde dein Netatmo-Konto erneut (Schaltfläche Verbinden), um die Rollladen-Berechtigungen zu erteilen.',
+    es: 'Netatmo rechazó la orden de la persiana: vuelva a conectar su cuenta Netatmo (botón Conectar) para conceder los permisos de las persianas.',
   },
 };

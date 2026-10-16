@@ -28,8 +28,65 @@ the notes of the version's GitHub Release.
   option labels are not translated yet) on the dashboard. An offline Home Coach is badged unreachable and publishes no
   stale value. No reconnection needed (`read_homecoach` was already
   requested) ([#37](https://github.com/Terdious/gladys-netatmo/issues/37)).
+- **Heating mode** of the Netatmo home (schedule / away / frost protection) on
+  every thermostat and valve, readable and writable from Gladys as a
+  thermostat preset: the command goes through `setthermmode` and applies to
+  the whole home, then an immediate refresh shows the new mode on every device
+  of the home. Existing thermostats get the feature through **Update** on the
+  Discovery screen ([#38](https://github.com/Terdious/gladys-netatmo/issues/38)).
+- **Scene triggers** (Gladys Plus webhooks): "A known person arrives" (an
+  indoor camera recognized a known face), "A known person leaves" and "The
+  siren sounds", with the person, camera / siren and home names passed on to
+  the scene and optional camera and person filters
+  ([#39](https://github.com/Terdious/gladys-netatmo/issues/39)).
+- **Scene actions**: "Change the heating mode" (schedule / away / frost
+  protection, optional duration), "Mark a person as away" (or the whole home
+  empty) and "Mark a person as at home" (or every known person), on the home
+  of the chosen device or the account's single home
+  ([#39](https://github.com/Terdious/gladys-netatmo/issues/39)).
+- **Dashboard widgets**: _Netatmo weather_ (live tiles of the station, a
+  health row for a module with a low battery or out of reach, three views),
+  _Netatmo heating_ (heating mode, one row per room with the measured and set
+  temperatures, Schedule / Frost protection / Away buttons) and _Netatmo
+  cameras_ (latest picture of each camera served by the integration under a
+  content-addressed key, monitoring state and on / off buttons). The widgets
+  are nudged to refresh when the heating mode, the module health, the
+  monitoring or a picture changes
+  ([#40](https://github.com/Terdious/gladys-netatmo/issues/40)).
+- Bubendorff / iDiamant roller shutters (`NBR` radio, `NBO` wired, `NBS`
+  solar), behind a new **Roller shutters (Bubendorff / iDiamant)** toggle (off
+  by default): open / close / stop, a writable position (0-100 %, read from
+  `current_position`) and the RF quality, commanded through `/api/setstate`
+  via the iDiamant gateway, with a values refresh 30 seconds after each
+  command. The `read_bubendorff` / `write_bubendorff` scopes are requested:
+  already connected users click **Connect** again to grant them — a refused
+  shutter command says so on the Configuration screen, in the four languages
+  ([#34](https://github.com/Terdious/gladys-netatmo/issues/34)).
+- Netatmo video doorbell (`NDB`), behind the Security toggle: dashboard image
+  (snapshot fetched on the Netatmo VPN URL — the doorbell serves nothing on the
+  local network), Wifi quality and a **Doorbell** ring fed by the webhooks
+  (`incoming_call` event), usable as an "If the doorbell rings" scene trigger
+  and reset after 60 s. No monitoring switch (none in the Netatmo API for the
+  doorbell) and no live stream button (WebRTC only)
+  ([#35](https://github.com/Terdious/gladys-netatmo/issues/35)).
+- New `read_doorbell` and `access_doorbell` OAuth scopes: an account connected
+  before must click **Connect** again. The integration reads the scopes
+  Netatmo granted to the token and, while some are missing, the Configuration
+  screen shows "click Connect again" next to the connected status
+  ([#35](https://github.com/Terdious/gladys-netatmo/issues/35)).
+- Netatmo carbon monoxide alarm (`NCO`), behind the Security toggle and
+  modelled on the smoke alarm: battery and signal (published when Netatmo
+  reports them), plus a **Carbon monoxide** detection fed by the webhooks
+  (`co_detected` event: pre-alarm and alarm are detections, "back to normal"
+  returns it to No), usable as a scene trigger and reset after 60 s. The
+  `read_carbonmonoxidedetector` scope was already requested: no reconnection
+  needed ([#36](https://github.com/Terdious/gladys-netatmo/issues/36)).
 
 ### Changed
+
+- Gladys Assistant 5.2.0 or later is required: the thermostat preset feature
+  type does not exist before, and an older core would refuse the whole
+  discovery list ([#38](https://github.com/Terdious/gladys-netatmo/issues/38)).
 
 - GitHub Release notes, like gladys-tuya: the version's changelog section,
   one line per bullet (no more hard line breaks), followed by the notes GitHub
@@ -46,6 +103,21 @@ the notes of the version's GitHub Release.
   the migration section gives the procedure of the Gladys **Migrate** button
   (4.84.1+), which keeps the history, scenes and dashboards of the devices of
   the built-in Netatmo service.
+
+### Fixed
+
+- Weather values no longer freeze when the Netatmo weather service
+  (getstationsdata) fails: the station and module measures also come from the
+  home status, now loaded whenever a device family is enabled
+  ([#33](https://github.com/Terdious/gladys-netatmo/issues/33)).
+- A Netatmo API failing for 3 refresh cycles in a row no longer goes unnoticed:
+  the devices it leaves without fresh values get a degraded badge with the
+  reason, the Configuration screen shows it under the Connected status, and
+  both clear on the first complete refresh
+  ([#33](https://github.com/Terdious/gladys-netatmo/issues/33)).
+- The "smoke cleared" webhook event (`sub_type` 0) no longer raises a smoke
+  detection: it returns the Smoke feature to No at once, so a scene triggered
+  by smoke does not fire a second time when the smoke clears.
 
 ## [1.3.0] - 2026-10-16
 
