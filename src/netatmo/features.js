@@ -185,6 +185,21 @@ export function buildFeatureCamera(name, externalId) {
 }
 
 // --- Momentary event features (webhook-driven, issue #5) --------------------
+
+// Video doorbell (NDB, issue #35): the ring (`incoming_call` event). Gladys
+// renders it as "Ringing" then the time of the last ring, and its scene
+// trigger fires on every 1 — a 1 -> 0 pulse like the other detections.
+export function buildFeatureDoorbellRing(name, externalId) {
+  return feature({
+    name: `Doorbell - ${name}`,
+    external_id: `${externalId}:ring`,
+    selector: `${externalId}:ring`,
+    category: DEVICE_FEATURE_CATEGORIES.DOORBELL,
+    type: DEVICE_FEATURE_TYPES.DOORBELL.RING,
+    min: 0,
+    max: 1,
+  });
+}
 // These exist only in the Netatmo event stream: no API state reports them, so
 // they are published from the webhook payload and reset after EVENT_RESET_MS.
 
@@ -245,6 +260,20 @@ export function buildFeatureSmoke(name, externalId) {
     external_id: `${externalId}:smoke`,
     selector: `${externalId}:smoke`,
     category: DEVICE_FEATURE_CATEGORIES.SMOKE_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// Carbon monoxide alarm (NCO, issue #36): like the smoke alarm, the CO state
+// is webhook-only (`co_detected` event) — the homestatus payload never reports it.
+export function buildFeatureCarbonMonoxide(name, externalId) {
+  return feature({
+    name: `Carbon monoxide - ${name}`,
+    external_id: `${externalId}:carbon_monoxide`,
+    selector: `${externalId}:carbon_monoxide`,
+    category: DEVICE_FEATURE_CATEGORIES.CO_SENSOR,
     type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
     min: 0,
     max: 1,
@@ -377,6 +406,40 @@ export function buildFeatureRain(name, externalId, featureName, unit) {
     category: DEVICE_FEATURE_CATEGORIES.PRECIPITATION_SENSOR,
     type: DEVICE_FEATURE_TYPES.SENSOR.DECIMAL,
     unit,
+    min: 0,
+    max: 100,
+  });
+}
+
+// --- Roller shutters (Bubendorff / iDiamant, issue #34) ---------------------
+
+// Open / close / stop command (Gladys COVER_STATE: CLOSE -1, STOP 0, OPEN 1),
+// sent as an /api/setstate target_position (0 / -1 / 100).
+export function buildFeatureShutterState(name, externalId) {
+  return feature({
+    name: `Shutter - ${name}`,
+    external_id: `${externalId}:state`,
+    selector: `${externalId}:state`,
+    category: DEVICE_FEATURE_CATEGORIES.SHUTTER,
+    type: DEVICE_FEATURE_TYPES.SHUTTER.STATE,
+    read_only: false,
+    keep_history: false,
+    min: -1,
+    max: 1,
+  });
+}
+
+// Position in percent (0 = closed, 100 = open), read from the homestatus
+// `current_position` and writable as a target_position.
+export function buildFeatureShutterPosition(name, externalId) {
+  return feature({
+    name: `Position - ${name}`,
+    external_id: `${externalId}:position`,
+    selector: `${externalId}:position`,
+    category: DEVICE_FEATURE_CATEGORIES.SHUTTER,
+    type: DEVICE_FEATURE_TYPES.SHUTTER.POSITION,
+    unit: DEVICE_FEATURE_UNITS.PERCENT,
+    read_only: false,
     min: 0,
     max: 100,
   });
