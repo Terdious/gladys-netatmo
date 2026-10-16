@@ -231,6 +231,14 @@ export const UPDATE_MAPPINGS = {
         : deviceNetatmo.monitoring === 'on',
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
+  // Indoor Camera Advance (issue #55): same homestatus fields as NACamera.
+  [SUPPORTED_MODULE_TYPE.NPC]: {
+    monitoring: (deviceNetatmo) =>
+      deviceNetatmo.monitoring === undefined || deviceNetatmo.monitoring === null
+        ? undefined
+        : deviceNetatmo.monitoring === 'on',
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+  },
   // Video doorbell (issue #35): only the wifi quality is pollable — the ring
   // is webhook-driven (`incoming_call`).
   [SUPPORTED_MODULE_TYPE.NDB]: {
