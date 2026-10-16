@@ -185,14 +185,16 @@ die als **Szenen-Auslöser** nutzbar sind:
 | Außenkamera (Presence)  | **Tier erkannt**     | ein erkanntes Tier                    |
 | Außenkamera (Presence)  | **Fahrzeug erkannt** | ein erkanntes Fahrzeug                |
 | Rauchmelder             | **Rauch**            | eine Raucherkennung                   |
+| Kohlenmonoxidmelder     | **Kohlenmonoxid**    | eine Kohlenmonoxid-Erkennung          |
 | Video-Türklingel        | **Türklingel**       | jemand klingelt                       |
 
 Jede Erkennung wechselt auf **Ja** und kehrt nach einer Minute von selbst auf
-**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“). Verwende in
-einer Szene den Auslöser „Wert wird Ja“ — für die Türklingel den Auslöser
-**Wenn die Türklingel klingelt**. Ein Klingeln löst einmal aus: Die
-Folgeereignisse „Anruf angenommen“ / „Anruf verpasst“ der Netatmo-App sind
-keine eigenen Auslöser.
+**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“, außer bei
+Rauch und Kohlenmonoxid: Das Ereignis „Rauch verschwunden“ / „wieder normal“
+setzt sie sofort auf **Nein**). Verwende in einer Szene den Auslöser „Wert wird
+Ja“ — für die Türklingel den Auslöser **Wenn die Türklingel klingelt**. Ein
+Klingeln löst einmal aus: Die Folgeereignisse „Anruf angenommen“ / „Anruf
+verpasst“ der Netatmo-App sind keine eigenen Auslöser.
 
 > ⚠️ **Wenn deine Kameras bereits in Gladys existierten**, erscheinen diese
 > neuen Funktionen nicht von selbst: Gehe in den Tab **Entdecken** und klicke
@@ -214,6 +216,9 @@ verknüpfte Zubehör erkannt:
 - **Rauchmelder** (`NSD`) — erkannt mit Batterie und Signal, dazu eine Funktion
   **Rauch**, die von den Webhooks gespeist wird (siehe Abschnitt oben): Die
   Abfrage allein kann diesen Zustand nicht melden.
+- **Kohlenmonoxidmelder** (`NCO`) — wie der Rauchmelder: Batterie und Signal
+  (sofern Netatmo sie meldet), dazu eine Funktion **Kohlenmonoxid**, die von
+  den Webhooks gespeist wird.
 
 ---
 
@@ -299,6 +304,14 @@ verschiebt nur, was noch übrig ist.
   veröffentlicht seine zuletzt bekannten Werte nicht mehr, damit du nicht durch
   veraltete Daten getäuscht wirst; das Badge verschwindet, sobald das Gerät
   wieder erreichbar ist.
+- **Ein Gerät zeigt ein Badge „Beeinträchtigt“, oder der Status zeigt trotz
+  Verbunden eine Meldung:** Ein Teil der Netatmo-Cloud fällt seit einigen
+  Minuten aus (zum Beispiel der Wetterdienst). Gladys veröffentlicht weiter,
+  was der Rest der Cloud liefert — die Messwerte der Station und ihrer Module
+  kommen auch aus dem Hausstatus — und markiert die Geräte, die keine frischen
+  Werte mehr erhalten. Nichts zu tun: Beides verschwindet von selbst bei der
+  ersten vollständigen Aktualisierung. Hält es an, nennen die **Logs** der
+  Integration die ausfallende API.
 - **Ein Kamerawert oder ein Überwachungsbefehl schlägt einmal mit einer Meldung
   „erneut verbinden“ fehl:** Deiner Netatmo-Autorisierung fehlt die
   Kamera-Berechtigung — verbinde dein Konto erneut.

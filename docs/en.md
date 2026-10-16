@@ -171,13 +171,15 @@ triggers**:
 | Outdoor camera (Presence)  | **Animal detected**  | an animal detected             |
 | Outdoor camera (Presence)  | **Vehicle detected** | a vehicle detected             |
 | Smoke alarm                | **Smoke**            | a smoke detection              |
+| Carbon monoxide alarm      | **Carbon monoxide**  | a carbon monoxide detection    |
 | Video doorbell             | **Doorbell**         | someone rings                  |
 
 Each detection goes to **Yes** and returns to **No** by itself after one minute
-(Netatmo sends no "detection over" event). In a scene, use the "value becomes
-Yes" trigger — for the doorbell, the **If the doorbell rings** trigger. A ring
-fires once: the follow-up "call answered" / "call missed" events of the Netatmo
-app are not separate triggers.
+(Netatmo sends no "detection over" event, except for smoke and carbon monoxide:
+the "cleared" / "back to normal" event returns it to **No** at once). In a
+scene, use the "value becomes Yes" trigger — for the doorbell, the **If the
+doorbell rings** trigger. A ring fires once: the follow-up "call answered" /
+"call missed" events of the Netatmo app are not separate triggers.
 
 > ⚠️ **If your cameras already existed in Gladys**, these new features do not
 > appear on their own: go to the **Discovery** screen and click **Update** on
@@ -197,6 +199,9 @@ discovered too:
 - **Smoke alarm** (`NSD`) — discovered with its battery and signal, plus a
   **Smoke** feature fed by the webhooks (see the section above): polling alone
   cannot report that state.
+- **Carbon monoxide alarm** (`NCO`) — same as the smoke alarm: battery and
+  signal (when Netatmo reports them), plus a **Carbon monoxide** feature fed by
+  the webhooks.
 
 ---
 
@@ -275,6 +280,13 @@ moves what is left.
   battery, powered off, out of range). Gladys stops publishing its last-known
   values so you are not misled by stale data; the badge clears when the device
   comes back.
+- **A device shows a "Degraded" badge, or the status carries a message while
+  Connected:** a part of the Netatmo cloud has been failing for several
+  minutes (for instance the weather service). Gladys keeps publishing what the
+  rest of the cloud still provides — station and module measures come from the
+  home status too — and marks the devices left without fresh values. Nothing to
+  do: both clear on their own on the first complete refresh. If it lasts, the
+  integration **Logs** name the failing API.
 - **A camera value or monitoring command fails once with a "reconnect" message:**
   your Netatmo authorization is missing the camera scope — reconnect your
   account.

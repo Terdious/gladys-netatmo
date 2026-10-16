@@ -177,21 +177,24 @@ d'événements, aucune interrogation de l'API ne peut les remonter. Ils sont
 publiés comme des fonctionnalités dédiées, utilisables comme **déclencheurs de
 scène** :
 
-| Appareil                        | Fonctionnalité        | Déclenchée par                   |
-| ------------------------------- | --------------------- | -------------------------------- |
-| Caméra intérieure et extérieure | **Mouvement**         | un mouvement détecté             |
-| Caméra intérieure et extérieure | **Personne détectée** | une personne détectée / reconnue |
-| Caméra extérieure (Presence)    | **Animal détecté**    | un animal détecté                |
-| Caméra extérieure (Presence)    | **Véhicule détecté**  | un véhicule détecté              |
-| Détecteur de fumée              | **Fumée**             | une détection de fumée           |
-| Sonnette vidéo                  | **Sonnette**          | quelqu'un sonne                  |
+| Appareil                         | Fonctionnalité          | Déclenchée par                       |
+| -------------------------------- | ----------------------- | ------------------------------------ |
+| Caméra intérieure et extérieure  | **Mouvement**           | un mouvement détecté                 |
+| Caméra intérieure et extérieure  | **Personne détectée**   | une personne détectée / reconnue     |
+| Caméra extérieure (Presence)     | **Animal détecté**      | un animal détecté                    |
+| Caméra extérieure (Presence)     | **Véhicule détecté**    | un véhicule détecté                  |
+| Détecteur de fumée               | **Fumée**               | une détection de fumée               |
+| Détecteur de monoxyde de carbone | **Monoxyde de carbone** | une détection de monoxyde de carbone |
+| Sonnette vidéo                   | **Sonnette**            | quelqu'un sonne                      |
 
 Chaque détection passe à **Oui** puis revient automatiquement à **Non** au bout
-d'une minute (Netatmo n'envoie pas d'événement de « fin de détection »). Dans
-une scène, utilisez donc le déclencheur « la valeur passe à Oui » — pour la
-sonnette, le déclencheur **Si la sonnette sonne**. Un coup de sonnette
-déclenche une seule fois : les événements « appel accepté » / « appel manqué »
-de l'application Netatmo ne sont pas des déclencheurs à part.
+d'une minute (Netatmo n'envoie pas d'événement de « fin de détection », sauf
+pour la fumée et le monoxyde de carbone : l'événement « fumée dissipée » /
+« retour à la normale » la remet aussitôt à **Non**). Dans une scène, utilisez
+donc le déclencheur « la valeur passe à Oui » — pour la sonnette, le
+déclencheur **Si la sonnette sonne**. Un coup de sonnette déclenche une seule
+fois : les événements « appel accepté » / « appel manqué » de l'application
+Netatmo ne sont pas des déclencheurs à part.
 
 > ⚠️ **Si vos caméras existaient déjà dans Gladys**, ces nouvelles
 > fonctionnalités n'apparaissent pas toutes seules : allez sur l'écran
@@ -213,6 +216,9 @@ Quand la famille Sécurité est activée, les accessoires liés à vos caméras 
 - **Détecteur de fumée** (`NSD`) — découvert avec sa batterie et son signal,
   plus la fonctionnalité **Fumée** alimentée par les webhooks (voir la section
   ci-dessus) : le polling seul ne peut pas remonter cet état.
+- **Détecteur de monoxyde de carbone** (`NCO`) — comme le détecteur de fumée :
+  batterie et signal (quand Netatmo les remonte), plus la fonctionnalité
+  **Monoxyde de carbone** alimentée par les webhooks.
 
 ---
 
@@ -298,6 +304,14 @@ peut être relancée : elle ne déplace que ce qui reste.
   ligne (batterie morte, éteint, hors de portée). Gladys cesse de publier ses
   dernières valeurs connues pour ne pas vous induire en erreur ; le badge
   disparaît au retour de l'appareil.
+- **Un appareil affiche un badge « Dégradé », ou le statut affiche un message
+  alors qu'il est Connecté :** une partie du cloud Netatmo est en panne depuis
+  plusieurs minutes (par exemple le service météo). Gladys continue de publier
+  ce que le reste du cloud fournit — les mesures de la station et de ses modules
+  viennent aussi de l'état de la maison — et signale les appareils restés sans
+  valeur fraîche. Rien à faire : les deux disparaissent d'eux-mêmes à la
+  première actualisation complète. Si cela dure, les **Logs** de l'intégration
+  nomment l'API en échec.
 - **Une valeur de caméra ou une commande monitoring échoue une fois avec un
   message « reconnecter » :** votre autorisation Netatmo n'a pas le scope
   caméra — reconnectez votre compte.

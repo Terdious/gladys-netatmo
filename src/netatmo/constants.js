@@ -40,8 +40,9 @@ export const WEBHOOK_DEBOUNCE_MS = 2 * 1000;
 // possible.
 //
 // Netatmo sends `push_type: "<module type>-<event>"` (e.g. "NACamera-movement",
-// "NOC-human", "NSD-smoke"). We key on the EVENT part so every module type is
-// handled by one table, and unknown events are ignored instead of guessed.
+// "NOC-human", "NSD-smoke", "NCO-co_detected"). We key on the EVENT part so
+// every module type is handled by one table, and unknown events are ignored
+// instead of guessed.
 export const EVENT_FEATURE_SUFFIXES = {
   movement: 'motion',
   human: 'human',
@@ -49,11 +50,22 @@ export const EVENT_FEATURE_SUFFIXES = {
   animal: 'animal',
   vehicle: 'vehicle',
   smoke: 'smoke',
+  co_detected: 'carbon_monoxide',
   // Video doorbell (NDB, issue #35): someone pressed the button. The follow-up
   // `accepted_call` / `missed_call` events describe the SAME ring (answered or
   // not in the Netatmo app): they are deliberately not mapped, so one ring
   // fires a scene once instead of twice.
   incoming_call: 'ring',
+};
+
+// Webhook `sub_type` values that report the END of a detection rather than a
+// new one (Netatmo security webhook documentation: smoke 0 = cleared,
+// 1 = detected; co_detected 0 = OK, 1 = pre-alarm, 2 = alarm). Such an event
+// returns the feature to 0 at once — publishing it as a detection would raise
+// a false alarm right after a real one.
+export const EVENT_CLEARED_SUB_TYPES = {
+  smoke: ['0'],
+  co_detected: ['0'],
 };
 
 // A momentary event has no "cleared" counterpart in the Netatmo stream: the
@@ -81,6 +93,9 @@ export const SUPPORTED_MODULE_TYPE = {
   // homestatus payload carries them); its SMOKE state is webhook-driven and
   // lands with the webhooks milestone (issue #5).
   NSD: 'NSD',
+  // Smart carbon monoxide alarm (issue #36): same shape as the smoke alarm —
+  // battery + signal when homestatus carries them, CO state webhook-driven.
+  NCO: 'NCO',
   // Smart video doorbell (issue #35): a camera of its own (snapshot + wifi),
   // plus the ring, which only exists in the webhook event stream.
   NDB: 'NDB',
@@ -138,6 +153,7 @@ export const SECURITY_MODULE_TYPES = [
   ...CAMERA_MODULE_TYPES,
   ...CAMERA_BRIDGED_SECURITY_TYPES,
   SUPPORTED_MODULE_TYPE.NSD,
+  SUPPORTED_MODULE_TYPE.NCO,
 ];
 
 // Device params persisted on the Gladys device (same names as the core:
@@ -190,6 +206,27 @@ export const HOMES_CONCURRENCY = 2;
 // POST /state and POST /device/transport accept at most 100 entries per
 // request (host API contract; the SDK does not export the constant).
 export const MAX_ENTRIES_PER_REQUEST = 100;
+
+// An API family failing for this many loads in a row (~6 minutes at the
+// 120 s cadence) marks the account degraded: one failed cycle is a hiccup.
+export const DEGRADED_AFTER_FAILED_LOADS = 3;
+
+// Degraded reasons: shown as the connection status message and in the device
+// badge tooltip (at most 200 characters per language).
+export const DEGRADED_MESSAGES = {
+  WEATHER: {
+    en: 'The Netatmo weather service is not responding: values come from the home status when available, retrying automatically.',
+    fr: "Le service météo Netatmo ne répond pas : les valeurs viennent de l'état de la maison quand il les fournit, nouvelle tentative automatique.",
+    de: 'Der Netatmo-Wetterdienst antwortet nicht: Die Werte kommen, soweit verfügbar, aus dem Hausstatus, neuer Versuch erfolgt automatisch.',
+    es: 'El servicio meteorológico de Netatmo no responde: los valores proceden del estado de la casa cuando está disponible, se reintentará automáticamente.',
+  },
+  PARTIAL: {
+    en: 'Part of the Netatmo cloud is not responding: some values are no longer refreshed, retrying automatically.',
+    fr: 'Une partie du cloud Netatmo ne répond pas : certaines valeurs ne sont plus actualisées, nouvelle tentative automatique.',
+    de: 'Ein Teil der Netatmo-Cloud antwortet nicht: Einige Werte werden nicht mehr aktualisiert, neuer Versuch erfolgt automatisch.',
+    es: 'Una parte de la nube de Netatmo no responde: algunos valores ya no se actualizan, se reintentará automáticamente.',
+  },
+};
 
 // The full scope set is requested in one go — like the core, where a single
 // (re)connection covers every device family, including the camera scopes the

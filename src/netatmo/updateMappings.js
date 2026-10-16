@@ -146,6 +146,14 @@ export const UPDATE_MAPPINGS = {
       deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
+  // Carbon monoxide alarm (issue #36), same table as the smoke alarm: battery +
+  // signal emitted only when homestatus carries them, CO state webhook-driven.
+  // Field names to confirm on a real NCO payload.
+  [SUPPORTED_MODULE_TYPE.NCO]: {
+    battery_percent: (deviceNetatmo) =>
+      deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+  },
   [SUPPORTED_MODULE_TYPE.NAMODULE4]: {
     battery_percent: (deviceNetatmo) => deviceNetatmo.battery_percent,
     temperature: (deviceNetatmo) =>

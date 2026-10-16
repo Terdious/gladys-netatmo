@@ -179,21 +179,23 @@ Algunos eventos son **momentáneos**: solo existen en el flujo de eventos, y
 ninguna consulta a la API puede reportarlos. Se publican como funcionalidades
 dedicadas, utilizables como **disparadores de escena**:
 
-| Dispositivo                    | Funcionalidad          | Activada por                       |
-| ------------------------------ | ---------------------- | ---------------------------------- |
-| Cámaras de interior y exterior | **Movimiento**         | movimiento detectado               |
-| Cámaras de interior y exterior | **Persona detectada**  | una persona detectada / reconocida |
-| Cámara de exterior (Presence)  | **Animal detectado**   | un animal detectado                |
-| Cámara de exterior (Presence)  | **Vehículo detectado** | un vehículo detectado              |
-| Detector de humo               | **Humo**               | una detección de humo              |
-| Timbre con vídeo               | **Timbre**             | alguien llama al timbre            |
+| Dispositivo                     | Funcionalidad           | Activada por                         |
+| ------------------------------- | ----------------------- | ------------------------------------ |
+| Cámaras de interior y exterior  | **Movimiento**          | movimiento detectado                 |
+| Cámaras de interior y exterior  | **Persona detectada**   | una persona detectada / reconocida   |
+| Cámara de exterior (Presence)   | **Animal detectado**    | un animal detectado                  |
+| Cámara de exterior (Presence)   | **Vehículo detectado**  | un vehículo detectado                |
+| Detector de humo                | **Humo**                | una detección de humo                |
+| Detector de monóxido de carbono | **Monóxido de carbono** | una detección de monóxido de carbono |
+| Timbre con vídeo                | **Timbre**              | alguien llama al timbre              |
 
 Cada detección pasa a **Sí** y vuelve a **No** por sí sola al cabo de un minuto
-(Netatmo no envía ningún evento de "fin de detección"). En una escena, utilice
-el disparador "el valor pasa a Sí" — para el timbre, el disparador **Si suena
-el timbre**. Un timbrazo dispara una sola vez: los eventos posteriores "llamada
-aceptada" / "llamada perdida" de la aplicación Netatmo no son disparadores
-aparte.
+(Netatmo no envía ningún evento de "fin de detección", salvo para el humo y el
+monóxido de carbono: el evento "humo disipado" / "vuelta a la normalidad" la
+devuelve a **No** de inmediato). En una escena, utilice el disparador "el valor
+pasa a Sí" — para el timbre, el disparador **Si suena el timbre**. Un timbrazo
+dispara una sola vez: los eventos posteriores "llamada aceptada" / "llamada
+perdida" de la aplicación Netatmo no son disparadores aparte.
 
 > ⚠️ **Si sus cámaras ya existían en Gladys**, estas nuevas funcionalidades no
 > aparecen por sí solas: vaya a la pestaña **Descubrir** y haga clic en
@@ -214,6 +216,9 @@ vinculados a sus cámaras:
 - **Detector de humo** (`NSD`) — descubierto con su batería y su señal, más una
   funcionalidad **Humo** alimentada por los webhooks (ver la sección anterior):
   la consulta periódica por sí sola no puede reportar ese estado.
+- **Detector de monóxido de carbono** (`NCO`) — igual que el detector de humo:
+  batería y señal (cuando Netatmo las reporta), más una funcionalidad
+  **Monóxido de carbono** alimentada por los webhooks.
 
 ---
 
@@ -299,6 +304,14 @@ relanzarse: solo mueve lo que queda.
   desconectado (batería agotada, apagado, fuera de alcance). Gladys deja de
   publicar sus últimos valores conocidos para que no le induzcan a error datos
   obsoletos; la insignia desaparece cuando el dispositivo vuelve.
+- **Un dispositivo muestra una insignia "Degradado", o el estado muestra un
+  mensaje estando Conectado:** una parte de la nube de Netatmo falla desde hace
+  varios minutos (por ejemplo el servicio meteorológico). Gladys sigue
+  publicando lo que el resto de la nube proporciona — las medidas de la estación
+  y de sus módulos también proceden del estado de la casa — y marca los
+  dispositivos que se quedan sin valores recientes. No hay nada que hacer: ambos
+  desaparecen solos en la primera actualización completa. Si persiste, los
+  **Logs** de la integración indican la API que falla.
 - **Un valor de cámara o un comando de vigilancia falla una vez con un mensaje
   de "reconectar":** a su autorización Netatmo le falta el permiso de cámara —
   vuelva a conectar su cuenta.
