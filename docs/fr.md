@@ -214,9 +214,8 @@ Dans une scène, comparez avec ces valeurs : par exemple « Qualité de l'air
 supérieure à 150 » signifie mauvais ou malsain.
 
 Une fonctionnalité **Air quality level** affiche le même niveau en toutes
-lettres sur le tableau de bord (Healthy, Fine, Fair, Poor, Unhealthy — sain,
-correct, moyen, mauvais, malsain). Ses libellés sont en anglais, comme les noms
-des fonctionnalités, et elle ne garde pas d'historique : c'est la fonctionnalité
+lettres sur le tableau de bord : Sain, Correct, Moyen, Mauvais, Malsain. Elle ne
+garde pas d'historique : c'est la fonctionnalité
 numérique **Qualité de l'air** qui garde l'historique, les couleurs et HomeKit.
 Nécessite Gladys 5.1.1 ou plus récent.
 

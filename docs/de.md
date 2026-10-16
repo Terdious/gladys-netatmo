@@ -213,10 +213,10 @@ AQI-Bereichs veröffentlicht:
 Vergleiche in einer Szene mit diesen Werten: „Luftqualität über 150“ bedeutet
 zum Beispiel schlecht oder ungesund.
 
-Eine Funktion **Air quality level** zeigt dieselbe Stufe im Dashboard in Worten
-(Healthy, Fine, Fair, Poor, Unhealthy — gesund, gut, mittel, schlecht,
-ungesund). Ihre Bezeichnungen sind englisch, wie die Funktionsnamen, und sie
-speichert keinen Verlauf: Die numerische Funktion **Luftqualität** behält den
+Eine Funktion **Air quality level** zeigt dieselbe Stufe im Dashboard in Worten.
+Gladys übersetzt Optionsbezeichnungen noch nicht: Sie sind französisch (Sain,
+Correct, Moyen, Mauvais, Malsain — gesund, gut, mittel, schlecht, ungesund).
+Sie speichert keinen Verlauf: Die numerische Funktion **Luftqualität** behält den
 Verlauf, die Farben und HomeKit. Erfordert Gladys 5.1.1 oder neuer.
 
 Ein Home Coach, der offline ist, erhält das Badge **nicht erreichbar**, und

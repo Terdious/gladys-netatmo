@@ -230,7 +230,7 @@ test('converts a Home Coach (NHC) with the indoor measures and the health index 
     level.supported_options.map((option) => option.value),
     ['healthy', 'fine', 'fair', 'poor', 'unhealthy'],
   );
-  assert.equal(level.supported_options[4].label, 'Unhealthy');
+  assert.equal(level.supported_options[4].label, 'Malsain');
   // Standalone device: no home in the legacy payload, so no params at all.
   assert.deepEqual(device.params, []);
 });

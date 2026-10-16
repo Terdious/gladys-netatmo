@@ -214,9 +214,9 @@ En una escena, compare con estos valores: por ejemplo "Calidad del aire superior
 a 150" significa malo o insalubre.
 
 Una funcionalidad **Air quality level** muestra el mismo nivel en palabras en el
-panel (Healthy, Fine, Fair, Poor, Unhealthy — saludable, bueno, regular, malo,
-insalubre). Sus etiquetas están en inglés, como los nombres de las
-funcionalidades, y no guarda historial: la funcionalidad numérica **Calidad del
+panel. Gladys aún no traduce las etiquetas de opciones: están en francés (Sain,
+Correct, Moyen, Mauvais, Malsain — saludable, bueno, regular, malo, insalubre).
+No guarda historial: la funcionalidad numérica **Calidad del
 aire** conserva el historial, los colores y HomeKit. Requiere Gladys 5.1.1 o
 posterior.
 

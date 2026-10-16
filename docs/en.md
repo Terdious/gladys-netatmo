@@ -201,9 +201,10 @@ band:
 In a scene, compare with these values: for example "Air quality above 150"
 means poor or unhealthy.
 
-An **Air quality level** feature shows the same rating in words (Healthy, Fine,
-Fair, Poor, Unhealthy) on the dashboard. Its labels are in English, like the
-feature names, and it keeps no history: the numeric **Air quality** feature
+An **Air quality level** feature shows the same rating in words on the
+dashboard. Gladys does not translate option labels yet: they are in French
+(Sain, Correct, Moyen, Mauvais, Malsain — healthy, fine, fair, poor,
+unhealthy). It keeps no history: the numeric **Air quality** feature
 keeps the history, the colours and HomeKit. Requires Gladys 5.1.1 or later.
 
 An offline Home Coach gets the **unreachable** badge and its last-known values

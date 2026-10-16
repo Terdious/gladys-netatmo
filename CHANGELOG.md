@@ -24,8 +24,8 @@ the notes of the version's GitHub Release.
   Gladys reads an AQI (0-500) for its dashboard colours and HomeKit, each
   level is published as the middle of the matching AQI band (25, 75, 125,
   175, 250). An **Air quality level** feature (`text` / `select`, suffix
-  `health_level`) shows the same rating in words (Healthy … Unhealthy) on the
-  dashboard. An offline Home Coach is badged unreachable and publishes no
+  `health_level`) shows the same rating in words (Sain … Malsain: Gladys
+  option labels are not translated yet) on the dashboard. An offline Home Coach is badged unreachable and publishes no
   stale value. No reconnection needed (`read_homecoach` was already
   requested) ([#37](https://github.com/Terdious/gladys-netatmo/issues/37)).
 

@@ -380,14 +380,14 @@ export function buildFeatureHealthIndex(name, externalId) {
 // The same health index as a named level (text / select, read-only): the
 // dashboard shows the Netatmo wording ("Fine", "Unhealthy"...) next to the
 // AQI-band value, which keeps the history, the colours and HomeKit. Option
-// labels are plain strings in Gladys (no per-language label): English, like
-// every feature name of the integration. A text state keeps no history.
+// labels are plain strings in Gladys (no per-language label yet): French, the
+// language of most Gladys installations. A text state keeps no history.
 export const HEALTH_LEVEL_OPTIONS = [
-  { value: 'healthy', label: 'Healthy' },
-  { value: 'fine', label: 'Fine' },
-  { value: 'fair', label: 'Fair' },
-  { value: 'poor', label: 'Poor' },
-  { value: 'unhealthy', label: 'Unhealthy' },
+  { value: 'healthy', label: 'Sain' },
+  { value: 'fine', label: 'Correct' },
+  { value: 'fair', label: 'Moyen' },
+  { value: 'poor', label: 'Mauvais' },
+  { value: 'unhealthy', label: 'Malsain' },
 ];
 
 export function buildFeatureHealthLevel(name, externalId) {
