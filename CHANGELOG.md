@@ -10,6 +10,15 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- User documentation (en, fr, de, es): the update section describes the
+  catalog update (Update button, new configuration fields applied on their
+  own) instead of re-pasting the manifest, now only needed in developer mode;
+  the migration section gives the procedure of the Gladys **Migrate** button
+  (4.84.1+), which keeps the history, scenes and dashboards of the devices of
+  the built-in Netatmo service.
+
 ## [1.3.0] - 2026-10-16
 
 ### Added

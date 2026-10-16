@@ -188,20 +188,72 @@ verknüpfte Zubehör erkannt:
 
 ## Die Integration aktualisieren
 
-Die Schaltfläche **„Update erzwingen“** im Tab Überwachung lädt ein neues
-**Docker-Image (die Laufzeitumgebung)**. Die **angezeigte Version** und die
-**Konfigurationsfelder** stammen aus dem **Manifest**, das du installiert hast.
-Fügt ein Update neue Konfigurationsfelder hinzu, installiere das aktualisierte
-Manifest erneut bzw. füge es erneut ein, um sie zu übernehmen.
+**Aus dem Katalog installiert** (der übliche Fall): Gladys prüft den Store
+regelmäßig. Erscheint eine neue Version, zeigt die Integration das Abzeichen
+**„Update verfügbar“** (auch neben **Integrationen** im Menü gezählt), und ihr
+Tab **Überwachung** nennt die angebotene Version mit einem Link zu ihren
+Versionshinweisen. Klicke auf **Aktualisieren**: Gladys lädt das neue Image
+**und** übernimmt das neue Manifest — neue Konfigurationsfelder erscheinen von
+selbst, es muss nichts erneut eingefügt werden. Deine Konfiguration und deine
+Geräte bleiben erhalten.
+
+Gladys kann bis zu etwa anderthalb Stunden brauchen, um eine neue Version zu
+bemerken (Aktualisierung des Store-Index). **„Update erzwingen“** prüft sofort:
+Es liest die zuletzt veröffentlichte Version und lädt ihr Image.
+
+**Im Entwicklermodus installiert** (Manifest von Hand eingefügt): **„Update
+erzwingen“** lädt nur das Image des installierten Tags erneut, und die
+angezeigte Version sowie die Konfigurationsfelder stammen aus dem eingefügten
+Manifest — füge das aktualisierte Manifest erneut ein, um neue Felder zu
+übernehmen.
 
 ---
 
 ## Migration vom integrierten Netatmo-Dienst
 
-Wenn du den in Gladys integrierten Netatmo-Dienst verwendet hast, ersetzt ihn
-diese externe Integration. Die Geräte werden **als neue Geräte erneut erkannt**
-(ihre Kennungen haben sich von `netatmo:*` zu `ext:netatmo:*` geändert), daher
-wird ihr Verlauf nicht übernommen — erstelle die Geräte im Tab Entdecken erneut.
+Diese externe Integration ersetzt den in Gladys integrierten Netatmo-Dienst.
+Ihre Geräte erhalten neue Kennungen (`netatmo:*` → `ext:netatmo:*`) und werden
+daher als neue Geräte angelegt — seit **Gladys 4.84.1** kannst du aber jedes
+alte Gerät auf sein neues Gegenstück **migrieren** und dabei seinen
+**Zustandsverlauf**, seine **Szenen** und seine **Dashboards** behalten.
+
+### Bevor du beginnst
+
+- **Lösche deine alten Netatmo-Geräte nicht**: Die Migration geht von ihnen aus.
+- **Migriere bald nach dem Anlegen der neuen Geräte.** Haben beide Geräte Werte
+  über denselben Zeitraum aufgezeichnet, wird nur der alte Verlauf _vor dem
+  ersten Wert des neuen Geräts_ verschoben, damit nichts doppelt gezählt wird:
+  Die Werte des alten Geräts aus dem gemeinsamen Zeitraum entfallen.
+
+### Schritte
+
+1. Installiere und verbinde diese Integration und lege dann deine Geräte im Tab
+   **Entdecken** an: Das Ziel muss vor der Migration existieren.
+2. Öffne **Integrationen → Netatmo** — die integrierte, als veraltet
+   gekennzeichnete Integration — und dann ihren Tab **Geräte**.
+3. Klicke bei einem alten Gerät auf **Migrieren**.
+4. Wähle das **Zielgerät**: das neue Gerät, aufgeführt unter der externen
+   Netatmo-Integration (die Liste lässt sich nach Integration, Raum und Name
+   filtern).
+5. Prüfe die Tabelle **Zuordnung der Funktionen**. Gladys füllt sie vor (gleiche
+   Kategorie, gleicher Typ und gleiche Einheit, dann gleicher Name, um
+   Zwillinge zu unterscheiden); jede alte Funktion kann von Hand zugeordnet oder
+   auf **Nicht migrieren** gesetzt werden — ihr Verlauf wird dann gelöscht.
+   Achte besonders auf die Temperaturzeilen von Thermostaten und Stationen, die
+   mehrere Temperaturfunktionen haben.
+6. Klicke auf **Migrieren und altes Gerät löschen**.
+
+Gladys verschiebt den Verlauf, schreibt die Szenen und Dashboards um, die das
+alte Gerät verwendet haben, verschiebt das neue Gerät in den Raum des alten,
+falls es keinen hat, verknüpft die Energie-Verbindungen neu und löscht dann das
+alte Gerät. Das Ergebnis zeigt die Anzahl der verschobenen Zustände und der
+aktualisierten Szenen / Dashboards. Wiederhole das für jedes Gerät.
+
+Ein langer Verlauf kann mehrere Minuten dauern: Verfolge ihn unter
+**Einstellungen → Aufgaben**. Verliert die Seite die Verbindung, läuft die
+Migration im Hintergrund weiter — prüfe diese Seite, bevor du es erneut
+versuchst. Eine fehlgeschlagene Migration kann erneut gestartet werden: Sie
+verschiebt nur, was noch übrig ist.
 
 ---
 

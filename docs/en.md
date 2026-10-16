@@ -176,19 +176,67 @@ discovered too:
 
 ## Updating the integration
 
-The **"Force update"** button in the Supervision tab pulls a new **Docker image
-(the runtime)**. The **version shown** and the **configuration fields** come
-from the **manifest** you installed. If an update adds new configuration fields,
-re-install / re-paste the updated manifest to pick them up.
+**Installed from the catalog** (the usual case): Gladys checks the store
+regularly. When a new version is out, the integration shows an **"Update
+available"** badge (also counted next to **Integrations** in the menu), and its
+**Supervision** tab names the version offered, with a link to its release
+notes. Click **Update**: Gladys pulls the new image **and** applies the new
+manifest — new configuration fields appear on their own, there is nothing to
+re-paste. Your configuration and your devices are kept.
+
+Gladys can take up to about an hour and a half to notice a new release (store
+index refresh). **"Force update"** checks right away: it reads the latest
+published version and pulls its image.
+
+**Installed in developer mode** (manifest pasted by hand): **"Force update"**
+only re-pulls the image of the tag you installed, and the version shown and the
+configuration fields come from the pasted manifest — re-paste the updated
+manifest to pick up new fields.
 
 ---
 
 ## Migrating from the built-in Netatmo service
 
-If you used the Netatmo service built into Gladys, this external integration
-replaces it. Devices are **re-discovered as new** (their identifiers changed
-from `netatmo:*` to `ext:netatmo:*`), so their history is not carried over —
-create the devices again from the Discovery screen.
+This external integration replaces the Netatmo service built into Gladys. Its
+devices get new identifiers (`netatmo:*` → `ext:netatmo:*`), so they are created
+as new devices — but since **Gladys 4.84.1** you can **migrate** each old device
+to its new counterpart and keep its **state history**, its **scenes** and its
+**dashboards**.
+
+### Before you start
+
+- **Do not delete your old Netatmo devices**: the migration starts from them.
+- **Migrate soon after creating the new devices.** When both devices recorded
+  values over the same period, only the old history _older than the new
+  device's first value_ is moved, so nothing is counted twice: the old device's
+  values of the overlap period are dropped.
+
+### Steps
+
+1. Install and connect this integration, then create your devices from the
+   **Discover** tab: the destination must exist before you migrate.
+2. Open **Integrations → Netatmo** — the built-in integration, flagged as
+   deprecated — then its **Devices** tab.
+3. On an old device, click **Migrate**.
+4. Pick the **Destination device**: the new device, listed under the external
+   Netatmo integration (the list can be filtered by integration, room and
+   name).
+5. Check the **Feature matching** table. Gladys pre-fills it (same category,
+   type and unit, then same name to tell twins apart); each old feature can be
+   matched by hand, or set to **Do not migrate** — its history is then deleted.
+   Look closely at the temperature rows of thermostats and stations, which
+   carry several temperature features.
+6. Click **Migrate and delete the old device**.
+
+Gladys moves the history, rewrites the scenes and dashboards that used the old
+device, moves the new device into the old one's room if it has none, re-points
+the energy links, then deletes the old device. The result shows the number of
+states moved and of scenes / dashboards updated. Repeat for each device.
+
+A long history can take several minutes: follow it in **Settings → Tasks**. If
+the page loses the connection, the migration keeps running in the background —
+check that page before trying again. A failed migration can be re-run: it only
+moves what is left.
 
 ---
 

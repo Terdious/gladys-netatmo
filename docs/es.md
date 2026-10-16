@@ -188,21 +188,73 @@ vinculados a sus cámaras:
 
 ## Actualizar la integración
 
-El botón **"Forzar actualización"** de la pestaña Supervisión descarga una nueva
-**imagen Docker (el entorno de ejecución)**. La **versión mostrada** y los
-**campos de configuración** provienen del **manifiesto** que usted instaló. Si
-una actualización añade nuevos campos de configuración, vuelva a instalar /
-vuelva a pegar el manifiesto actualizado para obtenerlos.
+**Instalada desde el catálogo** (el caso habitual): Gladys consulta el store
+con regularidad. Cuando sale una nueva versión, la integración muestra la
+insignia **"Actualización disponible"** (también contada junto a
+**Integraciones** en el menú), y su pestaña **Supervisión** indica la versión
+ofrecida, con un enlace a sus notas de versión. Haga clic en **Actualizar**:
+Gladys descarga la nueva imagen **y** aplica el nuevo manifiesto — los nuevos
+campos de configuración aparecen solos, no hay nada que volver a pegar. Su
+configuración y sus dispositivos se conservan.
+
+Gladys puede tardar hasta una hora y media aproximadamente en detectar una
+nueva versión (actualización del índice del store). **"Forzar actualización"**
+lo comprueba de inmediato: lee la última versión publicada y descarga su
+imagen.
+
+**Instalada en modo desarrollador** (manifiesto pegado a mano): **"Forzar
+actualización"** solo vuelve a descargar la imagen de la etiqueta instalada, y
+la versión mostrada y los campos de configuración provienen del manifiesto
+pegado — vuelva a pegar el manifiesto actualizado para obtener los nuevos
+campos.
 
 ---
 
 ## Migrar desde el servicio Netatmo integrado
 
-Si utilizaba el servicio Netatmo integrado en Gladys, esta integración externa
-lo reemplaza. Los dispositivos se **vuelven a descubrir como nuevos** (sus
-identificadores cambian de `netatmo:*` a `ext:netatmo:*`), por lo que su
-historial no se conserva — vuelva a crear los dispositivos desde la pestaña
-Descubrir.
+Esta integración externa sustituye al servicio Netatmo integrado en Gladys. Sus
+dispositivos tienen nuevos identificadores (`netatmo:*` → `ext:netatmo:*`), por
+lo que se crean como dispositivos nuevos — pero desde **Gladys 4.84.1** puede
+**migrar** cada dispositivo antiguo a su sustituto y conservar su **historial de
+estados**, sus **escenas** y sus **paneles**.
+
+### Antes de empezar
+
+- **No elimine sus antiguos dispositivos Netatmo**: la migración parte de ellos.
+- **Migre poco después de crear los nuevos dispositivos.** Si ambos
+  dispositivos registraron valores durante el mismo periodo, solo se mueve el
+  historial antiguo _anterior al primer valor del nuevo dispositivo_, para no
+  contar nada dos veces: los valores del dispositivo antiguo en el periodo
+  común se descartan.
+
+### Pasos
+
+1. Instale y conecte esta integración y luego cree sus dispositivos desde la
+   pestaña **Descubrir**: el destino debe existir antes de migrar.
+2. Abra **Integraciones → Netatmo** — la integración integrada, marcada como
+   obsoleta — y luego su pestaña **Dispositivos**.
+3. En un dispositivo antiguo, haga clic en **Migrar**.
+4. Elija el **Dispositivo de destino**: el nuevo dispositivo, listado bajo la
+   integración externa Netatmo (la lista se puede filtrar por integración,
+   habitación y nombre).
+5. Revise la tabla **Coincidencia de funciones**. Gladys la rellena de antemano
+   (misma categoría, mismo tipo y misma unidad, y luego mismo nombre para
+   distinguir las gemelas); cada función antigua puede asociarse a mano o
+   marcarse como **No migrar** — su historial se elimina entonces. Revise bien
+   las filas de temperatura de los termostatos y las estaciones, que tienen
+   varias funciones de temperatura.
+6. Haga clic en **Migrar y eliminar el dispositivo antiguo**.
+
+Gladys mueve el historial, reescribe las escenas y los paneles que usaban el
+dispositivo antiguo, coloca el nuevo dispositivo en la habitación del antiguo
+si no tiene ninguna, vuelve a enlazar los vínculos de energía y luego elimina
+el dispositivo antiguo. El resultado indica el número de estados movidos y de
+escenas / paneles actualizados. Repita para cada dispositivo.
+
+Un historial largo puede tardar varios minutos: sígalo en **Configuración →
+Tareas**. Si la página pierde la conexión, la migración sigue en segundo plano
+— revise esa página antes de volver a intentarlo. Una migración fallida puede
+relanzarse: solo mueve lo que queda.
 
 ---
 
