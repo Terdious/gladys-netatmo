@@ -70,13 +70,14 @@ Konfiguration auf, dich erneut zu verbinden.
 
 Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
-| Schalter         | Erkennt                                                                                                                                                  |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`), modulierendes Thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)                |
-| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                                                                   |
-| **Sicherheit**   | Innenkameras (`NACamera`), Innenkamera Advance (`NPC`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör und die bekannten Personen |
-| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                                                       |
-| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                                                           |
+| Schalter                    | Erkennt                                                                                                                                                  |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energie**                 | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`), modulierendes Thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)                |
+| **Wetter**                  | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                                                                   |
+| **Sicherheit**              | Innenkameras (`NACamera`), Innenkamera Advance (`NPC`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör und die bekannten Personen |
+| **Rollläden**               | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                                                       |
+| **Luftqualität**            | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                                                           |
+| **BTicino-Türsprechanlage** | BTicino-Module Classe 300X / Classe 300 EOS (`BNCX`, `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — Vorschau, standardmäßig deaktiviert                       |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -536,6 +537,82 @@ seit der ersten Version Teil der Verbindung.
 
 ---
 
+## BTicino-Türsprechanlage (Classe 300X / Classe 300 EOS) — Vorschau
+
+Die Video-Türsprechanlagen **BTicino Classe 300X** und **Classe 300 EOS with
+Netatmo** laufen über die Netatmo-API, aber es gibt keine öffentliche
+Beschreibung ihrer Daten. Diese Version ist eine **Vorschau** (erster Schritt
+von [Issue #59](https://github.com/Terdious/gladys-netatmo/issues/59)): Sie erkennt die Module und schreibt ihre Rohdaten in
+die Protokolle der Integration, damit die vollständige Unterstützung — das
+Klingeln als Szenen-Auslöser, das Öffnen der Tür, das Treppenhauslicht — auf
+echten Daten aufgebaut werden kann.
+
+Aktiviere **BTicino-Türsprechanlage (Classe 300) — Vorschau** unter **Zu
+erkennende Geräte** (standardmäßig deaktiviert) und speichere. Jedes Modul wird
+als Gerät erkannt, nur mit dem, was Netatmo tatsächlich meldet:
+
+| Modul                  | Netatmo-Typ | In Gladys (Vorschau)                                   |
+| ---------------------- | ----------- | ------------------------------------------------------ |
+| Innenstation (Gateway) | `BNCX`      | WLAN-Qualität, wenn Netatmo sie meldet                 |
+| Außenstation           | `BNEU`      | nur Erreichbarkeit (noch kein Klingeln)                |
+| Türöffner              | `BNDL`      | nur Erreichbarkeit (noch kein Öffnungsbefehl)          |
+| Treppenhauslicht       | `BNSL`      | Zustand ein / aus, nur lesend, wenn Netatmo ihn meldet |
+| Geschaltete Steckdose  | `BNCS`      | Zustand ein / aus, nur lesend, wenn Netatmo ihn meldet |
+| X-Modul                | `BNXM`      | nur Erreichbarkeit                                     |
+
+Jedes Modul erhält außerdem seine WLAN- oder Funkqualität, sobald Netatmo eine
+meldet. Ein Modul, das Netatmo als offline meldet, erhält das Badge **nicht
+erreichbar**. Noch lässt sich nichts steuern: Die Befehle kommen mit dem
+nächsten Schritt, sobald die echten Daten bekannt sind.
+
+> ⚠️ **Neue Netatmo-Berechtigungen — klicke erneut auf Verbinden.** Der
+> Schalter fordert vier zusätzliche Berechtigungen an, nur solange er
+> eingeschaltet ist: `read_bfi` / `write_bfi` (BTicino IP, Classe 300X) und
+> `read_mx` / `write_mx` (Classe 300 EOS). Klicke im Konfigurationsbildschirm
+> erneut auf **Verbinden** und akzeptiere sie — deine Geräte und Einstellungen
+> bleiben erhalten. Bis dahin zeigt der
+> Verbindungsstatus einen Hinweis „klicke erneut auf Verbinden“, und Netatmo
+> lässt die BTicino-Module eventuell weg. Die Schreibberechtigungen werden
+> schon jetzt angefordert, damit der nächste Schritt keine erneute Verbindung
+> braucht.
+
+### Das Diagnoseprotokoll an den Maintainer senden
+
+Solange der Schalter aktiv ist, schreibt die Integration in ihre Protokolle,
+bei der ersten Aktualisierung nach einem Start und danach **nur bei einer
+Änderung**:
+
+- die Rohdaten, die Netatmo für jedes BTicino-Modul liefert (Haustopologie und
+  Hausstatus, einschließlich der Module, die Netatmo mit Fehler meldet);
+- jedes Gladys-Plus-Webhook-Ereignis zu einem BTicino-Modul (Klingeln,
+  angenommener oder verpasster Anruf, Tür geöffnet… — erfordert die
+  [Gladys-Plus-Webhooks](#gladys-plus-webhooks-echtzeit--optional)).
+
+Jede Zeile beginnt mit `[bticino-diagnostic]`. Zugriffstoken, Schlüssel,
+Signaturen, E-Mail-Adressen und alle URLs (eine VPN- oder Bild-URL enthält
+einen Zugriffsschlüssel) werden durch `<redacted>` ersetzt; die IDs der Module,
+des Gateways und des Hauses bleiben erhalten — sie werden gebraucht, um die
+Module zu unterscheiden. Eine Zeile über 8 KB wird mit einer Markierung
+`[truncated]` gekürzt.
+
+So hilfst du, die vollständige Unterstützung aufzubauen:
+
+1. aktiviere den Schalter, speichere und klicke erneut auf **Verbinden**, wenn
+   der Status danach fragt;
+2. benutze die Türsprechanlage ein paar Minuten: klingle an der Außenstation
+   (nimm einmal ab, lass es einmal klingeln), öffne die Tür aus der App,
+   schalte das Treppenhauslicht;
+3. öffne den Tab **Protokolle** der Integration, kopiere die Zeilen, die mit
+   `[bticino-diagnostic]` beginnen, und poste sie in [Issue #59](https://github.com/Terdious/gladys-netatmo/issues/59) oder
+   im Forumsthema [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308). Lies sie vor dem
+   Posten durch: Sie sind bereinigt, aber prüfe, dass nichts Persönliches
+   übrig bleibt.
+
+Danach kannst du den Schalter aktiviert lassen (das Protokoll schreibt nur bei
+Änderungen) oder ihn deaktivieren.
+
+---
+
 ## Die Integration aktualisieren
 
 **Aus dem Katalog installiert** (der übliche Fall): Gladys prüft den Store
@@ -637,7 +714,7 @@ verschiebt nur, was noch übrig ist.
   _WebRTC-Live-Video_ im Abschnitt Video-Türklingel (Gladys-Version, Browser,
   Firewall).
 - **Status „einige Netatmo-Berechtigungen fehlen“:** Eine neuere Version hat
-  Berechtigungen hinzugefügt (Video-Türklingel, Innenkamera Advance) — klicke erneut auf Verbinden
+  Berechtigungen hinzugefügt (Video-Türklingel, Innenkamera Advance, BTicino-Türsprechanlage) — klicke erneut auf Verbinden
   und akzeptiere sie. Die **Logs** der Integration nennen die fehlenden.
 - **Immer noch nicht gelöst oder fehlt ein Gerät?** Frag im Forumsthema
   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308)

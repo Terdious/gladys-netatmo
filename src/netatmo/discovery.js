@@ -31,11 +31,13 @@ import {
   SECURITY_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
   AIRCARE_MODULE_TYPES,
+  BTICINO_MODULE_TYPES,
   HOMES_CONCURRENCY,
   HEATING_SCHEDULE_TYPE,
   VIRTUAL_DEVICE_TYPE,
   KNOWN_PERSONS_ID_PREFIX,
 } from './constants.js';
+import { bticinoEntriesOf } from './bticino.js';
 
 const logger = createLogger({ name: 'netatmo-discovery' });
 
@@ -87,6 +89,13 @@ export function getModuleCategory(model, config) {
       apiNotConfigured: !config.shutter_api,
     };
   }
+  if (BTICINO_MODULE_TYPES.includes(model)) {
+    return {
+      moduleSupported: true,
+      categoryAPI: SUPPORTED_CATEGORY_TYPE.BTICINO,
+      apiNotConfigured: !config.bticino_api,
+    };
+  }
   return {
     moduleSupported: false,
     categoryAPI: SUPPORTED_CATEGORY_TYPE.UNKNOWN,
@@ -119,9 +128,12 @@ async function mapWithConcurrency(items, concurrency, fn) {
  * @param {object} client Netatmo API client
  * @param {object} config normalized integration config
  * @param {object} homeData one entry of the homesdata `homes` array
+ * @param {Array} [bticinoDiagnostics] when given (BTicino toggle on), receives
+ *   the raw homesdata / homestatus entries of the home's BTicino modules
+ *   (issue #59 diagnostic log)
  * @returns {Promise<Array>} raw devices of the home
  */
-export async function loadDeviceDetails(client, config, homeData) {
+export async function loadDeviceDetails(client, config, homeData, bticinoDiagnostics) {
   const { rooms: roomsHomeData = [], modules: modulesHomeData = [], id: homeId } = homeData;
   const { home, errors } = await client.getHomeStatus(homeId);
   if (!home) {
@@ -131,6 +143,14 @@ export async function loadDeviceDetails(client, config, homeData) {
     return null;
   }
   const { rooms: roomsHomestatus = [], modules: modulesHomestatus = [] } = home;
+  if (bticinoDiagnostics) {
+    // Raw entries, BEFORE any merge: the diagnostic log must show exactly
+    // what Netatmo sent for each source.
+    const entries = bticinoEntriesOf(homeId, modulesHomeData, modulesHomestatus, errors);
+    if (entries) {
+      bticinoDiagnostics.push(entries);
+    }
+  }
   // Heating mode of the home (issue #38): live in homestatus, also carried by
   // homesdata (topology snapshot) — kept on every device of the home so the
   // declarative mapping can read it like any other value.
@@ -408,15 +428,19 @@ export async function loadDevices(client, config) {
  * for the duration of a Netatmo hiccup. `failed` names the families that
  * failed: `homes` (homesdata/homestatus), `energy` (getthermostatsdata),
  * `weather` (getstationsdata), `aircare` (gethomecoachsdata).
+ * With the BTicino toggle on, `bticino` carries the raw BTicino module
+ * entries of every home whose homestatus loaded (issue #59 diagnostic log).
  * @param {object} client Netatmo API client
  * @param {object} config normalized integration config
- * @returns {Promise<{devices: Array, partial: boolean, failed: string[], homes: Array}>}
- * raw devices + flags + the homesdata homes summaries (see summarizeHome)
+ * @returns {Promise<{devices: Array, partial: boolean, failed: string[], homes: Array,
+ *   bticino?: Array}>} raw devices + flags + the homesdata homes summaries
+ *   (see summarizeHome) + the BTicino diagnostic entries
  */
 export async function loadAccount(client, config) {
   let listDevices = [];
   const failed = [];
   let homeSummaries = [];
+  const bticinoDiagnostics = config.bticino_api ? [] : undefined;
 
   // Cameras and roller shutters ride in the same homesdata/homestatus payloads
   // as the Energy modules (no dedicated API call), and homestatus carries the
@@ -426,11 +450,19 @@ export async function loadAccount(client, config) {
   // gating, on purpose: the core treats "no API configured at all" as "load
   // everything" (its variables may simply be unset); the manifest toggles are
   // always defined with sensible defaults, so here OFF means OFF.
-  if (config.energy_api || config.security_api || config.weather_api || config.shutter_api) {
+  if (
+    config.energy_api ||
+    config.security_api ||
+    config.weather_api ||
+    config.shutter_api ||
+    config.bticino_api
+  ) {
     try {
       const homes = await client.getHomesData();
       const results = await mapWithConcurrency(homes, HOMES_CONCURRENCY, async (home) =>
-        home.modules && home.modules.length > 0 ? loadDeviceDetails(client, config, home) : [],
+        home.modules && home.modules.length > 0
+          ? loadDeviceDetails(client, config, home, bticinoDiagnostics)
+          : [],
       );
       if (results.includes(null)) {
         failed.push('homes');
@@ -574,5 +606,11 @@ export async function loadAccount(client, config) {
     // logging it here would repeat the same line every 120s cycle.
     logger.debug(`Netatmo devices not supported: ${notHandled}`);
   }
-  return { devices: listDevices, partial: failed.length > 0, failed, homes: homeSummaries };
+  return {
+    devices: listDevices,
+    partial: failed.length > 0,
+    failed,
+    homes: homeSummaries,
+    ...(bticinoDiagnostics ? { bticino: bticinoDiagnostics } : {}),
+  };
 }

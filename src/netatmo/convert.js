@@ -24,6 +24,8 @@ import {
   HLS_CAMERA_MODULE_TYPES,
   WEBRTC_CAMERA_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
+  BTICINO_MODULE_TYPES,
+  BTICINO_SWITCH_MODULE_TYPES,
   VIRTUAL_DEVICE_TYPE,
   PARAMS,
 } from './constants.js';
@@ -67,6 +69,7 @@ import {
   buildFeatureHealthIndex,
   buildFeatureHealthLevel,
   buildFeaturePersonPresence,
+  buildFeatureBticinoOn,
 } from './features.js';
 
 const logger = createLogger({ name: 'netatmo-convert' });
@@ -103,6 +106,38 @@ function bridgeParams(plug) {
     { name: PARAMS.PLUG_ID, value: plugId },
     { name: PARAMS.PLUG_NAME, value: plug.name || plug.module_name || plug.station_name },
   ];
+}
+
+// Name of the read-only `on` feature of the BTicino switches (issue #59).
+const BTICINO_ON_LABELS = {
+  [SUPPORTED_MODULE_TYPE.BNSL]: 'Staircase light',
+  [SUPPORTED_MODULE_TYPE.BNCS]: 'Socket',
+};
+
+/**
+ * Features of a BTicino door entry module (issue #59, discovery preview):
+ * no public payload exists, so only what THIS payload carries is declared —
+ * WiFi / RF quality when homestatus reports them, and the `on` of the
+ * staircase light / controlled socket (read-only) when homestatus reports
+ * it. Reachability rides on the transport badge, like every module.
+ */
+function bticinoFeatures(netatmoDevice, nameDevice, externalId) {
+  const features = [];
+  if (typeof netatmoDevice.wifi_strength === 'number') {
+    features.push(buildFeatureWifiStrength(nameDevice, externalId));
+  }
+  if (typeof netatmoDevice.rf_strength === 'number') {
+    features.push(buildFeatureRfStrength(nameDevice, externalId));
+  }
+  if (
+    BTICINO_SWITCH_MODULE_TYPES.includes(netatmoDevice.type) &&
+    typeof netatmoDevice.on === 'boolean'
+  ) {
+    features.push(
+      buildFeatureBticinoOn(nameDevice, externalId, BTICINO_ON_LABELS[netatmoDevice.type]),
+    );
+  }
+  return features;
 }
 
 /** Append the min_temp / max_temp features shared by the indoor/outdoor modules. */
@@ -197,6 +232,14 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
       buildFeatureRfStrength(nameDevice, externalId),
     );
     params = bridgeParams(netatmoId(plug ?? {}) ? plug : { id: netatmoDevice.bridge });
+  }
+  if (BTICINO_MODULE_TYPES.includes(model)) {
+    // BTicino door entry (issue #59): the indoor unit (BNCX) bridges the
+    // other modules — kept as params for the step 2 commands.
+    features.push(...bticinoFeatures(netatmoDevice, nameDevice, externalId));
+    params = Array.isArray(netatmoDevice.modules_bridged)
+      ? [{ name: PARAMS.MODULES_BRIDGE_ID, value: JSON.stringify(netatmoDevice.modules_bridged) }]
+      : bridgeParams(netatmoId(plug ?? {}) ? plug : { id: netatmoDevice.bridge });
   }
   if (BRIDGE_MODULE_TYPES.includes(model) || CAMERA_MODULE_TYPES.includes(model)) {
     features.push(buildFeatureWifiStrength(nameDevice, externalId));
@@ -436,6 +479,15 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
     case SUPPORTED_MODULE_TYPE.NBO:
     case SUPPORTED_MODULE_TYPE.NBS:
       // Features built above (state, position, RF quality).
+      break;
+    case SUPPORTED_MODULE_TYPE.BNCX:
+    case SUPPORTED_MODULE_TYPE.BNEU:
+    case SUPPORTED_MODULE_TYPE.BNDL:
+    case SUPPORTED_MODULE_TYPE.BNSL:
+    case SUPPORTED_MODULE_TYPE.BNCS:
+    case SUPPORTED_MODULE_TYPE.BNXM:
+      // BTicino door entry (issue #59): features built above, from what the
+      // payload carries. The door lock and the ring come with step 2.
       break;
     case SUPPORTED_MODULE_TYPE.NAMODULE4:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));

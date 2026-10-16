@@ -181,6 +181,22 @@ export function buildFeatureBoilerFault(name, externalId) {
   });
 }
 
+// BTicino staircase light (BNSL) and controlled socket (BNCS), issue #59:
+// homestatus `on`, as pyatmo models them (`Switch`). Read-only in this
+// discovery preview: the command lands with step 2, once the real payloads
+// are known. The suffix keeps the Netatmo field name.
+export function buildFeatureBticinoOn(name, externalId, label) {
+  return feature({
+    name: `${label} - ${name}`,
+    external_id: `${externalId}:on`,
+    selector: `${externalId}:on`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
 export function buildFeatureHeatingPowerRequest(name, externalId) {
   return feature({
     name: `Heating power request - ${name}`,

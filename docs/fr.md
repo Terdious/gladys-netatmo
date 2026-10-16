@@ -66,13 +66,14 @@ vous invite à vous reconnecter.
 
 Sous **Appareils à découvrir**, activez les familles que vous possédez :
 
-| Interrupteur         | Découvre                                                                                                                                                   |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`), thermostat modulant (`OTM` + `OTH`), BTicino Smarther (`BNS`)                     |
-| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                                                                          |
-| **Sécurité**         | Caméras intérieure (`NACamera`), intérieure Advance (`NPC`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires et les personnes connues |
-| **Volets roulants**  | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                                                                          |
-| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                                                                           |
+| Interrupteur           | Découvre                                                                                                                                                   |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Énergie**            | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`), thermostat modulant (`OTM` + `OTH`), BTicino Smarther (`BNS`)                     |
+| **Météo**              | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                                                                          |
+| **Sécurité**           | Caméras intérieure (`NACamera`), intérieure Advance (`NPC`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires et les personnes connues |
+| **Volets roulants**    | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                                                                          |
+| **Qualité de l'air**   | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                                                                           |
+| **Interphone BTicino** | Modules BTicino Classe 300X / Classe 300 EOS (`BNCX`, `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — aperçu, désactivé par défaut                               |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -536,6 +537,82 @@ première version.
 
 ---
 
+## Interphone BTicino (Classe 300X / Classe 300 EOS) — aperçu
+
+Les interphones vidéo **BTicino Classe 300X** et **Classe 300 EOS with
+Netatmo** passent par l'API Netatmo, mais aucune description publique de leurs
+données n'existe. Cette version est un **aperçu** (première étape de
+l'[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59)) : elle découvre les modules et écrit leurs données
+brutes dans les journaux de l'intégration, pour que la prise en charge complète
+— la sonnerie comme déclencheur de scène, l'ouverture de la porte, l'éclairage
+d'escalier — soit construite sur des données réelles.
+
+Activez **Interphone BTicino (Classe 300) — aperçu** sous **Appareils à
+découvrir** (désactivé par défaut) et enregistrez. Chaque module est découvert
+comme un appareil, avec seulement ce que Netatmo renvoie réellement :
+
+| Module                       | Type Netatmo | Dans Gladys (aperçu)                                    |
+| ---------------------------- | ------------ | ------------------------------------------------------- |
+| Poste intérieur (passerelle) | `BNCX`       | qualité WiFi, quand Netatmo la renvoie                  |
+| Platine de rue               | `BNEU`       | joignabilité seulement (pas encore de sonnerie)         |
+| Gâche / ouvre-porte          | `BNDL`       | joignabilité seulement (pas encore de commande)         |
+| Éclairage d'escalier         | `BNSL`       | état allumé / éteint en lecture seule, s'il est renvoyé |
+| Prise commandée              | `BNCS`       | état allumé / éteint en lecture seule, s'il est renvoyé |
+| Module X                     | `BNXM`       | joignabilité seulement                                  |
+
+Chaque module reçoit aussi sa qualité WiFi ou RF dès que Netatmo en renvoie une.
+Un module que Netatmo signale hors ligne reçoit le badge **injoignable**. Rien
+n'est encore pilotable : les commandes arrivent avec l'étape suivante, une fois
+les données réelles connues.
+
+> ⚠️ **Nouvelles autorisations Netatmo — recliquez sur Connecter.**
+> Activer l'interrupteur demande quatre autorisations supplémentaires,
+> demandées uniquement tant qu'il est activé : `read_bfi` / `write_bfi`
+> (BTicino IP, Classe 300X) et `read_mx` / `write_mx` (Classe 300 EOS).
+> Cliquez à nouveau sur **Connecter** dans l'écran Configuration et
+> acceptez-les — vos appareils et réglages sont conservés. D'ici là, le statut
+> de connexion affiche « cliquez à nouveau sur Connecter », et Netatmo peut
+> omettre les modules BTicino. Les autorisations d'écriture sont demandées dès
+> maintenant pour que l'étape suivante ne demande pas de nouvelle reconnexion.
+
+### Envoyer le journal de diagnostic au mainteneur
+
+Tant que l'interrupteur est activé, l'intégration écrit dans ses journaux, au
+premier rafraîchissement après un démarrage puis **uniquement quand quelque
+chose change** :
+
+- les données brutes que Netatmo renvoie pour chaque module BTicino
+  (topologie et état de la maison, y compris les modules que Netatmo signale en
+  erreur) ;
+- chaque événement webhook Gladys Plus concernant un module BTicino (sonnerie,
+  appel décroché ou manqué, porte ouverte… — nécessite les
+  [webhooks Gladys Plus](#webhooks-gladys-plus-temps-réel--optionnel)).
+
+Chaque ligne commence par `[bticino-diagnostic]`. Les jetons d'accès, clés,
+signatures, adresses e-mail et toutes les URL (une URL VPN ou d'image contient
+une clé d'accès) sont remplacés par `<redacted>` ; les identifiants des
+modules, de la passerelle et de la maison sont conservés — ils servent à
+distinguer les modules. Une ligne de plus de 8 Ko est coupée, avec une marque
+`[truncated]`.
+
+Pour aider à construire la prise en charge complète :
+
+1. activez l'interrupteur, enregistrez, et recliquez sur **Connecter** si le
+   statut le demande ;
+2. utilisez l'interphone quelques minutes : sonnez à la platine de rue
+   (décrochez une fois, laissez sonner une fois), ouvrez la porte depuis
+   l'application, allumez l'éclairage d'escalier ;
+3. ouvrez l'onglet **Journaux** de l'intégration, copiez les lignes qui
+   commencent par `[bticino-diagnostic]` et publiez-les dans
+   l'[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59) ou sur le sujet du forum
+   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308). Relisez-les avant de les publier :
+   elles sont expurgées, mais vérifiez qu'il ne reste rien de personnel.
+
+Vous pouvez ensuite laisser l'interrupteur activé (le journal n'écrit que lors
+des changements) ou le désactiver.
+
+---
+
 ## Mettre à jour l'intégration
 
 **Installée depuis le catalogue** (le cas habituel) : Gladys consulte
@@ -637,7 +714,7 @@ peut être relancée : elle ne déplace que ce qui reste.
 - **Sonnette ou caméra intérieure Advance sans direct :** voir _Direct WebRTC_
   dans la section Sonnette vidéo (version de Gladys, navigateur, pare-feu).
 - **Statut « des autorisations Netatmo manquent » :** une version plus récente
-  a ajouté des autorisations (sonnette vidéo, caméra intérieure Advance) — recliquez sur Connecter et
+  a ajouté des autorisations (sonnette vidéo, caméra intérieure Advance, interphone BTicino) — recliquez sur Connecter et
   acceptez-les. Les **Journaux** de l'intégration listent celles qui manquent.
 - **Toujours bloqué, ou un appareil manque ?** Posez votre question sur le
   sujet du forum [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),

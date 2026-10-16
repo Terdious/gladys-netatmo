@@ -31,6 +31,12 @@ test('normalizeConfig trims strings and coerces form values', () => {
   assert.equal(config.expires_at, 1700000000000);
 });
 
+test('the BTicino door entry is opt-in (bticino_api defaults to false, issue #59)', () => {
+  assert.equal(normalizeConfig().bticino_api, false);
+  assert.equal(normalizeConfig({ bticino_api: 'true' }).bticino_api, true);
+  assert.equal(normalizeConfig({ bticino_api: 'false' }).bticino_api, false);
+});
+
 test('the roller shutters are opt-in (shutter_api defaults to false)', () => {
   assert.equal(normalizeConfig().shutter_api, false);
   assert.equal(normalizeConfig({ shutter_api: 'false' }).shutter_api, false);

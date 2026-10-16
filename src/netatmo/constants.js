@@ -152,6 +152,17 @@ export const SUPPORTED_MODULE_TYPE = {
   // BTicino Smarther with Netatmo (issue #54): wifi thermostat of its own
   // (no relay), served by the same homesdata/homestatus and commands.
   BNS: 'BNS',
+  // BTicino Classe 300X / Classe 300 EOS with Netatmo door entry (issue #59),
+  // discovery preview: indoor unit = gateway (BNCX), external street panel
+  // (BNEU), door lock (BNDL), staircase light (BNSL), controlled socket
+  // (BNCS) and X module (BNXM). No public payload exists: their exact state
+  // fields are collected through the diagnostic log (src/netatmo/bticino.js).
+  BNCX: 'BNCX',
+  BNEU: 'BNEU',
+  BNDL: 'BNDL',
+  BNSL: 'BNSL',
+  BNCS: 'BNCS',
+  BNXM: 'BNXM',
 };
 
 // Virtual devices (issue #57): built by the integration from home-level data
@@ -182,6 +193,7 @@ export const SUPPORTED_CATEGORY_TYPE = {
   SECURITY: 'Security',
   SHUTTER: 'Shutter',
   AIRCARE: 'Aircare',
+  BTICINO: 'BTicino',
   UNKNOWN: 'unknown',
 };
 
@@ -281,6 +293,28 @@ export const SHUTTER_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NBO,
   SUPPORTED_MODULE_TYPE.NBS,
 ];
+
+// BTicino door entry modules (issue #59), gated by their own `bticino_api`
+// toggle. Discovery preview only: signal quality and reachability, plus the
+// read-only `on` of the modules pyatmo models as switches. The door lock
+// command and the ring land once the real payloads are known (step 2).
+export const BTICINO_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.BNCX,
+  SUPPORTED_MODULE_TYPE.BNEU,
+  SUPPORTED_MODULE_TYPE.BNDL,
+  SUPPORTED_MODULE_TYPE.BNSL,
+  SUPPORTED_MODULE_TYPE.BNCS,
+  SUPPORTED_MODULE_TYPE.BNXM,
+];
+
+// BTicino modules pyatmo models as a `Switch` (homestatus `on`): staircase
+// light and controlled socket. Read-only for now (step 2 of issue #59).
+export const BTICINO_SWITCH_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.BNSL, SUPPORTED_MODULE_TYPE.BNCS];
+
+// Diagnostic log of the BTicino payloads (issue #59): every line carries this
+// tag (easy to grep in the Gladys logs) and is cut at this many characters.
+export const BTICINO_DIAGNOSTIC_TAG = '[bticino-diagnostic]';
+export const BTICINO_DIAGNOSTIC_MAX_LINE = 8 * 1024;
 
 // Gladys cover states (server/utils/constants.js COVER_STATE — not exported
 // by the SDK).
@@ -485,6 +519,24 @@ export const OAUTH_SCOPES = [
   'write_smarther',
 ];
 
+// BTicino door entry (issue #59): BTicino IP (Classe 300X) and Classe 300 EOS,
+// the names pyatmo requests (ALL_SCOPES). Requested ONLY while the opt-in
+// `bticino_api` toggle is on: an account without a BTicino door entry never
+// sees them (no "click Connect again" hint, no consent for scopes it does
+// not need). The write scopes are requested together, so the step 2
+// commands (door lock, staircase light) need no second reconnection.
+export const BTICINO_OAUTH_SCOPES = ['read_bfi', 'write_bfi', 'read_mx', 'write_mx'];
+
+/**
+ * Scopes to request for a configuration: the base set, plus the BTicino door
+ * entry ones while its toggle is on.
+ * @param {object} [config] normalized configuration
+ * @returns {string[]} the scopes to request
+ */
+export function requestedScopes(config) {
+  return config?.bticino_api ? [...OAUTH_SCOPES, ...BTICINO_OAUTH_SCOPES] : OAUTH_SCOPES;
+}
+
 // Refresh the access token at 80% of its lifetime (core PR #2618 hardening),
 // never sooner than 30 seconds from now.
 export const TOKEN_REFRESH_RATIO = 0.8;
@@ -530,13 +582,13 @@ export const CONNECTION_MESSAGES = {
     es: 'La sesión de Netatmo ha caducado, vuelva a conectar su cuenta Netatmo.',
   },
   // Connected, but the token lacks requested scopes (typically scopes added by
-  // a newer release, like the Smarther or the Indoor Camera Advance ones): the
-  // exact list is logged.
+  // a newer release, like the BTicino door entry, Smarther or Indoor Camera
+  // Advance ones): the exact list is logged.
   MISSING_SCOPES: {
-    en: 'Connected, but some Netatmo permissions added in a recent version are missing (e.g. Smarther thermostat, Indoor Camera Advance): click Connect again to grant them.',
-    fr: 'Connecté, mais des autorisations Netatmo ajoutées récemment manquent (ex. thermostat Smarther, caméra intérieure Advance) : cliquez à nouveau sur Connecter pour les accorder.',
-    de: 'Verbunden, aber neu hinzugekommene Netatmo-Berechtigungen fehlen (z. B. Thermostat Smarther, Innenkamera Advance): Klicke erneut auf Verbinden, um sie zu erteilen.',
-    es: 'Conectado, pero faltan permisos de Netatmo añadidos recientemente (p. ej. termostato Smarther, cámara de interior Advance): vuelva a hacer clic en Conectar para concederlos.',
+    en: 'Connected, but some Netatmo permissions added in a recent version are missing (e.g. BTicino door entry, Smarther thermostat, Indoor Camera Advance): click Connect again to grant them.',
+    fr: 'Connecté, mais des autorisations Netatmo ajoutées récemment manquent (ex. interphone BTicino, thermostat Smarther, caméra intérieure Advance) : cliquez à nouveau sur Connecter pour les accorder.',
+    de: 'Verbunden, aber neu hinzugekommene Netatmo-Berechtigungen fehlen (z. B. Türsprechanlage BTicino, Thermostat Smarther, Innenkamera Advance): Klicke erneut auf Verbinden, um sie zu erteilen.',
+    es: 'Conectado, pero faltan permisos de Netatmo añadidos recientemente (p. ej. portero BTicino, termostato Smarther, cámara de interior Advance): vuelva a hacer clic en Conectar para concederlos.',
   },
   NETATMO_UNREACHABLE: {
     en: 'Netatmo cloud is unreachable, retrying automatically.',

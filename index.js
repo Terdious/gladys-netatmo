@@ -39,6 +39,7 @@ import {
   refreshWidgets,
   requestRefresh,
 } from './src/netatmo/widgets.js';
+import { createBticinoDiagnostic } from './src/netatmo/bticino.js';
 import { CONNECTION_MESSAGES, WEBHOOK_KEY } from './src/netatmo/constants.js';
 
 /**
@@ -101,6 +102,10 @@ export function setupIntegration(
     await reportConnectionStatus(gladys, isConnected, shown ?? undefined);
   }
 
+  // BTicino door entry diagnostic log (issue #59): raw payloads of the BN*
+  // modules (fed by every load) and of their webhook events.
+  const bticinoDiagnostic = createBticinoDiagnostic();
+
   // WebRTC live view of the doorbell and the Indoor Camera Advance (issue
   // #70): inert with an SDK or a Gladys core that cannot relay it yet.
   const webRtc = createWebRtc({
@@ -113,6 +118,7 @@ export function setupIntegration(
     gladys,
     client,
     fetchImpl,
+    bticinoDiagnostic,
     webRtc,
     ...(refreshIntervalMs ? { refreshIntervalMs } : {}),
     onDegradedChange: async () => {
@@ -338,6 +344,13 @@ export function setupIntegration(
   // else), and every event debounces a refresh of the pollable state.
   gladys.onWebhook(WEBHOOK_KEY, async (request) => {
     logger.debug('Netatmo webhook event received');
+    if (config.bticino_api) {
+      try {
+        bticinoDiagnostic.logWebhook(request?.body);
+      } catch (err) {
+        logger.debug(`BTicino diagnostic log failed: ${err.message}`);
+      }
+    }
     await events.handleWebhook(request?.body);
     webhooks.handleEvent();
   });
@@ -362,9 +375,19 @@ export function setupIntegration(
       previous.weather_api !== config.weather_api ||
       previous.security_api !== config.security_api ||
       previous.shutter_api !== config.shutter_api ||
-      previous.aircare_api !== config.aircare_api;
+      previous.aircare_api !== config.aircare_api ||
+      previous.bticino_api !== config.bticino_api;
     if (togglesChanged) {
       telemetry.resetDedup();
+    }
+    if (config.bticino_api && !previous.bticino_api) {
+      // BTicino toggle (re-)enabled: log every BTicino entry again.
+      bticinoDiagnostic.reset();
+    }
+    if (config.bticino_api !== previous.bticino_api) {
+      // The BTicino scopes are only requested while the toggle is on: the
+      // "click Connect again" hint follows the toggle.
+      await oauth.recheckScopes();
     }
     await syncConnection();
     // Saving the configuration re-runs the discovery automatically: enabling
@@ -397,7 +420,16 @@ export function setupIntegration(
     events.stop();
   });
 
-  return { oauth, client, telemetry, webhooks, events, webRtc, getConfig: () => config };
+  return {
+    oauth,
+    client,
+    telemetry,
+    webhooks,
+    events,
+    bticinoDiagnostic,
+    webRtc,
+    getConfig: () => config,
+  };
 }
 
 // --- Startup (container entry point only) ------------------------------------

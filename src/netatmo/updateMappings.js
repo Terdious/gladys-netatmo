@@ -92,6 +92,20 @@ function knownPersonsMapping(deviceNetatmo) {
   );
 }
 
+// BTicino door entry modules (issue #59, discovery preview): the signal
+// quality, emitted only when homestatus carries it.
+const BTICINO_MAPPING = {
+  wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength,
+  rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
+};
+
+// Staircase light / controlled socket (pyatmo `Switch`): homestatus `on`, a
+// boolean — anything else is no value.
+const BTICINO_SWITCH_MAPPING = {
+  on: (deviceNetatmo) => (typeof deviceNetatmo.on === 'boolean' ? deviceNetatmo.on : undefined),
+  ...BTICINO_MAPPING,
+};
+
 export const UPDATE_MAPPINGS = {
   [SUPPORTED_MODULE_TYPE.PLUG]: {
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
@@ -282,6 +296,12 @@ export const UPDATE_MAPPINGS = {
   [SUPPORTED_MODULE_TYPE.NBR]: SHUTTER_MAPPING,
   [SUPPORTED_MODULE_TYPE.NBO]: SHUTTER_MAPPING,
   [SUPPORTED_MODULE_TYPE.NBS]: SHUTTER_MAPPING,
+  [SUPPORTED_MODULE_TYPE.BNCX]: BTICINO_MAPPING,
+  [SUPPORTED_MODULE_TYPE.BNEU]: BTICINO_MAPPING,
+  [SUPPORTED_MODULE_TYPE.BNDL]: BTICINO_MAPPING,
+  [SUPPORTED_MODULE_TYPE.BNSL]: BTICINO_SWITCH_MAPPING,
+  [SUPPORTED_MODULE_TYPE.BNCS]: BTICINO_SWITCH_MAPPING,
+  [SUPPORTED_MODULE_TYPE.BNXM]: BTICINO_MAPPING,
   [SUPPORTED_MODULE_TYPE.NAMODULE4]: {
     battery_percent: (deviceNetatmo) => deviceNetatmo.battery_percent,
     temperature: (deviceNetatmo) =>

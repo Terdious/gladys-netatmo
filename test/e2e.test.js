@@ -23,6 +23,8 @@ import {
   FAKE_AUTH_CODE,
   addShutterFixtures,
   SHUTTER_BRIDGE_ID,
+  addBticinoFixtures,
+  BNEU_ID,
 } from './helpers/fakeNetatmo.js';
 
 const { EXTERNAL_INTEGRATION } = WEBSOCKET_MESSAGE_TYPES;
@@ -278,4 +280,57 @@ test('enabling the roller shutters surfaces them, and a command reaches setstate
       modules: [{ id: '0009999992', target_position: 100, bridge: SHUTTER_BRIDGE_ID }],
     },
   });
+});
+
+test('the BTicino toggle surfaces the door entry modules and logs their webhooks (issue #59)', async () => {
+  const webhookCalls = [];
+  const diagnosticCalls = [];
+  const { events, bticinoDiagnostic } = integration;
+  const handleWebhook = events.handleWebhook;
+  const logWebhook = bticinoDiagnostic.logWebhook;
+  events.handleWebhook = async (body) => {
+    webhookCalls.push(body);
+    return handleWebhook(body);
+  };
+  bticinoDiagnostic.logWebhook = (body) => {
+    diagnosticCalls.push(body);
+    return logWebhook(body);
+  };
+  const ring = { push_type: 'BNEU-incoming_call', home_id: 'home-1', module_id: BNEU_ID };
+  const sendWebhook = () =>
+    core.send(EXTERNAL_INTEGRATION.WEBHOOK_RECEIVED, {
+      webhook_key: 'events',
+      method: 'POST',
+      body: ring,
+      content_type: 'application/json',
+    });
+  try {
+    // Toggle off: the event goes through the usual path, no diagnostic.
+    sendWebhook();
+    await waitFor(() => webhookCalls.length === 1);
+    assert.equal(diagnosticCalls.length, 0);
+
+    addBticinoFixtures(netatmo.state);
+    core.send(EXTERNAL_INTEGRATION.CONFIG_UPDATED, {
+      config: {
+        ...core.state.config,
+        client_id: FAKE_CLIENT_ID,
+        client_secret: FAKE_CLIENT_SECRET,
+        bticino_api: 'true',
+      },
+    });
+    const bneu = await waitFor(() =>
+      core.state.discovered
+        .at(-1)
+        ?.find((device) => device.external_id === `ext:netatmo:${BNEU_ID}`),
+    );
+    assert.equal(bneu.model, 'BNEU');
+
+    sendWebhook();
+    await waitFor(() => webhookCalls.length === 2);
+    assert.deepEqual(diagnosticCalls, [ring]);
+  } finally {
+    events.handleWebhook = handleWebhook;
+    bticinoDiagnostic.logWebhook = logWebhook;
+  }
 });

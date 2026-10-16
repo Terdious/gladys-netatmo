@@ -63,13 +63,14 @@ expires beyond repair, the Configuration screen tells you to reconnect.
 
 Under **Devices to discover**, enable the families you own:
 
-| Toggle              | Discovers                                                                                                                                        |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)         |
-| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                                                |
-| **Security**        | Indoor (`NACamera`), Indoor Camera Advance (`NPC`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
-| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                                                 |
-| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                                            |
+| Toggle                 | Discovers                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Energy**             | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)         |
+| **Weather**            | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                                                |
+| **Security**           | Indoor (`NACamera`), Indoor Camera Advance (`NPC`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
+| **Roller shutters**    | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                                                 |
+| **Air quality**        | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                                            |
+| **BTicino door entry** | BTicino Classe 300X / Classe 300 EOS modules (`BNCX`, `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — preview, off by default                          |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -499,6 +500,75 @@ are not published. No reconnection is needed: the Home Coach permission
 
 ---
 
+## BTicino door entry (Classe 300X / Classe 300 EOS) — preview
+
+The **BTicino Classe 300X** and **Classe 300 EOS with Netatmo** video door entry
+systems are served by the Netatmo API, but no public description of their data
+exists. This version is a **preview** (first step of
+[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59)): it discovers the modules and writes their raw data to the
+integration logs, so that the full support — the ring as a scene trigger, the
+door opening, the staircase light — can be built on real data.
+
+Enable **BTicino door entry (Classe 300) — preview** under **Devices to
+discover** (off by default) and save. Each module is discovered as a device,
+with only what Netatmo actually reports:
+
+| Module                | Netatmo type | In Gladys (preview)                               |
+| --------------------- | ------------ | ------------------------------------------------- |
+| Indoor unit (gateway) | `BNCX`       | WiFi quality, when Netatmo reports it             |
+| Street panel          | `BNEU`       | reachability only (no ring yet)                   |
+| Door lock             | `BNDL`       | reachability only (no opening command yet)        |
+| Staircase light       | `BNSL`       | read-only on / off state, when Netatmo reports it |
+| Controlled socket     | `BNCS`       | read-only on / off state, when Netatmo reports it |
+| X module              | `BNXM`       | reachability only                                 |
+
+Every module also gets its WiFi or RF quality whenever Netatmo reports one. A
+module Netatmo reports offline gets the **unreachable** badge. Nothing can be
+controlled yet: the commands come with the next step, once the real data is
+known.
+
+> ⚠️ **New Netatmo permissions — click Connect again.** Turning the toggle on
+> asks for four extra permissions, requested only while it is on:
+> `read_bfi` / `write_bfi` (BTicino IP, Classe 300X) and `read_mx` /
+> `write_mx` (Classe 300 EOS). Click **Connect** again on the Configuration
+> screen and accept them — your devices and settings are kept.
+> Until then the connection status shows a "click Connect again" hint, and
+> Netatmo may leave the BTicino modules out. The write permissions are
+> requested now so that the next step needs no new reconnection.
+
+### Sending the diagnostic log to the maintainer
+
+While the toggle is on, the integration writes to its logs, at the first
+refresh after a start and then **only when something changes**:
+
+- the raw data Netatmo returns for every BTicino module (home topology and
+  home status, including the modules Netatmo reports in error);
+- every Gladys Plus webhook event about a BTicino module (ring, call answered
+  or missed, door opened… — requires the
+  [Gladys Plus webhooks](#gladys-plus-webhooks-real-time--optional)).
+
+Each line starts with `[bticino-diagnostic]`. Access tokens, keys, signatures,
+e-mail addresses and every URL (a VPN or snapshot URL embeds an access key) are
+replaced by `<redacted>`; the module, bridge and home ids are kept — they are
+needed to tell the modules apart. A line longer than 8 KB is cut, with a
+`[truncated]` marker.
+
+To help build the full support:
+
+1. enable the toggle, save, and click **Connect** again if the status asks for
+   it;
+2. use the door entry for a few minutes: ring at the street panel (answer once,
+   let it ring once), open the door from the app, switch the staircase light;
+3. open the integration **Logs** tab, copy the lines starting with
+   `[bticino-diagnostic]` and post them in [issue #59](https://github.com/Terdious/gladys-netatmo/issues/59) or on the
+   forum topic [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308). Read them before
+   posting: they are redacted, but check that nothing personal is left.
+
+You can leave the toggle on afterwards (the log only writes on changes) or turn
+it off.
+
+---
+
 ## Updating the integration
 
 **Installed from the catalog** (the usual case): Gladys checks the store
@@ -590,7 +660,7 @@ moves what is left.
 - **Doorbell or Indoor Camera Advance without live video:** see _WebRTC live
   view_ in the Video doorbell section (Gladys version, browser, firewall).
 - **"Some Netatmo permissions are missing" status:** a newer version added
-  permissions (video doorbell, Indoor Camera Advance) — click Connect again and accept them. The
+  permissions (video doorbell, Indoor Camera Advance, BTicino door entry) — click Connect again and accept them. The
   integration **Logs** list the missing ones.
 - **Still stuck, or a device is missing?** Ask on the forum topic
   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),
