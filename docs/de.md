@@ -158,10 +158,12 @@ die als **Szenen-Auslöser** nutzbar sind:
 | Außenkamera (Presence)  | **Tier erkannt**     | ein erkanntes Tier                    |
 | Außenkamera (Presence)  | **Fahrzeug erkannt** | ein erkanntes Fahrzeug                |
 | Rauchmelder             | **Rauch**            | eine Raucherkennung                   |
+| Kohlenmonoxidmelder     | **Kohlenmonoxid**    | eine Kohlenmonoxid-Erkennung          |
 
 Jede Erkennung wechselt auf **Ja** und kehrt nach einer Minute von selbst auf
-**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“, außer beim
-Rauch: Das Ereignis „Rauch verschwunden“ setzt sie sofort auf **Nein**).
+**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“, außer bei
+Rauch und Kohlenmonoxid: Das Ereignis „Rauch verschwunden“ / „wieder normal“
+setzt sie sofort auf **Nein**).
 Verwende in einer Szene den Auslöser „Wert wird Ja“.
 
 > ⚠️ **Wenn deine Kameras bereits in Gladys existierten**, erscheinen diese
@@ -184,6 +186,9 @@ verknüpfte Zubehör erkannt:
 - **Rauchmelder** (`NSD`) — erkannt mit Batterie und Signal, dazu eine Funktion
   **Rauch**, die von den Webhooks gespeist wird (siehe Abschnitt oben): Die
   Abfrage allein kann diesen Zustand nicht melden.
+- **Kohlenmonoxidmelder** (`NCO`) — wie der Rauchmelder: Batterie und Signal
+  (sofern Netatmo sie meldet), dazu eine Funktion **Kohlenmonoxid**, die von
+  den Webhooks gespeist wird.
 
 ---
 

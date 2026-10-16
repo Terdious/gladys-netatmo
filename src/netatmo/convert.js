@@ -37,6 +37,7 @@ import {
   buildFeatureAnimal,
   buildFeatureVehicle,
   buildFeatureSmoke,
+  buildFeatureCarbonMonoxide,
   buildFeatureMonitoring,
   buildFeatureCamera,
   buildFeatureCo2,
@@ -255,6 +256,16 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeatureBattery(nameDevice, externalId),
         buildFeatureWifiStrength(nameDevice, externalId),
         buildFeatureSmoke(nameDevice, externalId),
+      );
+      break;
+    case SUPPORTED_MODULE_TYPE.NCO:
+      // Carbon monoxide alarm (issue #36), modelled on the smoke alarm:
+      // battery + signal are pollable when homestatus carries them, the CO
+      // state only exists in the webhook event stream (`co_detected`).
+      features.push(
+        buildFeatureBattery(nameDevice, externalId),
+        buildFeatureWifiStrength(nameDevice, externalId),
+        buildFeatureCarbonMonoxide(nameDevice, externalId),
       );
       break;
     case SUPPORTED_MODULE_TYPE.NACAMERA:

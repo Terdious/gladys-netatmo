@@ -48,9 +48,9 @@ capabilities land (Home + Security cameras, webhooks, …).
 - **Camera-bridged security accessories** (opt-in with the cameras): the
   door/window tag (`NACamDoorTag`) as an opening sensor, the indoor siren
   (`NIS`) as a read-only sounding sensor, both with battery + RF quality; the
-  smoke alarm (`NSD`) is discovered with battery + signal — its smoke state is
-  webhook-driven and lands with the webhooks milestone. Net-new vs the core
-  service.
+  smoke alarm (`NSD`) and the carbon monoxide alarm (`NCO`) are discovered
+  with battery + signal — their smoke / CO state is webhook-driven. Net-new vs
+  the core service.
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required), plus the
   **degraded state**: an API family failing 3 cycles in a row is named under

@@ -40,8 +40,9 @@ export const WEBHOOK_DEBOUNCE_MS = 2 * 1000;
 // possible.
 //
 // Netatmo sends `push_type: "<module type>-<event>"` (e.g. "NACamera-movement",
-// "NOC-human", "NSD-smoke"). We key on the EVENT part so every module type is
-// handled by one table, and unknown events are ignored instead of guessed.
+// "NOC-human", "NSD-smoke", "NCO-co_detected"). We key on the EVENT part so
+// every module type is handled by one table, and unknown events are ignored
+// instead of guessed.
 export const EVENT_FEATURE_SUFFIXES = {
   movement: 'motion',
   human: 'human',
@@ -49,14 +50,17 @@ export const EVENT_FEATURE_SUFFIXES = {
   animal: 'animal',
   vehicle: 'vehicle',
   smoke: 'smoke',
+  co_detected: 'carbon_monoxide',
 };
 
 // Webhook `sub_type` values that report the END of a detection rather than a
 // new one (Netatmo security webhook documentation: smoke 0 = cleared,
-// 1 = detected). Such an event returns the feature to 0 at once — publishing
-// it as a detection would raise a false alarm right after a real one.
+// 1 = detected; co_detected 0 = OK, 1 = pre-alarm, 2 = alarm). Such an event
+// returns the feature to 0 at once — publishing it as a detection would raise
+// a false alarm right after a real one.
 export const EVENT_CLEARED_SUB_TYPES = {
   smoke: ['0'],
+  co_detected: ['0'],
 };
 
 // A momentary event has no "cleared" counterpart in the Netatmo stream: the
@@ -84,6 +88,9 @@ export const SUPPORTED_MODULE_TYPE = {
   // homestatus payload carries them); its SMOKE state is webhook-driven and
   // lands with the webhooks milestone (issue #5).
   NSD: 'NSD',
+  // Smart carbon monoxide alarm (issue #36): same shape as the smoke alarm —
+  // battery + signal when homestatus carries them, CO state webhook-driven.
+  NCO: 'NCO',
 };
 
 export const SUPPORTED_CATEGORY_TYPE = {
@@ -123,6 +130,7 @@ export const SECURITY_MODULE_TYPES = [
   ...CAMERA_MODULE_TYPES,
   ...CAMERA_BRIDGED_SECURITY_TYPES,
   SUPPORTED_MODULE_TYPE.NSD,
+  SUPPORTED_MODULE_TYPE.NCO,
 ];
 
 // Device params persisted on the Gladys device (same names as the core:

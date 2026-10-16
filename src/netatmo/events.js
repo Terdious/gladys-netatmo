@@ -2,19 +2,20 @@
 // Momentary Netatmo events (issue #5), fed by the Gladys Plus webhook relay.
 //
 // This is the documented EXCEPTION to the "trigger, not data" doctrine: motion,
-// person, animal, vehicle and smoke detections exist ONLY in the event stream —
-// no API state ever reports them, so refreshing cannot surface them. They are
-// published as dedicated binary features, which is what makes a scene trigger
-// ("camera detects motion -> ...") possible.
+// person, animal, vehicle, smoke and carbon monoxide detections exist ONLY in
+// the event stream — no API state ever reports them, so refreshing cannot
+// surface them. They are published as dedicated binary features, which is what
+// makes a scene trigger ("camera detects motion -> ...") possible.
 //
 // Netatmo sends `push_type: "<module type>-<event>"` (e.g. "NACamera-movement",
-// "NOC-human", "NSD-smoke"). We key on the EVENT part, so every module type
-// goes through one table and unknown events are ignored rather than guessed.
+// "NOC-human", "NSD-smoke", "NCO-co_detected"). We key on the EVENT part, so
+// every module type goes through one table and unknown events are ignored
+// rather than guessed.
 //
 // Each detection is published as 1, then automatically back to 0 after
 // EVENT_RESET_MS: most events have no "cleared" counterpart, and a feature
 // stuck at 1 would make a scene trigger fire once and never again. The few
-// that do (smoke: `sub_type` 0 = cleared, see EVENT_CLEARED_SUB_TYPES) return
+// that do (smoke and carbon monoxide, see EVENT_CLEARED_SUB_TYPES) return
 // the feature to 0 at once instead of raising a new detection.
 // -----------------------------------------------------------------------------
 

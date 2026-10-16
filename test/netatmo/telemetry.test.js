@@ -150,8 +150,8 @@ test('unchanged values are deduped, then re-published after the 30-minute keep-a
 test('cameras are discovered and updated when security_api is enabled (core #2621)', async () => {
   const configSecurity = normalizeConfig({ security_api: 'true' });
   gladys.devices = await telemetry.syncDiscovery(configSecurity);
-  // 7 Energy/Weather devices + 2 cameras + siren + door tag + smoke alarm.
-  assert.equal(gladys.devices.length, 12);
+  // 7 Energy/Weather devices + 2 cameras + siren + door tag + smoke + CO alarms.
+  assert.equal(gladys.devices.length, 13);
 
   await telemetry.refreshValues(configSecurity);
   // monitoring 'off'/'on' → binary, wifi_status fallback (core mapping).
@@ -204,6 +204,11 @@ test('the camera-bridged security accessories publish their states (issue #9)', 
   // Smoke alarm: battery + signal pollable today (smoke state is webhook-only).
   assert.deepEqual(stateOf('ext:netatmo:smoke-1:battery_percent'), [88]);
   assert.deepEqual(stateOf('ext:netatmo:smoke-1:wifi_strength'), [66]);
+
+  // CO alarm (issue #36): only what homestatus carries — battery, no wifi.
+  assert.deepEqual(stateOf('ext:netatmo:co-1:battery_percent'), [92]);
+  assert.deepEqual(stateOf('ext:netatmo:co-1:wifi_strength'), []);
+  assert.deepEqual(stateOf('ext:netatmo:co-1:carbon_monoxide'), []); // webhook-only
 
   // A door opening flows on the next cycle.
   const doortag = netatmo.state.homeStatuses['home-1'].home.modules.find(

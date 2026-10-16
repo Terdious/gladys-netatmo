@@ -55,6 +55,8 @@ function buildDefaultHomes() {
         // Smoke alarm: discovered with battery + signal; smoke state is
         // webhook-driven (issue #9 / #5).
         { id: 'smoke-1', type: 'NSD', name: 'Détecteur de fumée', bridge: 'camera-1' },
+        // Carbon monoxide alarm (issue #36): modelled on the smoke alarm.
+        { id: 'co-1', type: 'NCO', name: 'Détecteur de CO', room_id: 'room-1' },
       ],
     },
   ];
@@ -104,6 +106,8 @@ function buildDefaultHomeStatuses() {
             rf_strength: 68,
           },
           { id: 'smoke-1', type: 'NSD', battery_percent: 88, wifi_strength: 66 },
+          // No wifi field: the CO alarm must only publish what homestatus carries.
+          { id: 'co-1', type: 'NCO', battery_percent: 92 },
         ],
         errors: [{ code: 6, id: 'valve-2' }],
       },
