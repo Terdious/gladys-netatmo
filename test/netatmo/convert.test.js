@@ -208,6 +208,7 @@ test('converts a Home Coach (NHC) with the indoor measures and the health index 
     'pressure',
     'absolute_pressure',
     'health_idx',
+    'health_level',
   ]);
   const minTemp = device.features.find((f) => f.external_id.endsWith(':min_temp'));
   assert.equal(minTemp.type, 'min');
@@ -219,6 +220,17 @@ test('converts a Home Coach (NHC) with the indoor measures and the health index 
   assert.equal(aqi.min, 0);
   assert.equal(aqi.max, 500);
   assert.equal(aqi.read_only, true);
+  // The same index as a named level, shown with the Netatmo wording.
+  const level = device.features.find((f) => f.external_id.endsWith(':health_level'));
+  assert.equal(level.category, 'text');
+  assert.equal(level.type, 'select');
+  assert.equal(level.read_only, true);
+  assert.equal(level.keep_history, false);
+  assert.deepEqual(
+    level.supported_options.map((option) => option.value),
+    ['healthy', 'fine', 'fair', 'poor', 'unhealthy'],
+  );
+  assert.equal(level.supported_options[4].label, 'Unhealthy');
   // Standalone device: no home in the legacy payload, so no params at all.
   assert.deepEqual(device.params, []);
 });

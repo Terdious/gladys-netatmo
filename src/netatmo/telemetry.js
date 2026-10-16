@@ -23,7 +23,11 @@
 //     discovery list: devices must not vanish during a Netatmo hiccup.
 // -----------------------------------------------------------------------------
 
-import { createLogger, DEVICE_TRANSPORTS } from '@gladysassistant/integration-sdk';
+import {
+  createLogger,
+  DEVICE_TRANSPORTS,
+  DEVICE_FEATURE_CATEGORIES,
+} from '@gladysassistant/integration-sdk';
 
 import {
   REFRESH_VALUES_INTERVAL_MS,
@@ -244,7 +248,13 @@ export function createTelemetry({
         continue; // unchanged and fresh: dedup
       }
       published.set(featureExternalId, { state, at: now() });
-      states.push({ device_feature_external_id: featureExternalId, state });
+      // Text features (e.g. the Home Coach air quality level) carry a string
+      // state, published as `text`.
+      states.push(
+        feature.category === DEVICE_FEATURE_CATEGORIES.TEXT
+          ? { device_feature_external_id: featureExternalId, text: String(state) }
+          : { device_feature_external_id: featureExternalId, state },
+      );
     }
     return states;
   }

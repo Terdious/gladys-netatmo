@@ -213,6 +213,13 @@ correspondante :
 Dans une scène, comparez avec ces valeurs : par exemple « Qualité de l'air
 supérieure à 150 » signifie mauvais ou malsain.
 
+Une fonctionnalité **Air quality level** affiche le même niveau en toutes
+lettres sur le tableau de bord (Healthy, Fine, Fair, Poor, Unhealthy — sain,
+correct, moyen, mauvais, malsain). Ses libellés sont en anglais, comme les noms
+des fonctionnalités, et elle ne garde pas d'historique : c'est la fonctionnalité
+numérique **Qualité de l'air** qui garde l'historique, les couleurs et HomeKit.
+Nécessite Gladys 5.1.1 ou plus récent.
+
 Un Home Coach hors ligne reçoit le badge **injoignable** et ses dernières
 valeurs connues ne sont pas publiées. Aucune reconnexion n'est nécessaire : la
 permission Home Coach (`read_homecoach`) fait partie de la connexion depuis la

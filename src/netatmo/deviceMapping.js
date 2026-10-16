@@ -29,6 +29,11 @@ const BATTERY_LEVELS = {
 // show an "unhealthy" room as green / excellent.
 export const HEALTH_INDEX_TO_AQI = [25, 75, 125, 175, 250];
 
+// The same `health_idx` as a named level, for the text feature that shows the
+// Netatmo wording on the dashboard (values = Netatmo level names, like Home
+// Assistant's enum sensor).
+export const HEALTH_LEVELS = ['healthy', 'fine', 'fair', 'poor', 'unhealthy'];
+
 /**
  * Convert a Home Coach health index to its AQI-band value.
  * @param {unknown} healthIndex raw `health_idx` (0-4)
@@ -40,6 +45,19 @@ export function healthIndexToAqi(healthIndex) {
   }
   const level = Number(healthIndex);
   return Number.isInteger(level) ? HEALTH_INDEX_TO_AQI[level] : undefined;
+}
+
+/**
+ * Convert a Home Coach health index to its named level.
+ * @param {unknown} healthIndex raw `health_idx` (0-4)
+ * @returns {string|undefined} level name, undefined when unknown
+ */
+export function healthIndexToLevel(healthIndex) {
+  if (healthIndex === undefined || healthIndex === null || healthIndex === '') {
+    return undefined;
+  }
+  const level = Number(healthIndex);
+  return Number.isInteger(level) ? HEALTH_LEVELS[level] : undefined;
 }
 
 export const writeValues = {

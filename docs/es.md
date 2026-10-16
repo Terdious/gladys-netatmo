@@ -213,6 +213,13 @@ en el centro del tramo AQI correspondiente:
 En una escena, compare con estos valores: por ejemplo "Calidad del aire superior
 a 150" significa malo o insalubre.
 
+Una funcionalidad **Air quality level** muestra el mismo nivel en palabras en el
+panel (Healthy, Fine, Fair, Poor, Unhealthy — saludable, bueno, regular, malo,
+insalubre). Sus etiquetas están en inglés, como los nombres de las
+funcionalidades, y no guarda historial: la funcionalidad numérica **Calidad del
+aire** conserva el historial, los colores y HomeKit. Requiere Gladys 5.1.1 o
+posterior.
+
 Un Home Coach sin conexión recibe la insignia **inaccesible** y sus últimos
 valores conocidos no se publican. No hace falta volver a conectarse: el permiso
 Home Coach (`read_homecoach`) forma parte de la conexión desde la primera

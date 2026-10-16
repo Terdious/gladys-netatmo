@@ -9,7 +9,7 @@
 // -----------------------------------------------------------------------------
 
 import { SUPPORTED_MODULE_TYPE } from './constants.js';
-import { healthIndexToAqi } from './deviceMapping.js';
+import { healthIndexToAqi, healthIndexToLevel } from './deviceMapping.js';
 
 export const UPDATE_MAPPINGS = {
   [SUPPORTED_MODULE_TYPE.PLUG]: {
@@ -167,6 +167,7 @@ export const UPDATE_MAPPINGS = {
     pressure: (deviceNetatmo) => deviceNetatmo.dashboard_data?.Pressure,
     absolute_pressure: (deviceNetatmo) => deviceNetatmo.dashboard_data?.AbsolutePressure,
     health_idx: (deviceNetatmo) => healthIndexToAqi(deviceNetatmo.dashboard_data?.health_idx),
+    health_level: (deviceNetatmo) => healthIndexToLevel(deviceNetatmo.dashboard_data?.health_idx),
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
 };

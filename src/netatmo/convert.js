@@ -47,6 +47,7 @@ import {
   buildFeatureWindAngle,
   buildFeatureRain,
   buildFeatureHealthIndex,
+  buildFeatureHealthLevel,
 } from './features.js';
 
 const logger = createLogger({ name: 'netatmo-convert' });
@@ -323,6 +324,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeaturePressure(`Pressure - ${nameDevice}`, externalId, 'pressure'),
         buildFeaturePressure(`Absolute pressure - ${nameDevice}`, externalId, 'absolute_pressure'),
         buildFeatureHealthIndex(nameDevice, externalId),
+        buildFeatureHealthLevel(nameDevice, externalId),
       );
       break;
     default:

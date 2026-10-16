@@ -66,7 +66,7 @@ afterEach(async () => {
 function stateOf(featureExternalId) {
   return gladys.published
     .filter((s) => s.device_feature_external_id === featureExternalId)
-    .map((s) => s.state);
+    .map((s) => s.state ?? s.text);
 }
 
 test('syncDiscovery publishes the supported devices and the transport badges', async () => {
@@ -500,6 +500,13 @@ test('the Home Coach publishes its dashboard_data, never stale values (issue #37
   assert.deepEqual(stateOf(`${coach}:absolute_pressure`), [1004]);
   // health_idx 1 ("fine") → 75, the middle of the "moderate" AQI band.
   assert.deepEqual(stateOf(`${coach}:health_idx`), [75]);
+  // The same level as text: published with `text`, not `state`.
+  assert.deepEqual(stateOf(`${coach}:health_level`), ['fine']);
+  assert.ok(
+    gladys.published.some(
+      (s) => s.device_feature_external_id === `${coach}:health_level` && s.state === undefined,
+    ),
+  );
   assert.deepEqual(stateOf(`${coach}:wifi_strength`), [67]);
 
   // The unreachable Home Coach publishes nothing and is badged unreachable.
@@ -513,4 +520,5 @@ test('the Home Coach publishes its dashboard_data, never stale values (issue #37
   netatmo.state.homeCoachDevices[1].dashboard_data.health_idx = 4;
   await telemetry.refreshValues(configAircare);
   assert.deepEqual(stateOf(`${coach}:health_idx`), [75, 250]);
+  assert.deepEqual(stateOf(`${coach}:health_level`), ['fine', 'unhealthy']);
 });
