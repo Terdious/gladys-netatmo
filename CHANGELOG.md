@@ -22,6 +22,20 @@ the notes of the version's GitHub Release.
   `boiler_error`, 0 when it reports the relay without one). The thermostat's
   room joins the heating widget and the heating mode scene action. No
   reconnection needed ([#53](https://github.com/Terdious/gladys-netatmo/issues/53)).
+- BTicino Smarther with Netatmo thermostat (`BNS`), in the Energy family:
+  room temperature, writable setpoint, heating mode preset, boiler status,
+  cooler status (`cooler_status`), the reported comfort boost
+  (`boiler_valve_comfort_boost`, read-only) and WiFi quality; its room joins
+  the heating widget and the heating mode scene action. It needs the new
+  `read_smarther` / `write_smarther` scopes: **an account connected before
+  must click Connect again** (the Configuration screen says so until then)
+  ([#54](https://github.com/Terdious/gladys-netatmo/issues/54)).
+
+### Changed
+
+- The "some Netatmo permissions are missing" connection message now takes the
+  BTicino Smarther as its example
+  ([#54](https://github.com/Terdious/gladys-netatmo/issues/54)).
 
 ## [2.0.1] - 2026-10-16
 

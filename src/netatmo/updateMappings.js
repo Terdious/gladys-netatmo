@@ -111,6 +111,17 @@ export const UPDATE_MAPPINGS = {
     outdoor_temperature: (deviceNetatmo) => deviceNetatmo.outdoor_temperature,
     boiler_fault: boilerFault,
   },
+  // BTicino Smarther with Netatmo (issue #54): WiFi, room values, heating /
+  // cooling states, comfort boost, heating mode.
+  [SUPPORTED_MODULE_TYPE.BNS]: {
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength,
+    therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
+    therm_setpoint_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_setpoint_temperature,
+    boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
+    cooler_status: (deviceNetatmo) => deviceNetatmo.cooler_status,
+    boiler_valve_comfort_boost: (deviceNetatmo) => deviceNetatmo.boiler_valve_comfort_boost,
+    therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
+  },
   [SUPPORTED_MODULE_TYPE.NAMAIN]: {
     temperature: (deviceNetatmo) =>
       deviceNetatmo.temperature ?? deviceNetatmo.dashboard_data?.Temperature,

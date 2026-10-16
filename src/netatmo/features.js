@@ -131,6 +131,35 @@ export function buildFeatureBoilerStatus(name, externalId) {
   });
 }
 
+// BTicino Smarther (BNS, issue #54): the air conditioning is running
+// (homestatus `cooler_status`), the cooling twin of the boiler status.
+export function buildFeatureCoolerStatus(name, externalId) {
+  return feature({
+    name: `Cooler status - ${name}`,
+    external_id: `${externalId}:cooler_status`,
+    selector: `${externalId}:cooler_status`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// BTicino Smarther (BNS, issue #54): homestatus `boiler_valve_comfort_boost`
+// as reported (pyatmo BoilerMixin), read-only. The suffix keeps the Netatmo
+// field name: its exact meaning is still to be confirmed on a real device.
+export function buildFeatureComfortBoost(name, externalId) {
+  return feature({
+    name: `Comfort boost - ${name}`,
+    external_id: `${externalId}:boiler_valve_comfort_boost`,
+    selector: `${externalId}:boiler_valve_comfort_boost`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
 // OpenTherm relay (OTH, issue #53): 1 while the boiler reports a fault
 // (homestatus `boiler_error`, e.g. "water_pressure"), 0 otherwise. A binary
 // rather than the fault text: Gladys has no "fault" category, and a 0/1 keeps

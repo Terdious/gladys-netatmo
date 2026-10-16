@@ -255,3 +255,12 @@ test('an object-shaped token error ({error: {message}}) surfaces its message', a
   await assert.rejects(connectAccount(), /answered 400: \{"code":21\}$/);
   assert.equal(oauth.hasTokens(), false);
 });
+
+test('a token granted before the Smarther scopes reports them missing (issue #54)', async () => {
+  await connectAccount();
+  // An account connected with 2.0.x: everything but the Smarther scopes.
+  netatmo.state.grantedScopes = OAUTH_SCOPES.filter((scope) => !scope.endsWith('_smarther'));
+  await oauth.refreshTokens();
+  assert.deepEqual(oauth.missingScopes(), ['read_smarther', 'write_smarther']);
+  assert.ok(OAUTH_SCOPES.join(' ').includes('read_smarther write_smarther'));
+});

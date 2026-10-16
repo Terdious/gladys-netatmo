@@ -136,6 +136,9 @@ export const SUPPORTED_MODULE_TYPE = {
   // boiler (OTH, the bridge) and its radio room thermostat (OTM).
   OTH: 'OTH',
   OTM: 'OTM',
+  // BTicino Smarther with Netatmo (issue #54): wifi thermostat of its own
+  // (no relay), served by the same homesdata/homestatus and commands.
+  BNS: 'BNS',
 };
 
 export const SUPPORTED_CATEGORY_TYPE = {
@@ -153,6 +156,7 @@ export const ENERGY_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NRV,
   SUPPORTED_MODULE_TYPE.OTH,
   SUPPORTED_MODULE_TYPE.OTM,
+  SUPPORTED_MODULE_TYPE.BNS,
 ];
 
 // Modules that heat a room: their room (homestatus `rooms`) carries the
@@ -162,6 +166,7 @@ export const HEATED_ROOM_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.THERMOSTAT,
   SUPPORTED_MODULE_TYPE.NRV,
   SUPPORTED_MODULE_TYPE.OTM,
+  SUPPORTED_MODULE_TYPE.BNS,
 ];
 
 export const WEATHER_MODULE_TYPES = [
@@ -388,6 +393,10 @@ export const OAUTH_SCOPES = [
   // Bubendorff / iDiamant roller shutters (issue #34)
   'read_bubendorff',
   'write_bubendorff',
+  // BTicino Smarther with Netatmo thermostat (issue #54) — added after 2.0.1:
+  // an account connected before must click Connect again to grant them.
+  'read_smarther',
+  'write_smarther',
 ];
 
 // Refresh the access token at 80% of its lifetime (core PR #2618 hardening),
@@ -435,12 +444,12 @@ export const CONNECTION_MESSAGES = {
     es: 'La sesión de Netatmo ha caducado, vuelva a conectar su cuenta Netatmo.',
   },
   // Connected, but the token lacks requested scopes (typically scopes added by
-  // a newer release, like the video doorbell ones): the exact list is logged.
+  // a newer release, like the Smarther ones): the exact list is logged.
   MISSING_SCOPES: {
-    en: 'Connected, but some Netatmo permissions are missing (for example the video doorbell, added in a recent version): click Connect again to grant them.',
-    fr: 'Connecté, mais des autorisations Netatmo manquent (par exemple la sonnette vidéo, ajoutée dans une version récente) : cliquez à nouveau sur Connecter pour les accorder.',
-    de: 'Verbunden, aber einige Netatmo-Berechtigungen fehlen (zum Beispiel für die Video-Türklingel, in einer neueren Version hinzugefügt): Klicke erneut auf Verbinden, um sie zu erteilen.',
-    es: 'Conectado, pero faltan algunos permisos de Netatmo (por ejemplo, el timbre con vídeo, añadido en una versión reciente): vuelva a hacer clic en Conectar para concederlos.',
+    en: 'Connected, but some Netatmo permissions are missing (for example the BTicino Smarther thermostat, added in a recent version): click Connect again to grant them.',
+    fr: 'Connecté, mais des autorisations Netatmo manquent (par exemple le thermostat BTicino Smarther, ajouté dans une version récente) : cliquez à nouveau sur Connecter pour les accorder.',
+    de: 'Verbunden, aber einige Netatmo-Berechtigungen fehlen (zum Beispiel für das Thermostat BTicino Smarther, in einer neueren Version hinzugefügt): Klicke erneut auf Verbinden, um sie zu erteilen.',
+    es: 'Conectado, pero faltan algunos permisos de Netatmo (por ejemplo, el termostato BTicino Smarther, añadido en una versión reciente): vuelva a hacer clic en Conectar para concederlos.',
   },
   NETATMO_UNREACHABLE: {
     en: 'Netatmo cloud is unreachable, retrying automatically.',

@@ -67,13 +67,13 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor               | Descubre                                                                                                     |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`), termostato modulante (`OTM` + `OTH`) |
-| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                              |
-| **Seguridad**             | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios         |
-| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                          |
-| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                           |
+| Interruptor               | Descubre                                                                                                                               |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`), termostato modulante (`OTM` + `OTH`), BTicino Smarther (`BNS`) |
+| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                                                        |
+| **Seguridad**             | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios                                   |
+| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                                                    |
+| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                                                     |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -90,9 +90,9 @@ Netatmo).
 
 ## Modo de calefacción (programación / ausencia / antihielo)
 
-Cada termostato (`NATherm1`, modulante `OTM`) y válvula de radiador (`NRV`)
-incluye una funcionalidad **Modo de calefacción** (un _preajuste_ de termostato
-en Gladys) con tres opciones:
+Cada termostato (`NATherm1`, modulante `OTM`, BTicino Smarther `BNS`) y válvula
+de radiador (`NRV`) incluye una funcionalidad **Modo de calefacción** (un
+_preajuste_ de termostato en Gladys) con tres opciones:
 
 | En Gladys        | En la aplicación Netatmo       |
 | ---------------- | ------------------------------ |
@@ -137,6 +137,28 @@ calefacción**. Un termostato inaccesible recibe la insignia **inaccesible** y
 su batería y su señal dejan de publicarse. No es necesario volver a conectar:
 los permisos de los termostatos forman parte de la conexión desde la primera
 versión.
+
+---
+
+## Termostato BTicino Smarther
+
+El termostato **BTicino Smarther with Netatmo** (`BNS`) forma parte de la
+familia Energía. Se crea con la temperatura de su habitación, una **consigna**
+ajustable, el **Modo de calefacción** (ver arriba), el **estado de la
+caldera** (encendido mientras calienta), el **estado de la climatización**
+(encendido mientras funciona el aire acondicionado), un estado **Boost de
+confort** de solo lectura (el campo Netatmo `boiler_valve_comfort_boost`, tal
+como se reporta) y su calidad WiFi. Su habitación aparece en el widget
+**Calefacción Netatmo** y el termostato puede elegirse en la acción de escena
+**Cambiar el modo de calefacción**.
+
+> ⚠️ **¿Cuenta Netatmo conectada antes de esta versión?** El Smarther necesita
+> dos nuevos permisos de Netatmo (`read_smarther`, `write_smarther`): vuelva a
+> hacer clic en **Conectar** en la pantalla Configuración y acéptelos — sus
+> dispositivos y ajustes se conservan. Mientras tanto, el estado de la conexión
+> muestra el aviso «vuelva a hacer clic en Conectar», y una orden de consigna o
+> de modo de calefacción en el Smarther falla con un mensaje «vuelva a conectar
+> su cuenta Netatmo».
 
 ---
 

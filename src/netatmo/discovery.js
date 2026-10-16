@@ -275,8 +275,8 @@ function isScopeRefusal(err) {
 export function summarizeHome(homeData, devices = []) {
   const withMode = devices.find((device) => device.therm_mode !== undefined);
   // Heated rooms (issue #40 heating widget): the rooms of the thermostats
-  // (NATherm1, modulating OTM) and valves, with their live homestatus values,
-  // once per room.
+  // (NATherm1, modulating OTM, Smarther BNS) and valves, with their live
+  // homestatus values, once per room.
   const rooms = new Map();
   for (const device of devices) {
     const room = device.room ?? {};

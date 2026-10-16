@@ -25,7 +25,8 @@ capabilities land (Home + Security cameras, webhooks, …).
   Energy family (`NATherm1` thermostat, `NAPlug` relay, `NRV` valves) — same
   feature set as the core service, powered-off modules included (rebuilt from
   the homestatus `errors` array and badged **unreachable**) — plus the
-  modulating OpenTherm thermostat (`OTM`) and its relay (`OTH`).
+  modulating OpenTherm thermostat (`OTM`) and its relay (`OTH`), and the
+  BTicino Smarther with Netatmo thermostat (`BNS`).
 - **Telemetry**: one global refresh loop every 120 s (3-4 API calls per cycle
   for the whole account), declarative per-module mappings, legitimate zeros
   kept, unchanged values deduped with a 30-minute keep-alive.

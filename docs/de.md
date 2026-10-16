@@ -70,13 +70,13 @@ Konfiguration auf, dich erneut zu verbinden.
 
 Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
-| Schalter         | Erkennt                                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`), modulierendes Thermostat (`OTM` + `OTH`) |
-| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                          |
-| **Sicherheit**   | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör                      |
-| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                              |
-| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                  |
+| Schalter         | Erkennt                                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`), modulierendes Thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`) |
+| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                                                    |
+| **Sicherheit**   | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör                                                |
+| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                                        |
+| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                                            |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -91,9 +91,9 @@ Die Werte werden alle **2 Minuten** aktualisiert (Ratenbegrenzung von Netatmo).
 
 ## Heizmodus (Zeitplan / abwesend / Frostschutz)
 
-Jedes Thermostat (`NATherm1`, modulierendes `OTM`) und jedes Heizkörperventil
-(`NRV`) hat eine Funktion **Heizmodus** (ein Thermostat-_Preset_ in Gladys) mit
-drei Möglichkeiten:
+Jedes Thermostat (`NATherm1`, modulierendes `OTM`, BTicino Smarther `BNS`) und
+jedes Heizkörperventil (`NRV`) hat eine Funktion **Heizmodus** (ein
+Thermostat-_Preset_ in Gladys) mit drei Möglichkeiten:
 
 | In Gladys       | In der Netatmo-App        |
 | --------------- | ------------------------- |
@@ -138,6 +138,27 @@ nicht erreichbares Thermostat erhält das Badge **nicht erreichbar**, und
 Akku und Signal werden nicht mehr veröffentlicht. Du musst dich nicht erneut
 verbinden: Die Thermostat-Berechtigungen sind seit der ersten Version Teil der
 Verbindung.
+
+---
+
+## Thermostat BTicino Smarther
+
+Das Thermostat **BTicino Smarther with Netatmo** (`BNS`) gehört zur Familie
+Energie. Es wird mit seiner Raumtemperatur, einem steuerbaren **Sollwert**, dem
+**Heizmodus** (siehe oben), dem **Kesselstatus** (an, während es heizt), dem
+**Klimastatus** (an, während die Klimaanlage läuft), einem schreibgeschützten
+Zustand **Komfort-Boost** (das Netatmo-Feld `boiler_valve_comfort_boost`, wie
+gemeldet) und seiner WLAN-Qualität angelegt. Sein Raum erscheint im Widget
+**Netatmo-Heizung**, und das Thermostat kann in der Szenenaktion **Heizmodus
+ändern** gewählt werden.
+
+> ⚠️ **Netatmo-Konto vor dieser Version verbunden?** Das Smarther braucht zwei
+> neue Netatmo-Berechtigungen (`read_smarther`, `write_smarther`): Klicke auf
+> dem Konfigurationsbildschirm erneut auf **Verbinden** und erteile sie — deine
+> Geräte und Einstellungen bleiben erhalten. Bis dahin zeigt der
+> Verbindungsstatus den Hinweis „erneut auf Verbinden klicken“, und ein
+> Sollwert- oder Heizmodus-Befehl am Smarther schlägt mit der Meldung
+> „Netatmo-Konto erneut verbinden“ fehl.
 
 ---
 
