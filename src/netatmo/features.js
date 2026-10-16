@@ -161,6 +161,21 @@ export function buildFeatureCamera(name, externalId) {
 }
 
 // --- Momentary event features (webhook-driven, issue #5) --------------------
+
+// Video doorbell (NDB, issue #35): the ring (`incoming_call` event). Gladys
+// renders it as "Ringing" then the time of the last ring, and its scene
+// trigger fires on every 1 — a 1 -> 0 pulse like the other detections.
+export function buildFeatureDoorbellRing(name, externalId) {
+  return feature({
+    name: `Doorbell - ${name}`,
+    external_id: `${externalId}:ring`,
+    selector: `${externalId}:ring`,
+    category: DEVICE_FEATURE_CATEGORIES.DOORBELL,
+    type: DEVICE_FEATURE_TYPES.DOORBELL.RING,
+    min: 0,
+    max: 1,
+  });
+}
 // These exist only in the Netatmo event stream: no API state reports them, so
 // they are published from the webhook payload and reset after EVENT_RESET_MS.
 

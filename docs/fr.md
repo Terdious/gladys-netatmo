@@ -36,8 +36,9 @@ votre compte Netatmo.
 
 Vous n'avez **pas** besoin de configurer de scopes ni d'URL de redirection sur
 le portail : Gladys demande automatiquement les scopes requis (lecture +
-écriture, couvrant l'Énergie, la Météo et la Sécurité y compris les caméras) au
-moment de la connexion, et gère lui-même la redirection OAuth2.
+écriture, couvrant l'Énergie, la Météo et la Sécurité y compris les caméras et
+la sonnette vidéo) au moment de la connexion, et gère lui-même la redirection
+OAuth2.
 
 ---
 
@@ -65,11 +66,11 @@ vous invite à vous reconnecter.
 
 Sous **Appareils à découvrir**, activez les familles que vous possédez :
 
-| Interrupteur | Découvre                                                                      |
-| ------------ | ----------------------------------------------------------------------------- |
-| **Énergie**  | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`)       |
-| **Météo**    | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs             |
-| **Sécurité** | Caméras intérieure (`NACamera`) et extérieure (`NOC`), plus leurs accessoires |
+| Interrupteur | Découvre                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| **Énergie**  | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`)                               |
+| **Météo**    | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                     |
+| **Sécurité** | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -105,6 +106,32 @@ Quand la famille Sécurité est activée, chaque caméra est créée avec :
   là, aucun client (Gladys, web Netatmo, app Netatmo) n'a de son. Gladys
   transporte l'audio dès que le flux en contient — il n'y a rien à configurer
   côté Gladys.
+
+---
+
+## Sonnette vidéo
+
+Quand la famille Sécurité est activée, la sonnette vidéo Netatmo (`NDB`) est
+créée avec :
+
+- une **image de tableau de bord** (un instantané, rafraîchi automatiquement) —
+  récupérée via l'URL VPN Netatmo : la sonnette ne la sert pas sur le réseau
+  local ;
+- une fonctionnalité **Sonnette** qui affiche **Sonne** quand quelqu'un appuie
+  sur le bouton, utilisable comme déclencheur de scène (**Si la sonnette
+  sonne**) — elle nécessite les webhooks Gladys Plus (voir ci-dessous) : le
+  polling seul ne peut pas remonter un coup de sonnette ;
+- la qualité de son lien **Wifi**.
+
+Il n'y a pas d'interrupteur monitoring (Netatmo n'en propose pas pour la
+sonnette) ni de bouton flux en direct : la sonnette diffuse uniquement en
+WebRTC, que la vue en direct des caméras de Gladys ne sait pas lire.
+
+> ⚠️ **Compte Netatmo connecté avant cette version ?** La sonnette nécessite
+> deux nouvelles autorisations Netatmo (`read_doorbell`, `access_doorbell`) :
+> cliquez à nouveau sur **Connecter** sur l'écran Configuration et acceptez-les.
+> D'ici là, le statut de connexion affiche une invitation à recliquer sur
+> Connecter.
 
 ---
 
@@ -158,12 +185,16 @@ scène** :
 | Caméra extérieure (Presence)     | **Véhicule détecté**    | un véhicule détecté                  |
 | Détecteur de fumée               | **Fumée**               | une détection de fumée               |
 | Détecteur de monoxyde de carbone | **Monoxyde de carbone** | une détection de monoxyde de carbone |
+| Sonnette vidéo                   | **Sonnette**            | quelqu'un sonne                      |
 
 Chaque détection passe à **Oui** puis revient automatiquement à **Non** au bout
 d'une minute (Netatmo n'envoie pas d'événement de « fin de détection », sauf
 pour la fumée et le monoxyde de carbone : l'événement « fumée dissipée » /
-« retour à la normale » la remet aussitôt à **Non**).
-Dans une scène, utilisez donc le déclencheur « la valeur passe à Oui ».
+« retour à la normale » la remet aussitôt à **Non**). Dans une scène, utilisez
+donc le déclencheur « la valeur passe à Oui » — pour la sonnette, le
+déclencheur **Si la sonnette sonne**. Un coup de sonnette déclenche une seule
+fois : les événements « appel accepté » / « appel manqué » de l'application
+Netatmo ne sont pas des déclencheurs à part.
 
 > ⚠️ **Si vos caméras existaient déjà dans Gladys**, ces nouvelles
 > fonctionnalités n'apparaissent pas toutes seules : allez sur l'écran
@@ -286,3 +317,6 @@ peut être relancée : elle ne déplace que ce qui reste.
   caméra — reconnectez votre compte.
 - **Pas de son sur la caméra :** voir l'astuce microphone dans la section
   Caméras ci-dessus.
+- **Statut « des autorisations Netatmo manquent » :** une version plus récente
+  a ajouté des autorisations (sonnette vidéo) — recliquez sur Connecter et
+  acceptez-les. Les **Journaux** de l'intégration listent celles qui manquent.

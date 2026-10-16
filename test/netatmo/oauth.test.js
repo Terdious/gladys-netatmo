@@ -9,7 +9,11 @@ import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { normalizeConfig } from '../../src/config.js';
-import { createNetatmoOAuth, NotConnectedError } from '../../src/netatmo/oauth.js';
+import {
+  createNetatmoOAuth,
+  NotConnectedError,
+  parseGrantedScopes,
+} from '../../src/netatmo/oauth.js';
 import { OAUTH_SCOPES } from '../../src/netatmo/constants.js';
 import {
   startFakeNetatmo,
@@ -97,6 +101,46 @@ test('handleCallback exchanges the code and persists the tokens', async () => {
   // expires_in=10800s from the fake clock.
   assert.equal(configStore.expires_at, clock + 10800 * 1000);
   assert.equal(oauth.hasTokens(), true);
+});
+
+test('the granted scopes are parsed from an array or a space-separated string', () => {
+  assert.deepEqual(parseGrantedScopes(['read_station', 'read_doorbell']), [
+    'read_station',
+    'read_doorbell',
+  ]);
+  assert.deepEqual(parseGrantedScopes('read_station read_doorbell'), [
+    'read_station',
+    'read_doorbell',
+  ]);
+  assert.equal(parseGrantedScopes(undefined), null);
+  assert.equal(parseGrantedScopes(''), null);
+});
+
+test('scopes missing from the token are tracked until Connect grants them (issue #35)', async () => {
+  const notified = [];
+  oauth.onMissingScopes((missing) => notified.push(missing));
+  assert.deepEqual(oauth.missingScopes(), []); // unknown before any token response
+
+  // Full grant on the authorization exchange: nothing missing, nothing notified.
+  await connectAccount();
+  assert.deepEqual(oauth.missingScopes(), []);
+  assert.equal(notified.length, 0);
+
+  // A token granted before the doorbell scopes existed: the refresh echoes the
+  // old set, the new scopes are reported missing.
+  netatmo.state.grantedScopes = OAUTH_SCOPES.filter((scope) => !scope.includes('doorbell'));
+  await oauth.refreshTokens();
+  assert.deepEqual(oauth.missingScopes(), ['read_doorbell', 'access_doorbell']);
+  assert.deepEqual(notified, [['read_doorbell', 'access_doorbell']]);
+
+  // Same set on the next refresh: no duplicate notification.
+  await oauth.refreshTokens();
+  assert.equal(notified.length, 1);
+
+  // The user clicks Connect again: the full set is granted.
+  await connectAccount();
+  assert.deepEqual(oauth.missingScopes(), []);
+  assert.deepEqual(notified.at(-1), []);
 });
 
 test('handleCallback rejects a state mismatch', async () => {

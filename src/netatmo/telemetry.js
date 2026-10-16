@@ -34,6 +34,7 @@ import {
   STATE_KEEP_ALIVE_MS,
   MAX_ENTRIES_PER_REQUEST,
   SECURITY_MODULE_TYPES,
+  HLS_CAMERA_MODULE_TYPES,
   CAMERA_LIVE_QUALITIES,
   DEFAULT_CAMERA_LIVE_QUALITY,
   ROOM_DERIVED_SUFFIXES,
@@ -410,6 +411,9 @@ export function createTelemetry({
   async function buildCameraEnrichments(config) {
     const enrichments = new Map();
     for (const [id, rawDevice] of rawCamerasById) {
+      if (!HLS_CAMERA_MODULE_TYPES.includes(rawDevice.type)) {
+        continue; // no HLS live stream (video doorbell: WebRTC only)
+      }
       try {
         const baseUrl = await cameras.resolveBaseUrl(rawDevice);
         if (!baseUrl) {

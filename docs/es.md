@@ -36,8 +36,9 @@ cuenta Netatmo.
 
 **No** necesita configurar permisos (scopes) ni una URI de redirección en el
 portal: Gladys solicita automáticamente los permisos necesarios (lectura +
-escritura, que cubren Energía, Meteorología y Seguridad, cámaras incluidas)
-durante la conexión, y gestiona por sí mismo la redirección OAuth2.
+escritura, que cubren Energía, Meteorología y Seguridad, cámaras y timbre con
+vídeo incluidos) durante la conexión, y gestiona por sí mismo la redirección
+OAuth2.
 
 ---
 
@@ -66,11 +67,11 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor      | Descubre                                                                        |
-| ---------------- | ------------------------------------------------------------------------------- |
-| **Energía**      | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)          |
-| **Meteorología** | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales |
-| **Seguridad**    | Cámaras de interior (`NACamera`) y de exterior (`NOC`), más sus accesorios      |
+| Interruptor      | Descubre                                                                                             |
+| ---------------- | ---------------------------------------------------------------------------------------------------- |
+| **Energía**      | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)                               |
+| **Meteorología** | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                      |
+| **Seguridad**    | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -109,6 +110,32 @@ Cuando la familia Seguridad está activada, cada cámara se crea con:
   ningún cliente (Gladys, web de Netatmo, aplicación Netatmo) recibe audio.
   Gladys transmite el audio siempre que la transmisión lo incluya — no hay nada
   que configurar del lado de Gladys.
+
+---
+
+## Timbre con vídeo
+
+Cuando la familia Seguridad está activada, el timbre con vídeo Netatmo (`NDB`)
+se crea con:
+
+- una **imagen para el panel** (una captura, actualizada automáticamente) —
+  obtenida a través de la URL VPN de Netatmo: el timbre no la sirve en la red
+  local;
+- una funcionalidad **Timbre** que muestra **Sonando** cuando alguien pulsa el
+  botón, utilizable como disparador de escena (**Si suena el timbre**) —
+  necesita los webhooks de Gladys Plus (ver más abajo): la consulta periódica
+  por sí sola no puede reportar un timbrazo;
+- la calidad de su enlace **Wifi**.
+
+No hay interruptor de vigilancia (Netatmo no ofrece ninguno para el timbre) ni
+botón de transmisión en directo: el timbre solo transmite por WebRTC, que la
+vista en directo de las cámaras de Gladys no puede reproducir.
+
+> ⚠️ **¿Cuenta Netatmo conectada antes de esta versión?** El timbre necesita dos
+> nuevos permisos de Netatmo (`read_doorbell`, `access_doorbell`): vuelva a
+> hacer clic en **Conectar** en la pantalla Configuración y acéptelos. Mientras
+> tanto, el estado de la conexión muestra una invitación a volver a hacer clic
+> en Conectar.
 
 ---
 
@@ -160,12 +187,15 @@ dedicadas, utilizables como **disparadores de escena**:
 | Cámara de exterior (Presence)   | **Vehículo detectado**  | un vehículo detectado                |
 | Detector de humo                | **Humo**                | una detección de humo                |
 | Detector de monóxido de carbono | **Monóxido de carbono** | una detección de monóxido de carbono |
+| Timbre con vídeo                | **Timbre**              | alguien llama al timbre              |
 
 Cada detección pasa a **Sí** y vuelve a **No** por sí sola al cabo de un minuto
-(Netatmo no envía ningún evento de "fin de detección", salvo para el humo y
-el monóxido de carbono: el evento "humo disipado" / "vuelta a la normalidad" la
-devuelve a **No** de inmediato). En una escena,
-utilice el disparador "el valor pasa a Sí".
+(Netatmo no envía ningún evento de "fin de detección", salvo para el humo y el
+monóxido de carbono: el evento "humo disipado" / "vuelta a la normalidad" la
+devuelve a **No** de inmediato). En una escena, utilice el disparador "el valor
+pasa a Sí" — para el timbre, el disparador **Si suena el timbre**. Un timbrazo
+dispara una sola vez: los eventos posteriores "llamada aceptada" / "llamada
+perdida" de la aplicación Netatmo no son disparadores aparte.
 
 > ⚠️ **Si sus cámaras ya existían en Gladys**, estas nuevas funcionalidades no
 > aparecen por sí solas: vaya a la pestaña **Descubrir** y haga clic en
@@ -287,3 +317,6 @@ relanzarse: solo mueve lo que queda.
   vuelva a conectar su cuenta.
 - **No hay sonido en la cámara:** consulte el consejo sobre el micrófono en la
   sección Cámaras más arriba.
+- **Estado "faltan algunos permisos de Netatmo":** una versión más reciente
+  añadió permisos (timbre con vídeo) — vuelva a hacer clic en Conectar y
+  acéptelos. Los **Registros** de la integración indican cuáles faltan.

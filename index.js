@@ -77,9 +77,18 @@ export function setupIntegration(
   // "reconnect required" or "unreachable" must never be overwritten by it.
   let connected = null;
   let telemetry = null;
+  // While connected, the status also carries the actionable hints: scopes the
+  // token lacks (added by a newer release, issue #35) first, then a degraded
+  // API family.
+  function connectedHint() {
+    if (oauth.missingScopes().length > 0) {
+      return CONNECTION_MESSAGES.MISSING_SCOPES;
+    }
+    return telemetry?.getDegradedMessage() ?? null;
+  }
   async function setStatus(isConnected, message) {
     connected = isConnected;
-    const shown = message ?? (isConnected ? telemetry?.getDegradedMessage() : null);
+    const shown = message ?? (isConnected ? connectedHint() : null);
     await reportConnectionStatus(gladys, isConnected, shown ?? undefined);
   }
 
@@ -88,9 +97,9 @@ export function setupIntegration(
     client,
     fetchImpl,
     ...(refreshIntervalMs ? { refreshIntervalMs } : {}),
-    onDegradedChange: async (message) => {
+    onDegradedChange: async () => {
       if (connected) {
-        await reportConnectionStatus(gladys, true, message ?? undefined);
+        await setStatus(true);
       }
     },
   });
@@ -102,8 +111,8 @@ export function setupIntegration(
     client,
     refresh: () => telemetry.refreshValues(config),
   });
-  // Momentary detections (motion, person, smoke…): published as push features
-  // straight from the event payload — no API state ever reports them.
+  // Momentary detections (motion, person, smoke, doorbell ring…): published as
+  // push features straight from the event payload — no API state reports them.
   const events = createEvents({ gladys });
 
   // Tokens wiped after the 24h grace window: ask the user to reconnect.
@@ -117,6 +126,15 @@ export function setupIntegration(
   oauth.onRefreshRecovered(async () => {
     await setStatus(true);
     telemetry.start(config);
+  });
+
+  // A token response revealed missing scopes (or a reconnect granted them):
+  // refresh the status shown on the Configuration screen.
+  // The rest of the account keeps working: only the new devices need it.
+  oauth.onMissingScopes(async () => {
+    if (oauth.hasTokens() && connected) {
+      await setStatus(true);
+    }
   });
 
   /**

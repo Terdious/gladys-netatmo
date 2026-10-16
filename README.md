@@ -45,6 +45,12 @@ capabilities land (Home + Security cameras, webhooks, …).
   rotation, local/VPN switch, user-edited quality) — the external-integrations
   framework silently upserts the params of created devices on every
   discovery publish.
+- **Video doorbell** (`NDB`, opt-in with the cameras): dashboard image
+  (snapshot on the VPN URL only — WebRTC cameras serve nothing locally),
+  WiFi quality and a **doorbell ring** feature fed by the webhooks
+  (`incoming_call`). No monitoring switch and no `CAMERA_URL` (WebRTC-only
+  stream). Requests the `read_doorbell` / `access_doorbell` scopes: a token
+  lacking them keeps working, with a "click Connect again" status.
 - **Camera-bridged security accessories** (opt-in with the cameras): the
   door/window tag (`NACamDoorTag`) as an opening sensor, the indoor siren
   (`NIS`) as a read-only sounding sensor, both with battery + RF quality; the
