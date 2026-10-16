@@ -159,11 +159,15 @@ Netatmo cloud — no account or hardware needed.
 
 ## Related
 
-- Gladys core Netatmo service (being retired in favour of this integration):
-  `server/services/netatmo` in
-  [GladysAssistant/Gladys](https://github.com/GladysAssistant/Gladys). The core
-  Netatmo PR stack was closed once reproduced here — disposition & parity map:
-  [#15](https://github.com/Terdious/gladys-netatmo/issues/15).
+- Forum topic (announcements, help, feedback):
+  [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308).
+- Gladys core Netatmo service (deprecated in favour of this integration; its
+  devices migrate here with their history through the Gladys **Migrate**
+  button, see the user docs): `server/services/netatmo` in
+  [GladysAssistant/Gladys](https://github.com/GladysAssistant/Gladys). Parity
+  map: [#15](https://github.com/Terdious/gladys-netatmo/issues/15).
+- Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md) and
+  [#7](https://github.com/Terdious/gladys-netatmo/issues/7).
 - Sibling external integrations:
   [gladys-tuya](https://github.com/Terdious/gladys-tuya),
   [gladys-zendure](https://github.com/Terdious/gladys-zendure)

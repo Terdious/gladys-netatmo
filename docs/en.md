@@ -253,3 +253,7 @@ moves what is left.
   your Netatmo authorization is missing the camera scope — reconnect your
   account.
 - **No camera sound:** see the microphone tip in the Cameras section above.
+- **Still stuck, or a device is missing?** Ask on the forum topic
+  [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),
+  or open an issue on [GitHub](https://github.com/Terdious/gladys-netatmo/issues) with the integration logs
+  (**Logs** tab).

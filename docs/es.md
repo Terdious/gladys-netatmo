@@ -273,3 +273,7 @@ relanzarse: solo mueve lo que queda.
   vuelva a conectar su cuenta.
 - **No hay sonido en la cámara:** consulte el consejo sobre el micrófono en la
   sección Cámaras más arriba.
+- **¿Sigue bloqueado, o falta un dispositivo?** Pregunte en el tema del foro
+  [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308)
+  o abra una issue en [GitHub](https://github.com/Terdious/gladys-netatmo/issues) con los registros de la integración
+  (pestaña **Registros**).

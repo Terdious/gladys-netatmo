@@ -272,3 +272,7 @@ verschiebt nur, was noch übrig ist.
   „erneut verbinden“ fehl:** Deiner Netatmo-Autorisierung fehlt die
   Kamera-Berechtigung — verbinde dein Konto erneut.
 - **Kein Kameraton:** Siehe den Mikrofon-Tipp im Abschnitt Kameras oben.
+- **Immer noch nicht gelöst oder fehlt ein Gerät?** Frag im Forumsthema
+  [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308)
+  nach oder eröffne ein Issue auf [GitHub](https://github.com/Terdious/gladys-netatmo/issues) mit den Protokollen der
+  Integration (Tab **Protokolle**).

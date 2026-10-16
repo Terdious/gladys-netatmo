@@ -272,3 +272,7 @@ peut être relancée : elle ne déplace que ce qui reste.
   caméra — reconnectez votre compte.
 - **Pas de son sur la caméra :** voir l'astuce microphone dans la section
   Caméras ci-dessus.
+- **Toujours bloqué, ou un appareil manque ?** Posez votre question sur le
+  sujet du forum [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),
+  ou ouvrez une issue sur [GitHub](https://github.com/Terdious/gladys-netatmo/issues) avec les journaux de
+  l'intégration (onglet **Journaux**).
