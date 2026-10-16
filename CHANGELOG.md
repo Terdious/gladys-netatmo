@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-16
+
 ### Fixed
 
 - Feature names of a weather module without a room no longer read "Minimum in
@@ -231,7 +233,8 @@ the notes of the version's GitHub Release.
 - First stable release: OAuth2 connection, Weather and Energy devices,
   thermostat setpoint, cameras (image, monitoring, live stream).
 
-[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/Terdious/gladys-netatmo/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/Terdious/gladys-netatmo/compare/v1.3.0...v2.0.0
 [1.3.0]: https://github.com/Terdious/gladys-netatmo/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Terdious/gladys-netatmo/compare/v1.1.3...v1.2.0
