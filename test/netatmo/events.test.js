@@ -128,6 +128,24 @@ test('a carbon monoxide event (NCO-co_detected) publishes 1, then resets (issue 
   assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:carbon_monoxide'), [1, 0]);
 });
 
+test('carbon monoxide: pre-alarm and alarm are detections, sub_type 0 (OK) clears', async () => {
+  const gladys = fakeGladys({ features: ['carbon_monoxide'] });
+  const events = createEvents({ gladys, timers: fakeTimers() });
+  const co = (subType) =>
+    events.handleWebhook({
+      push_type: 'NCO-co_detected',
+      device_id: 'camera-1',
+      sub_type: subType,
+    });
+
+  // Netatmo: co_detected sub_type 0 = OK, 1 = pre-alarm, 2 = alarm.
+  await co(1);
+  await co(2);
+  await co(0);
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:carbon_monoxide'), [1, 1, 0]);
+  assert.equal(events.pendingResets(), 0);
+});
+
 test('a new detection re-arms the reset instead of stacking timers', async () => {
   const gladys = fakeGladys();
   const timers = fakeTimers();

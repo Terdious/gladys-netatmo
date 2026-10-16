@@ -55,10 +55,12 @@ export const EVENT_FEATURE_SUFFIXES = {
 
 // Webhook `sub_type` values that report the END of a detection rather than a
 // new one (Netatmo security webhook documentation: smoke 0 = cleared,
-// 1 = detected). Such an event returns the feature to 0 at once — publishing
-// it as a detection would raise a false alarm right after a real one.
+// 1 = detected; co_detected 0 = OK, 1 = pre-alarm, 2 = alarm). Such an event
+// returns the feature to 0 at once — publishing it as a detection would raise
+// a false alarm right after a real one.
 export const EVENT_CLEARED_SUB_TYPES = {
   smoke: ['0'],
+  co_detected: ['0'],
 };
 
 // A momentary event has no "cleared" counterpart in the Netatmo stream: the

@@ -15,7 +15,8 @@ the notes of the version's GitHub Release.
 - Netatmo carbon monoxide alarm (`NCO`), behind the Security toggle and
   modelled on the smoke alarm: battery and signal (published when Netatmo
   reports them), plus a **Carbon monoxide** detection fed by the webhooks
-  (`co_detected` event), usable as a scene trigger and reset after 60 s. The
+  (`co_detected` event: pre-alarm and alarm are detections, "back to normal"
+  returns it to No), usable as a scene trigger and reset after 60 s. The
   `read_carbonmonoxidedetector` scope was already requested: no reconnection
   needed ([#36](https://github.com/Terdious/gladys-netatmo/issues/36)).
 

@@ -161,7 +161,8 @@ scène** :
 
 Chaque détection passe à **Oui** puis revient automatiquement à **Non** au bout
 d'une minute (Netatmo n'envoie pas d'événement de « fin de détection », sauf
-pour la fumée : l'événement « fumée dissipée » la remet aussitôt à **Non**).
+pour la fumée et le monoxyde de carbone : l'événement « fumée dissipée » /
+« retour à la normale » la remet aussitôt à **Non**).
 Dans une scène, utilisez donc le déclencheur « la valeur passe à Oui ».
 
 > ⚠️ **Si vos caméras existaient déjà dans Gladys**, ces nouvelles
