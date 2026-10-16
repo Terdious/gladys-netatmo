@@ -62,7 +62,8 @@ capabilities land (Home + Security cameras, webhooks, …).
   `read_camerapro` / `write_camerapro` / `access_camerapro` scopes): the
   NACamera feature set (monitoring switch, dashboard image, motion / person
   detections, cameras widget). It is a WebRTC camera like the doorbell: the
-  snapshot is fetched on the VPN URL only, and it gets no `CAMERA_URL`.
+  snapshot is fetched on the VPN URL only, and it gets no `CAMERA_URL` (live
+  view in WebRTC, see below).
 - **Outdoor camera floodlight** (`NOC`): the homestatus `floodlight` mode
   (on / off / auto) split over a `light` / `binary` **Floodlight** and a
   `switch` / `binary` **Floodlight automatic mode**, both writable through
@@ -74,6 +75,17 @@ capabilities land (Home + Security cameras, webhooks, …).
   (`incoming_call`). No monitoring switch and no `CAMERA_URL` (WebRTC-only
   stream). Requests the `read_doorbell` / `access_doorbell` scopes: a token
   lacking them keeps working, with a "click Connect again" status.
+- **WebRTC live view** of the doorbell and the Indoor Camera Advance
+  ([#70](https://github.com/Terdious/gladys-netatmo/issues/70)): both carry
+  the reserved `GLADYS_CAMERA_STREAM_PROTOCOL` = `webrtc` device param, and
+  the `onCameraWebRtcOffer` / `onCameraWebRtcStop` handlers relay the
+  browser's SDP offer to `/api/webrtc/offer` (answer, `session_id`,
+  `tag_id`) and end it with `/api/webrtc/terminate`. Feature-detected: inert
+  (still image) with an SDK without these handlers (0.15) — needs
+  GladysAssistant/integration-sdk-js#43 — and with a Gladys core without the
+  relay (GladysAssistant/Gladys#3215), which refuses the param: the discovery
+  is published again without it. No new scope (`access_doorbell` /
+  `access_camerapro`).
 - **Camera-bridged security accessories** (opt-in with the cameras): the
   door/window tag (`NACamDoorTag`) as an opening sensor, the indoor siren
   (`NIS`) as a read-only sounding sensor, both with battery + RF quality; the

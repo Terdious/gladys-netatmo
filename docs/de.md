@@ -222,8 +222,9 @@ und **Person erkannt** (Gladys-Plus-Webhooks), und sie erscheint im Widget
 
 - ihr Schnappschuss wird über die Netatmo-VPN-URL abgerufen: Wie die
   Video-Türklingel liefert diese Kamera ihn nicht im lokalen Netzwerk;
-- es gibt keine Livestream-Schaltfläche: Sie streamt nur per WebRTC, was die
-  Kamera-Liveansicht von Gladys nicht abspielen kann.
+- ihr Live-Video wird per **WebRTC** ausgehandelt (siehe _WebRTC-Live-Video_
+  unten): Mit einer älteren Gladys-Version zeigt die Kamerakachel das
+  Standbild.
 
 > ⚠️ **Netatmo-Konto vor dieser Version verbunden?** Diese Kamera benötigt drei
 > neue Netatmo-Berechtigungen (`read_camerapro`, `write_camerapro`,
@@ -249,15 +250,43 @@ Wenn die Familie Sicherheit aktiviert ist, wird die Netatmo-Video-Türklingel
   kein Klingeln melden;
 - der Qualität ihrer **WLAN**-Verbindung.
 
-Es gibt keinen Überwachungsschalter (Netatmo bietet keinen für die Türklingel)
-und keine Livestream-Schaltfläche: Die Türklingel streamt nur über WebRTC, das
-die Kamera-Liveansicht von Gladys nicht abspielen kann.
+Es gibt keinen Überwachungsschalter (Netatmo bietet keinen für die
+Türklingel). Ihr Live-Video wird per **WebRTC** ausgehandelt (siehe
+_WebRTC-Live-Video_ unten): Mit einer älteren Gladys-Version zeigt die
+Kamerakachel das Standbild.
 
 > ⚠️ **Netatmo-Konto vor dieser Version verbunden?** Die Türklingel benötigt
 > zwei neue Netatmo-Berechtigungen (`read_doorbell`, `access_doorbell`): Klicke
 > auf dem Konfigurationsbildschirm erneut auf **Verbinden** und akzeptiere sie.
 > Bis dahin zeigt der Verbindungsstatus einen Hinweis, erneut auf Verbinden zu
 > klicken.
+
+### WebRTC-Live-Video (Türklingel und Innenkamera Advance)
+
+Die Video-Türklingel und die Innenkamera Advance streamen **nur per WebRTC**
+über die Netatmo-Cloud: kein HLS, nichts im lokalen Netzwerk. Mit einer
+Gladys-Version nach 5.2.1, die das WebRTC-Live-Video der Kameras enthält
+([Gladys#3215](https://github.com/GladysAssistant/Gladys/pull/3215)), spielt
+die Kamerakachel des Dashboards ihr Live-Video ab. Der Browser baut den Stream
+auf; Gladys und die Integration leiten diesen Aufbau nur an Netatmo weiter, und
+das Video geht direkt von der Netatmo-Cloud zum Browser, zu Hause wie über
+Gladys Plus.
+
+- **Ältere Gladys-Version:** Die Kamerakachel zeigt wie bisher das Standbild,
+  automatisch aktualisiert. Speichere nach dem Gladys-Update einmal die
+  Konfiguration der Integration (oder scanne erneut auf dem Bildschirm
+  **Erkennung**): Die vorhandene Türklingel und Kamera wechseln zum
+  Live-Video, nichts muss neu erstellt werden.
+- **Beenden:** Das Live-Video endet, wenn du es pausierst, das Dashboard
+  verlässt oder den Tab schließt (Gladys beendet eine vergessene Sitzung nach
+  30 Sekunden).
+- **Das Live-Video startet nicht:** Die Kachel zeigt eine Meldung und das letzte
+  Bild. Prüfe, ob die Kamera in der Netatmo-App online ist und ob der Browser
+  WebRTC unterstützt. Eine strenge Firewall oder ein VPN kann den WebRTC-Verkehr
+  zur Netatmo-Cloud blockieren. Fordern der Verbindungsstatus oder die **Logs**
+  der Integration dazu auf, das Konto erneut zu verbinden, fehlt der
+  Autorisierung `access_doorbell` / `access_camerapro`: Klicke erneut auf
+  **Verbinden**.
 
 ---
 
@@ -604,6 +633,9 @@ verschiebt nur, was noch übrig ist.
   Deine Netatmo-Autorisierung stammt aus der Zeit vor der
   Rollladen-Unterstützung — klicke erneut auf Verbinden.
 - **Kein Kameraton:** Siehe den Mikrofon-Tipp im Abschnitt Kameras oben.
+- **Türklingel oder Innenkamera Advance ohne Live-Video:** Siehe
+  _WebRTC-Live-Video_ im Abschnitt Video-Türklingel (Gladys-Version, Browser,
+  Firewall).
 - **Status „einige Netatmo-Berechtigungen fehlen“:** Eine neuere Version hat
   Berechtigungen hinzugefügt (Video-Türklingel, Innenkamera Advance) — klicke erneut auf Verbinden
   und akzeptiere sie. Die **Logs** der Integration nennen die fehlenden.

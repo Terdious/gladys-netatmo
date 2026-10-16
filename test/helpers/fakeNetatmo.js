@@ -5,7 +5,7 @@
 //   - Bearer-protected API: homesdata, homestatus, getthermostatsdata,
 //     getstationsdata, setroomthermpoint, switchhomeschedule, setthermmode,
 //     setpersonsaway and setpersonshome (form), gethomecoachsdata, setstate
-//     (JSON);
+//     (JSON), webrtc/offer and webrtc/terminate (form, issue #70);
 //   - two fake cameras (/vpn/<id> and /local/<id>: command/ping + snapshot).
 // Behaviour toggles (`failTokenWith`, `rejectAccessToken`, `failSetpointWith`,
 // `failSwitchScheduleWith`, `failHomesWith`, `failLocalSnapshot`) let the tests exercise the failure
@@ -470,6 +470,34 @@ export function addIndoorCameraAdvance(state, homeId = 'home-1') {
   });
 }
 
+// Video doorbell (NDB, issue #35), shaped like the pyatmo fixtures (homesdata
+// + homestatus): VPN URL, `is_local` claimed but never used (WebRTC camera).
+// Opt-in, like the Indoor Camera Advance.
+export const NDB_ID = '12:34:56:10:f1:66';
+
+export function addDoorbell(state, homeId = 'home-1') {
+  const home = state.homes.find((h) => h.id === homeId);
+  home.modules.push({
+    id: NDB_ID,
+    type: 'NDB',
+    name: 'Netatmo-Doorbell',
+    setup_date: 1602691361,
+    room_id: 'room-1',
+    reachable: true,
+  });
+  state.homeStatuses[homeId].home.modules.push({
+    id: NDB_ID,
+    type: 'NDB',
+    vpn_url: `${state.baseUrl}/vpn/${NDB_ID}`,
+    is_local: true,
+    alim_status: 2,
+    connection: 'wifi',
+    sd_status: 4,
+    wifi_strength: 66,
+    wifi_state: 'medium',
+  });
+}
+
 // Home Coach / Smart Indoor Air Quality Monitors (issue #37), shaped like the
 // pyatmo fixture gethomecoachsdata.json: one UNREACHABLE device without
 // dashboard_data, one reachable device whose generic `module_name` ("Indoor")
@@ -537,6 +565,9 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     failSetStateWith: null, // set to {status, body} to make setstate fail
     addWebhookRequests: [], // every parsed form POSTed to /api/addwebhook
     dropWebhookRequests: [], // every parsed form POSTed to /api/dropwebhook
+    // every {path, form} POSTed to /api/webrtc/* — recorded even when an
+    // override answers, so the error paths can check what was sent
+    webRtcRequests: [],
     failAddWebhookWith: null, // set to an HTTP status to make addwebhook fail
     failHomesWith: null, // set to an HTTP status to make homesdata fail
     failStationsWith: null, // set to an HTTP status to make getstationsdata fail
@@ -666,6 +697,12 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
         if (!known || token === state.rejectAccessToken) {
           respond({ error: { code: 2, message: 'Invalid access token' } }, 401);
           return;
+        }
+        if (req.method === 'POST' && req.url.startsWith('/api/webrtc/')) {
+          state.webRtcRequests.push({
+            path: req.url,
+            form: Object.fromEntries(new URLSearchParams(body)),
+          });
         }
         if (respondOverride()) {
           return;
@@ -802,6 +839,39 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
             return;
           }
           respond({ status: 'ok' });
+          return;
+        }
+        // WebRTC live view (issue #70), pyatmo fixtures webrtc_offer_ok.json /
+        // webrtc_terminate_ok.json: the answer rides in `body`, which carries
+        // a `status` of its own; the session id given is echoed.
+        if (req.method === 'POST' && req.url.startsWith('/api/webrtc/offer')) {
+          const form = Object.fromEntries(new URLSearchParams(body));
+          respond({
+            status: 'ok',
+            time_server: 1765234648,
+            body: {
+              type: 'ack',
+              time_server: 1765234642,
+              correlation_id: '2775454822782367811',
+              session_id: form.session_id,
+              tag_id: 'OZzgKVlQCW0=',
+              status: 'ok',
+              sdpAnswer: 'v=0\r\no=- 0 0 IN IP4 0.0.0.0\r\ns=fake-netatmo-answer\r\n',
+            },
+          });
+          return;
+        }
+        if (req.method === 'POST' && req.url.startsWith('/api/webrtc/terminate')) {
+          respond({
+            status: 'ok',
+            time_server: 1765234822,
+            body: {
+              type: 'ack',
+              time_server: 1765234822,
+              correlation_id: '11591074238736810245',
+              status: 'ok',
+            },
+          });
           return;
         }
         if (req.method === 'POST' && req.url.startsWith('/api/dropwebhook')) {
