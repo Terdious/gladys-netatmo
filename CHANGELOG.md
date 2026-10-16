@@ -10,6 +10,23 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- BTicino Classe 300X / Classe 300 EOS door entry, **preview** (step 1:
+  discovery and diagnostic log), behind a new toggle **BTicino door entry**,
+  off by default: the `BNCX` indoor unit, `BNEU` street panel, `BNDL` door
+  lock, `BNSL` staircase light, `BNCS` controlled socket and `BNXM` X module
+  are discovered with only what their payload carries (WiFi / RF quality, the
+  read-only on / off of `BNSL` / `BNCS`) and the **unreachable** badge. While the toggle is on, a `[bticino-diagnostic]` log
+  writes the raw homesdata / homestatus entries of these modules (first load,
+  then on change only) and every webhook event about them, with tokens, keys,
+  URLs and e-mail addresses redacted and each line bounded to 8 KB, so the
+  real formats can be collected for the ring, door lock and staircase light
+  commands. It needs the new `read_bfi` / `write_bfi` / `read_mx` /
+  `write_mx` scopes: **an account connected before must click Connect
+  again** (the Configuration screen says so until then)
+  ([#59](https://github.com/Terdious/gladys-netatmo/issues/59)).
+
 ## [2.1.0] - 2026-10-16
 
 ### Added

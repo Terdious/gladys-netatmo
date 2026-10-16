@@ -87,7 +87,10 @@ forum topic.
 ### Next
 
 - [#59](https://github.com/Terdious/gladys-netatmo/issues/59) BTicino
-  Classe 300 / IP door entry (BNCX, door lock BNDL, staircase light BNSL).
+  Classe 300 / IP door entry (BNCX, door lock BNDL, staircase light BNSL):
+  step 1 (discovery + `[bticino-diagnostic]` log, preview toggle) done;
+  step 2 (ring trigger, door lock, staircase light command) waits for the
+  real payloads.
 - [#60](https://github.com/Terdious/gladys-netatmo/issues/60) Legrand
   Home + Control devices, behind a new toggle.
 
