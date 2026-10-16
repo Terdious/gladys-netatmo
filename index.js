@@ -242,7 +242,12 @@ export function setupIntegration(
   gladys.onSetValue(async (device, feature, value) => {
     logger.info(`onSetValue <- ${feature.external_id} = ${value}`);
     await setDeviceValue(
-      { gladys, client, scheduleRefresh: () => telemetry.scheduleRefresh(config) },
+      {
+        gladys,
+        client,
+        refresh: () => telemetry.refreshNow(config),
+        scheduleRefresh: () => telemetry.scheduleRefresh(config),
+      },
       { device, feature, value },
     );
   });

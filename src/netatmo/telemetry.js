@@ -604,6 +604,22 @@ export function createTelemetry({
     });
   }
 
+  /**
+   * Refresh right now from a FRESH account load (after a command whose effect
+   * the next 120 s cycle would otherwise show late): the burst cache is
+   * bypassed, and a cycle already in flight — started before the command —
+   * is awaited first so it cannot hide the new state.
+   * @param {object} config normalized integration config
+   * @returns {Promise<number>} number of states published
+   */
+  async function refreshNow(config) {
+    if (refreshInFlight) {
+      await refreshInFlight.catch(() => {});
+    }
+    loadCache = null;
+    return refreshValues(config);
+  }
+
   /** Start the periodic refresh loop (immediate first cycle). */
   function start(config) {
     stop();
@@ -654,6 +670,7 @@ export function createTelemetry({
   return {
     syncDiscovery,
     refreshValues,
+    refreshNow,
     scheduleRefresh,
     getCameraSnapshot,
     getDegradedMessage,

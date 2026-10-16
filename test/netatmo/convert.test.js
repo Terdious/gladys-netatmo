@@ -41,6 +41,7 @@ test('converts a NATherm1 with the core feature set and params', () => {
     'therm_setpoint_temperature',
     'open_window',
     'boiler_status',
+    'therm_preset',
   ]);
   const setpoint = device.features.find((f) =>
     f.external_id.endsWith(':therm_setpoint_temperature'),
@@ -66,8 +67,40 @@ test('converts a NRV without room: no measured temperature feature, no room para
     'therm_setpoint_temperature',
     'open_window',
     'heating_power_request',
+    'therm_preset',
   ]);
   assert.equal(paramValue(device, 'room_id'), undefined);
+});
+
+test('the heating mode is a writable thermostat preset limited to the Netatmo modes', () => {
+  const device = convertDevice(gladys, {
+    id: 'therm-1',
+    type: 'NATherm1',
+    name: 'Thermostat',
+    home: 'home-1',
+    room: { id: 'room-1', name: 'Salon' },
+  });
+  const preset = device.features.find((f) => f.external_id === 'ext:netatmo:therm-1:therm_preset');
+  assert.equal(preset.category, 'thermostat');
+  assert.equal(preset.type, 'preset');
+  assert.equal(preset.read_only, false);
+  assert.equal(preset.min, 0);
+  assert.equal(preset.max, 2);
+  // Gladys THERMOSTAT_PRESET values: SCHEDULE 0, FROST 1, AWAY 2 — nothing else.
+  assert.deepEqual(preset.supported_options, [
+    { value: 0, label: 'Schedule', sort_order: 0 },
+    { value: 1, label: 'Frost protection', sort_order: 1 },
+    { value: 2, label: 'Away', sort_order: 2 },
+  ]);
+});
+
+test('a legacy-only thermostat (no homesdata home) gets no heating mode feature', () => {
+  const device = convertDevice(gladys, {
+    _id: 'therm-legacy',
+    type: 'NATherm1',
+    module_name: 'Thermostat',
+  });
+  assert.ok(!suffixesOf(device).includes('therm_preset'));
 });
 
 test('converts a NAPlug with wifi+rf and the bridged modules param', () => {

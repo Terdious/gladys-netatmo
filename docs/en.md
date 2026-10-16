@@ -15,7 +15,7 @@ your devices and keeps their values up to date.
 - A **Netatmo account**, with your devices already installed and working in the
   Netatmo app (Gladys reads what Netatmo exposes — a device must be online in
   Netatmo first).
-- Gladys Assistant **4.86 or later**.
+- Gladys Assistant **5.2 or later**.
 
 ---
 
@@ -78,6 +78,33 @@ you create the ones you want.
 `high`) sets the quality of the camera live stream.
 
 Values refresh every **2 minutes** (Netatmo rate limits).
+
+---
+
+## Heating mode (schedule / away / frost protection)
+
+Each thermostat (`NATherm1`) and radiator valve (`NRV`) carries a **Heating
+mode** feature (a thermostat _preset_ in Gladys) with three choices:
+
+| In Gladys            | In the Netatmo app         |
+| -------------------- | -------------------------- |
+| **Schedule**         | follow the weekly schedule |
+| **Away**             | away mode                  |
+| **Frost protection** | frost guard (`hg`)         |
+
+The mode belongs to the **whole home** in Netatmo: changing it on one device
+switches the entire home, and every thermostat and valve of the home shows the
+new mode right after (the integration refreshes immediately). A mode changed
+from the Netatmo app shows up at the next refresh (2 minutes, or 2-3 seconds
+with the Gladys Plus webhooks).
+
+Use it in a scene ("everybody left → heating to Away") with the standard
+"Set device value" action.
+
+> ⚠️ **If your thermostats already existed in Gladys**, the feature does not
+> appear on its own: go to the **Discovery** screen and click **Update** on each
+> thermostat and valve. Gladys **5.2** or later is required (the thermostat
+> preset does not exist before).
 
 ---
 

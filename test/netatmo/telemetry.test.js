@@ -645,3 +645,101 @@ test('setDeviceValue surfaces the missing-scope error (Netatmo 403 code 13)', as
     /reconnect your Netatmo/,
   );
 });
+
+test('the heating mode of the home is published as a preset on thermostats and valves', async () => {
+  gladys.devices = await telemetry.syncDiscovery(config);
+  await telemetry.refreshValues(config);
+  // homestatus therm_mode "schedule" -> THERMOSTAT_PRESET.SCHEDULE (0).
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:therm_preset'), [0]);
+  assert.deepEqual(stateOf('ext:netatmo:valve-1:therm_preset'), [0]);
+  // The powered-off valve still reports the home's mode (home-derived value).
+  assert.deepEqual(stateOf('ext:netatmo:valve-2:therm_preset'), [0]);
+
+  netatmo.state.homeStatuses['home-1'].home.therm_mode = 'hg';
+  await telemetry.refreshValues(config);
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:therm_preset'), [0, 1]);
+
+  netatmo.state.homeStatuses['home-1'].home.therm_mode = 'away';
+  await telemetry.refreshValues(config);
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:therm_preset'), [0, 1, 2]);
+
+  // A mode Netatmo has but Gladys presets do not cover is never emitted.
+  netatmo.state.homeStatuses['home-1'].home.therm_mode = 'off';
+  clock += 31 * 60 * 1000; // past the keep-alive: an emission would show
+  await telemetry.refreshValues(config);
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:therm_preset'), [0, 1, 2]);
+});
+
+test('the heating mode falls back to the homesdata snapshot when homestatus omits it', async () => {
+  delete netatmo.state.homeStatuses['home-1'].home.therm_mode;
+  netatmo.state.homes[0].therm_mode = 'away';
+  gladys.devices = await telemetry.syncDiscovery(config);
+  await telemetry.refreshValues(config);
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:therm_preset'), [2]);
+});
+
+test('setDeviceValue sets the heating mode of the home, then refreshes at once', async () => {
+  gladys.devices = await telemetry.syncDiscovery(config);
+  await telemetry.refreshValues(config);
+  const device = gladys.devices.find((d) => d.external_id === 'ext:netatmo:valve-1');
+  const feature = device.features.find((f) => f.external_id.endsWith(':therm_preset'));
+
+  let refreshed;
+  const refreshDone = new Promise((resolve) => {
+    refreshed = resolve;
+  });
+  const refresh = () => telemetry.refreshNow(config).then(refreshed);
+  await setDeviceValue({ gladys, client, refresh }, { device, feature, value: 2 });
+  assert.deepEqual(netatmo.state.setThermModeRequests, [{ home_id: 'home-1', mode: 'away' }]);
+
+  // The immediate refresh republishes the new mode on EVERY device of the home.
+  await refreshDone;
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:therm_preset'), [0, 2]);
+  assert.deepEqual(stateOf('ext:netatmo:valve-1:therm_preset'), [0, 2]);
+
+  await setDeviceValue({ gladys, client }, { device, feature, value: 1 });
+  await setDeviceValue({ gladys, client }, { device, feature, value: 0 });
+  assert.deepEqual(
+    netatmo.state.setThermModeRequests.map((form) => form.mode),
+    ['away', 'hg', 'schedule'],
+  );
+  // A preset Netatmo does not support is refused before any API call.
+  await assert.rejects(
+    setDeviceValue({ gladys, client }, { device, feature, value: 3 }),
+    /no heating mode for the preset 3/,
+  );
+  assert.equal(netatmo.state.setThermModeRequests.length, 3);
+});
+
+test('a failing refresh after the heating mode change never fails the command', async () => {
+  gladys.devices = await telemetry.syncDiscovery(config);
+  const device = gladys.devices.find((d) => d.external_id === 'ext:netatmo:therm-1');
+  const feature = device.features.find((f) => f.external_id.endsWith(':therm_preset'));
+  let called = false;
+  const refresh = async () => {
+    called = true;
+    throw new Error('Netatmo down');
+  };
+  await setDeviceValue({ gladys, client, refresh }, { device, feature, value: 2 });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(called, true);
+});
+
+test('the heating mode command surfaces the missing-scope error', async () => {
+  gladys.devices = await telemetry.syncDiscovery(config);
+  const device = gladys.devices.find((d) => d.external_id === 'ext:netatmo:therm-1');
+  const feature = device.features.find((f) => f.external_id.endsWith(':therm_preset'));
+  netatmo.state.failSetThermModeWith = {
+    status: 403,
+    body: { error: { code: 13, message: 'scope' } },
+  };
+  await assert.rejects(
+    setDeviceValue({ gladys, client }, { device, feature, value: 2 }),
+    /reconnect your Netatmo/,
+  );
+  netatmo.state.failSetThermModeWith = { status: 500, body: { error: { code: 1 } } };
+  await assert.rejects(
+    setDeviceValue({ gladys, client }, { device, feature, value: 2 }),
+    /setthermmode answered 500/,
+  );
+});

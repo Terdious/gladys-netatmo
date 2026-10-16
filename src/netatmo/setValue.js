@@ -4,6 +4,9 @@
 // Writable features:
 //   - thermostat setpoint: POST /api/setroomthermpoint with the device's
 //     home_id/room_id params and mode `manual`;
+//   - heating mode (thermostat preset, issue #38): POST /api/setthermmode
+//     with the home_id param — the mode is the HOME's, so it applies to the
+//     whole home; an immediate refresh then republishes it on every device;
 //   - camera monitoring: POST /api/setstate (JSON) with the home_id param and
 //     the camera module id — no room required (core PR #2623);
 //   - roller shutter state / position (issue #34): POST /api/setstate with a
@@ -14,7 +17,11 @@
 // — surfaced as a clear "reconnect" message.
 // -----------------------------------------------------------------------------
 
-import { createLogger, DEVICE_FEATURE_CATEGORIES } from '@gladysassistant/integration-sdk';
+import {
+  createLogger,
+  DEVICE_FEATURE_CATEGORIES,
+  DEVICE_FEATURE_TYPES,
+} from '@gladysassistant/integration-sdk';
 
 import {
   PARAMS,
@@ -24,7 +31,7 @@ import {
 } from './constants.js';
 import { writeValues } from './deviceMapping.js';
 
-const logger = createLogger({ name: 'netatmo-setvalue' });
+const logger = createLogger({ name: 'netatmo-set-value' });
 
 const CAMERA_MODELS = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
 
@@ -49,6 +56,22 @@ function rethrowScopeError(err) {
 }
 
 /**
+ * Set the heating mode of a home, with the actionable scope message.
+ * @param {object} client Netatmo API client
+ * @param {string} homeId Netatmo home id
+ * @param {string} mode `schedule` | `away` | `hg`
+ * @param {number} [endtime] end of an away / frost guard period (UNIX seconds)
+ * @returns {Promise<void>} resolves when Netatmo acknowledged the command
+ */
+export async function setHomeThermMode(client, homeId, mode, endtime) {
+  try {
+    await client.setThermMode(homeId, mode, endtime);
+  } catch (err) {
+    rethrowScopeError(err);
+  }
+}
+
+/**
  * Shutter scope refusal: the token predates the Bubendorff scopes. Besides
  * the failed command, say it on the Configuration screen (in the user's
  * language) — the account stays connected for every other device.
@@ -67,13 +90,14 @@ async function rethrowShutterScopeError(gladys, err) {
 
 /**
  * Apply a user command on a Netatmo device.
- * @param {object} deps `{gladys, client, scheduleRefresh?}` SDK instance,
- * Netatmo API client, and the delayed refresh to arm after a shutter command
+ * @param {object} deps `{gladys, client, refresh?, scheduleRefresh?}` SDK
+ * instance, Netatmo API client, the immediate refresh after a heating mode
+ * change and the delayed refresh to arm after a shutter command
  * @param {object} command `{device, feature, value}` from the SDK
  * @returns {Promise<void>} resolves when Netatmo acknowledged the command
  */
 export async function setDeviceValue(
-  { gladys, client, scheduleRefresh },
+  { gladys, client, refresh, scheduleRefresh },
   { device, feature, value },
 ) {
   const transform = writeValues[feature.category]?.[feature.type];
@@ -124,6 +148,21 @@ export async function setDeviceValue(
       await client.setState({ homeId, moduleId, monitoring: transform(value) });
     } catch (err) {
       rethrowScopeError(err);
+    }
+    return;
+  }
+
+  // Heating mode: the home's, no room involved. The command acks right away;
+  // the refresh (not awaited: it costs a full account load) republishes the
+  // new mode on every thermostat and valve of the home.
+  if (feature.type === DEVICE_FEATURE_TYPES.THERMOSTAT.PRESET) {
+    await setHomeThermMode(client, homeId, transform(value));
+    if (refresh) {
+      Promise.resolve()
+        .then(refresh)
+        .catch((err) =>
+          logger.warn(`Refresh after the heating mode change failed: ${err.message}`),
+        );
     }
     return;
   }

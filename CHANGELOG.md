@@ -12,6 +12,12 @@ the notes of the version's GitHub Release.
 
 ### Added
 
+- **Heating mode** of the Netatmo home (schedule / away / frost protection) on
+  every thermostat and valve, readable and writable from Gladys as a
+  thermostat preset: the command goes through `setthermmode` and applies to
+  the whole home, then an immediate refresh shows the new mode on every device
+  of the home. Existing thermostats get the feature through **Update** on the
+  Discovery screen ([#38](https://github.com/Terdious/gladys-netatmo/issues/38)).
 - Bubendorff / iDiamant roller shutters (`NBR` radio, `NBO` wired, `NBS`
   solar), behind a new **Roller shutters (Bubendorff / iDiamant)** toggle (off
   by default): open / close / stop, a writable position (0-100 %, read from
@@ -42,6 +48,10 @@ the notes of the version's GitHub Release.
   needed ([#36](https://github.com/Terdious/gladys-netatmo/issues/36)).
 
 ### Changed
+
+- Gladys Assistant 5.2.0 or later is required: the thermostat preset feature
+  type does not exist before, and an older core would refuse the whole
+  discovery list ([#38](https://github.com/Terdious/gladys-netatmo/issues/38)).
 
 - GitHub Release notes, like gladys-tuya: the version's changelog section,
   one line per bullet (no more hard line breaks), followed by the notes GitHub

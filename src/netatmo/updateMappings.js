@@ -59,6 +59,9 @@ export const UPDATE_MAPPINGS = {
     open_window: (deviceNetatmo) => deviceNetatmo.room?.open_window,
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
     boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
+    // Heating mode of the home (issue #38), carried on every device of the
+    // home by the discovery (homestatus `home.therm_mode`).
+    therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
   },
   [SUPPORTED_MODULE_TYPE.NRV]: {
     battery_percent: (deviceNetatmo) => deviceNetatmo.battery_state,
@@ -72,6 +75,7 @@ export const UPDATE_MAPPINGS = {
         ? undefined
         : heatingPowerRequest > 0;
     },
+    therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
   },
   [SUPPORTED_MODULE_TYPE.NAMAIN]: {
     temperature: (deviceNetatmo) =>

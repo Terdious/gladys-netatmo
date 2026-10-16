@@ -7,7 +7,7 @@
 
 import { DEVICE_FEATURE_CATEGORIES, DEVICE_FEATURE_TYPES } from '@gladysassistant/integration-sdk';
 
-import { COVER_STATE, SHUTTER_POSITION } from './constants.js';
+import { THERM_MODE_PRESETS, COVER_STATE, SHUTTER_POSITION } from './constants.js';
 
 const toBinary = (valueFromDevice) => (valueFromDevice === true || valueFromDevice === 1 ? 1 : 0);
 const toInteger = (valueFromDevice) => parseInt(valueFromDevice, 10);
@@ -30,9 +30,30 @@ const BATTERY_LEVELS = {
   'very low': 10,
 };
 
+/**
+ * Netatmo heating mode (`schedule` / `hg` / `away`) -> Gladys preset; any
+ * other mode (`off`, `manual`…) has no preset: undefined, never emitted.
+ */
+export function thermModeToPreset(mode) {
+  return THERM_MODE_PRESETS.find((entry) => entry.mode === mode)?.preset;
+}
+
+/**
+ * Gladys preset -> Netatmo heating mode. A preset Netatmo does not support
+ * (eco, night, comfort) is refused: the feature never declares it.
+ */
+export function presetToThermMode(preset) {
+  const mode = THERM_MODE_PRESETS.find((entry) => entry.preset === Number(preset))?.mode;
+  if (!mode) {
+    throw new Error(`Netatmo has no heating mode for the preset ${preset}`);
+  }
+  return mode;
+}
+
 export const writeValues = {
   [DEVICE_FEATURE_CATEGORIES.THERMOSTAT]: {
     [DEVICE_FEATURE_TYPES.THERMOSTAT.TARGET_TEMPERATURE]: identity,
+    [DEVICE_FEATURE_TYPES.THERMOSTAT.PRESET]: presetToThermMode,
   },
   [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
     /* camera monitoring: 'on' / 'off' */
@@ -60,6 +81,7 @@ export const writeValues = {
 export const readValues = {
   [DEVICE_FEATURE_CATEGORIES.THERMOSTAT]: {
     [DEVICE_FEATURE_TYPES.THERMOSTAT.TARGET_TEMPERATURE]: identity,
+    [DEVICE_FEATURE_TYPES.THERMOSTAT.PRESET]: thermModeToPreset,
   },
   [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
     [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: toBinary,

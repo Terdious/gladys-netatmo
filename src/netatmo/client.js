@@ -7,7 +7,8 @@
 //
 // Endpoints mirror the core service: homesdata/homestatus (Energy topology +
 // live status), getthermostatsdata (legacy Energy details), getstationsdata
-// (Weather stations) and setroomthermpoint (thermostat setpoint).
+// (Weather stations), setroomthermpoint (thermostat setpoint) and
+// setthermmode (heating mode of a home).
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
@@ -136,6 +137,23 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
   }
 
   /**
+   * Set the heating mode of a whole home (issue #38): follow the schedule,
+   * away or frost guard. `endtime` (UNIX seconds) bounds an away / frost
+   * guard period; Netatmo ignores it for the schedule.
+   * @param {string} homeId Netatmo home id
+   * @param {string} mode `schedule` | `away` | `hg`
+   * @param {number} [endtime] end of the away / frost guard period (UNIX seconds)
+   * @returns {Promise<object>} parsed response body
+   */
+  async function setThermMode(homeId, mode, endtime) {
+    const form = { home_id: homeId, mode };
+    if (endtime !== undefined && endtime !== null && mode !== 'schedule') {
+      form.endtime = String(Math.round(endtime));
+    }
+    return request(API_PATHS.SET_THERM_MODE, { method: 'POST', form });
+  }
+
+  /**
    * Set the state of a module through the JSON /api/setstate endpoint: camera
    * monitoring on/off (core PR #2623) or a roller shutter target_position +
    * bridge (issue #34). Every field besides homeId/moduleId goes into the
@@ -176,6 +194,7 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     getThermostatsData,
     getStationsData,
     setRoomThermpoint,
+    setThermMode,
     setState,
     addWebhook,
     dropWebhook,

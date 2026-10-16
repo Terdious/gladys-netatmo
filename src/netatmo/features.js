@@ -13,6 +13,8 @@ import {
   DEVICE_FEATURE_UNITS,
 } from '@gladysassistant/integration-sdk';
 
+import { THERM_MODE_PRESETS, THERM_MODE_LABELS } from './constants.js';
+
 function feature(overrides) {
   return {
     read_only: true,
@@ -92,6 +94,28 @@ export function buildFeatureThermSetpointTemperature(name, externalId, { writabl
     max: 30,
     // Netatmo setpoints move by half degrees (Gladys 4.86+ reads `step`).
     step: 0.5,
+  });
+}
+
+// Heating mode of the home (issue #38), as a Gladys `thermostat/preset`
+// (Gladys 5.2.0+). Only the three Netatmo modes are declared: the front then
+// offers nothing else. `label` is a plain string by contract — the Gladys UI
+// translates the preset values itself, the label is its fallback.
+export function buildFeatureThermPreset(name, externalId) {
+  return feature({
+    name: `Heating mode - ${name}`,
+    external_id: `${externalId}:therm_preset`,
+    selector: `${externalId}:therm_preset`,
+    category: DEVICE_FEATURE_CATEGORIES.THERMOSTAT,
+    type: DEVICE_FEATURE_TYPES.THERMOSTAT.PRESET,
+    read_only: false,
+    min: Math.min(...THERM_MODE_PRESETS.map(({ preset }) => preset)),
+    max: Math.max(...THERM_MODE_PRESETS.map(({ preset }) => preset)),
+    supported_options: THERM_MODE_PRESETS.map(({ mode, preset }, index) => ({
+      value: preset,
+      label: THERM_MODE_LABELS[mode].en,
+      sort_order: index,
+    })),
   });
 }
 

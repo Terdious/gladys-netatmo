@@ -30,6 +30,9 @@ capabilities land (Home + Security cameras, webhooks, …).
   kept, unchanged values deduped with a 30-minute keep-alive.
 - **Thermostat control**: the setpoint is writable (`setroomthermpoint`,
   mode `manual`), with a clear "reconnect" message on missing scope rights.
+- **Heating mode**: the home's mode (schedule / away / frost guard) as a
+  writable thermostat preset on every thermostat and valve (`setthermmode`,
+  then an immediate refresh).
 - **Cameras** (opt-in via the `security_api` toggle, like the core): indoor
   `NACamera` and outdoor `NOC` cameras are discovered from the same
   homesdata/homestatus payloads, with WiFi quality, a **writable monitoring
@@ -85,8 +88,9 @@ frame is never dropped.
 
 ## Installation & updates
 
-Requires **Gladys Assistant 4.86.0 or later** (`gladys_version` in the
-manifest).
+Requires **Gladys Assistant 5.2.0 or later** (`gladys_version` in the
+manifest): the heating mode is a thermostat preset, a feature type Gladys knows
+since 5.2.0.
 
 The integration is listed in the Gladys integration catalog (categories
 _Climate_, _Security_ and _Environment_): open
@@ -142,7 +146,7 @@ never appear on the configuration form.
 │  │  ├─ deviceMapping.js            # value transforms (read/write)
 │  │  ├─ telemetry.js                # 120s refresh loop, dedup, transport badges
 │  │  ├─ camera.js                   # snapshots: local-first URL, ≤150KB pipeline
-│  │  └─ setValue.js                 # thermostat setpoint + camera monitoring
+│  │  └─ setValue.js                 # setpoint, heating mode, camera monitoring
 │  └─ config.js                      # config defaults + normalization
 ├─ gladys-assistant-integration.json # manifest (name, config schema, image…)
 ├─ Dockerfile                        # Node 24 Alpine, read-only rootfs ready

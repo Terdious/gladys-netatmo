@@ -15,7 +15,7 @@ descubre sus dispositivos y mantiene sus valores actualizados.
 - Una **cuenta Netatmo**, con sus dispositivos ya instalados y funcionando en la
   aplicación Netatmo (Gladys lee lo que Netatmo expone — un dispositivo debe
   estar primero en línea en Netatmo).
-- Gladys Assistant **4.86 o posterior**.
+- Gladys Assistant **5.2 o posterior**.
 
 ---
 
@@ -84,6 +84,34 @@ directo de las cámaras.
 
 Los valores se actualizan cada **2 minutos** (límites de uso de la API de
 Netatmo).
+
+---
+
+## Modo de calefacción (programación / ausencia / antihielo)
+
+Cada termostato (`NATherm1`) y válvula de radiador (`NRV`) incluye una
+funcionalidad **Modo de calefacción** (un _preajuste_ de termostato en Gladys)
+con tres opciones:
+
+| En Gladys        | En la aplicación Netatmo       |
+| ---------------- | ------------------------------ |
+| **Programación** | seguir la programación semanal |
+| **Ausencia**     | modo ausente                   |
+| **Antihielo**    | antihielo (`hg`)               |
+
+En Netatmo, el modo es el de **toda la casa**: cambiarlo en un dispositivo
+cambia toda la vivienda, y cada termostato y válvula de la casa muestra el
+nuevo modo justo después (la integración se actualiza de inmediato). Un modo
+cambiado desde la aplicación Netatmo aparece en la siguiente actualización (2
+minutos, o 2-3 segundos con los webhooks de Gladys Plus).
+
+Úselo en una escena («todos se han ido → calefacción en Ausencia») con la
+acción estándar «Establecer valor del dispositivo».
+
+> ⚠️ **Si sus termostatos ya existían en Gladys**, la funcionalidad no aparece
+> sola: vaya a la pantalla **Descubrimiento** y haga clic en **Actualizar** en
+> cada termostato y válvula. Se requiere Gladys **5.2** o posterior (el
+> preajuste de termostato no existe antes).
 
 ---
 
