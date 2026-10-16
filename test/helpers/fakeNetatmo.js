@@ -378,6 +378,63 @@ export function addOpenThermFixtures(state) {
   };
 }
 
+// -----------------------------------------------------------------------------
+// BTicino Smarther with Netatmo (issue #54), modelled on the same pyatmo
+// fixtures: the BNS module (wifi, boiler heating, cooler idle) in the
+// "Corridor" room, whose homestatus values come from the pyatmo fixture too.
+// Added to the pyatmo home (created if addOpenThermFixtures did not run).
+// -----------------------------------------------------------------------------
+
+export const BNS_ID = '10:20:30:bd:b8:1e';
+
+export function addSmartherFixtures(state) {
+  let home = state.homes.find((h) => h.id === OPENTHERM_HOME_ID);
+  if (!home) {
+    home = {
+      id: OPENTHERM_HOME_ID,
+      name: 'MYHOME',
+      therm_mode: 'schedule',
+      rooms: [],
+      modules: [],
+    };
+    state.homes.push(home);
+    state.homeStatuses[OPENTHERM_HOME_ID] = {
+      home: { id: OPENTHERM_HOME_ID, therm_mode: 'schedule', rooms: [], modules: [] },
+    };
+  }
+  home.rooms.push({ id: '1002003001', name: 'Corridor', type: 'corridor', module_ids: [BNS_ID] });
+  home.modules.push({
+    id: BNS_ID,
+    type: 'BNS',
+    name: 'Smarther',
+    setup_date: 1638022197,
+    room_id: '1002003001',
+  });
+  const status = state.homeStatuses[OPENTHERM_HOME_ID].home;
+  status.rooms.push({
+    id: '1002003001',
+    reachable: true,
+    anticipating: false,
+    heating_power_request: 0,
+    open_window: false,
+    humidity: 67,
+    therm_measured_temperature: 22,
+    therm_setpoint_temperature: 22,
+    therm_setpoint_start_time: 1647462737,
+    therm_setpoint_end_time: null,
+    therm_setpoint_mode: 'home',
+  });
+  status.modules.push({
+    id: BNS_ID,
+    type: 'BNS',
+    firmware_revision: 32,
+    wifi_strength: 49,
+    boiler_valve_comfort_boost: false,
+    boiler_status: true,
+    cooler_status: false,
+  });
+}
+
 // Home Coach / Smart Indoor Air Quality Monitors (issue #37), shaped like the
 // pyatmo fixture gethomecoachsdata.json: one UNREACHABLE device without
 // dashboard_data, one reachable device whose generic `module_name` ("Indoor")

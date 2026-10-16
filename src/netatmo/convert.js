@@ -35,6 +35,8 @@ import {
   buildFeatureThermPreset,
   buildFeatureBoilerStatus,
   buildFeatureBoilerFault,
+  buildFeatureCoolerStatus,
+  buildFeatureComfortBoost,
   buildFeatureHeatingPowerRequest,
   buildFeaturePlugConnectedBoiler,
   buildFeatureOpenWindow,
@@ -242,6 +244,26 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
           writable: setpointWritable,
         }),
         buildFeatureBoilerStatus(nameDevice, externalId),
+      );
+      pushThermPreset(features, homeId, nameDevice, externalId);
+      break;
+    case SUPPORTED_MODULE_TYPE.BNS:
+      // BTicino Smarther with Netatmo (issue #54): a wifi thermostat of its
+      // own (no relay, no battery); room temperature, setpoint and heating
+      // mode like the NATherm1, plus its heating / cooling states.
+      features.push(buildFeatureWifiStrength(nameDevice, externalId));
+      if (room.id) {
+        features.push(
+          buildFeatureTemperature(`room ${roomName}`, externalId, 'therm_measured_temperature'),
+        );
+      }
+      features.push(
+        buildFeatureThermSetpointTemperature(nameDevice, externalId, {
+          writable: setpointWritable,
+        }),
+        buildFeatureBoilerStatus(nameDevice, externalId),
+        buildFeatureCoolerStatus(nameDevice, externalId),
+        buildFeatureComfortBoost(nameDevice, externalId),
       );
       pushThermPreset(features, homeId, nameDevice, externalId);
       break;

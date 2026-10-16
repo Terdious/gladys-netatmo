@@ -63,13 +63,13 @@ expires beyond repair, the Configuration screen tells you to reconnect.
 
 Under **Devices to discover**, enable the families you own:
 
-| Toggle              | Discovers                                                                                                         |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`)    |
-| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                 |
-| **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
-| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                  |
-| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                             |
+| Toggle              | Discovers                                                                                                                                |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`) |
+| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                                        |
+| **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons                        |
+| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                                         |
+| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                                    |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -84,9 +84,9 @@ Values refresh every **2 minutes** (Netatmo rate limits).
 
 ## Heating mode (schedule / away / frost protection)
 
-Each thermostat (`NATherm1`, modulating `OTM`) and radiator valve (`NRV`)
-carries a **Heating mode** feature (a thermostat _preset_ in Gladys) with three
-choices:
+Each thermostat (`NATherm1`, modulating `OTM`, BTicino Smarther `BNS`) and
+radiator valve (`NRV`) carries a **Heating mode** feature (a thermostat _preset_
+in Gladys) with three choices:
 
 | In Gladys            | In the Netatmo app         |
 | -------------------- | -------------------------- |
@@ -129,6 +129,25 @@ thermostat can be chosen in the **Change the heating mode** scene action. A
 thermostat out of reach gets the **unreachable** badge and its battery and
 signal are no longer published. No reconnection is needed: the thermostat
 permissions have been part of the connection since the first version.
+
+---
+
+## BTicino Smarther thermostat
+
+The **BTicino Smarther with Netatmo** thermostat (`BNS`) comes with the Energy
+family. It is created with its room temperature, a writable **setpoint**, the
+**Heating mode** (see above), the **Boiler status** (on while it heats), a
+**Cooler status** (on while the air conditioning runs), a read-only **Comfort
+boost** state (the Netatmo `boiler_valve_comfort_boost` field, as reported)
+and its WiFi quality. Its room shows up in the **Netatmo heating** widget and
+the thermostat can be chosen in the **Change the heating mode** scene action.
+
+> ⚠️ **Netatmo account connected before this version?** The Smarther needs two
+> new Netatmo permissions (`read_smarther`, `write_smarther`): click
+> **Connect** again on the Configuration screen and accept them — your devices
+> and settings are kept. Until then the connection status shows a "click
+> Connect again" hint, and a setpoint or heating mode command on the Smarther
+> fails with a "reconnect your Netatmo account" message.
 
 ---
 
