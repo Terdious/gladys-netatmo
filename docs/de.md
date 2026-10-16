@@ -161,8 +161,9 @@ die als **Szenen-Auslöser** nutzbar sind:
 | Kohlenmonoxidmelder     | **Kohlenmonoxid**    | eine Kohlenmonoxid-Erkennung          |
 
 Jede Erkennung wechselt auf **Ja** und kehrt nach einer Minute von selbst auf
-**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“). Verwende in
-einer Szene den Auslöser „Wert wird Ja“.
+**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“, außer beim
+Rauch: Das Ereignis „Rauch verschwunden“ setzt sie sofort auf **Nein**).
+Verwende in einer Szene den Auslöser „Wert wird Ja“.
 
 > ⚠️ **Wenn deine Kameras bereits in Gladys existierten**, erscheinen diese
 > neuen Funktionen nicht von selbst: Gehe in den Tab **Entdecken** und klicke

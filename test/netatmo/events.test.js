@@ -12,16 +12,21 @@ import { createEvents, eventNameOf, eventDeviceIdOf } from '../../src/netatmo/ev
 
 // Injectable timers: capture the scheduled reset so the test drives it.
 function fakeTimers() {
-  const scheduled = [];
+  const scheduled = new Map();
+  let nextId = 0;
   return {
     scheduled,
     setTimeout: (fn) => {
-      scheduled.push(fn);
-      return scheduled.length;
+      nextId += 1;
+      scheduled.set(nextId, fn);
+      return nextId;
     },
-    clearTimeout: () => {},
+    clearTimeout: (id) => {
+      scheduled.delete(id);
+    },
     async flush() {
-      const pending = scheduled.splice(0);
+      const pending = [...scheduled.values()];
+      scheduled.clear();
       for (const fn of pending) {
         await fn();
       }
@@ -132,6 +137,27 @@ test('a new detection re-arms the reset instead of stacking timers', async () =>
   await events.handleWebhook({ push_type: 'NACamera-movement', camera_id: 'camera-1' });
   assert.equal(events.pendingResets(), 1, 'one pending reset for the feature, not two');
   assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:motion'), [1, 1]);
+});
+
+test('a smoke "cleared" event (sub_type 0) returns the feature to 0, never raises a detection', async () => {
+  const gladys = fakeGladys();
+  const timers = fakeTimers();
+  const events = createEvents({ gladys, timers });
+
+  // Netatmo: smoke sub_type 1 = detected, 0 = cleared.
+  await events.handleWebhook({ push_type: 'NSD-smoke', device_id: 'camera-1', sub_type: 1 });
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:smoke'), [1]);
+  assert.equal(events.pendingResets(), 1);
+
+  await events.handleWebhook({ push_type: 'NSD-smoke', device_id: 'camera-1', sub_type: 0 });
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:smoke'), [1, 0]);
+  assert.equal(events.pendingResets(), 0, 'the pending reset is cancelled');
+
+  // A "cleared" event alone (string sub_type too) never publishes a detection.
+  await events.handleWebhook({ push_type: 'NSD-smoke', device_id: 'camera-1', sub_type: '0' });
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:smoke'), [1, 0, 0]);
+  await timers.flush();
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:smoke'), [1, 0, 0]);
 });
 
 test('non-momentary events, unknown devices and junk bodies are ignored', async () => {

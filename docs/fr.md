@@ -160,8 +160,9 @@ scène** :
 | Détecteur de monoxyde de carbone | **Monoxyde de carbone** | une détection de monoxyde de carbone |
 
 Chaque détection passe à **Oui** puis revient automatiquement à **Non** au bout
-d'une minute (Netatmo n'envoie pas d'événement de « fin de détection »). Dans
-une scène, utilisez donc le déclencheur « la valeur passe à Oui ».
+d'une minute (Netatmo n'envoie pas d'événement de « fin de détection », sauf
+pour la fumée : l'événement « fumée dissipée » la remet aussitôt à **Non**).
+Dans une scène, utilisez donc le déclencheur « la valeur passe à Oui ».
 
 > ⚠️ **Si vos caméras existaient déjà dans Gladys**, ces nouvelles
 > fonctionnalités n'apparaissent pas toutes seules : allez sur l'écran

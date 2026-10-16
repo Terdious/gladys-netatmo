@@ -13,13 +13,15 @@
 // rather than guessed.
 //
 // Each detection is published as 1, then automatically back to 0 after
-// EVENT_RESET_MS: the stream carries no "cleared" counterpart, and a feature
-// stuck at 1 would make a scene trigger fire once and never again.
+// EVENT_RESET_MS: most events have no "cleared" counterpart, and a feature
+// stuck at 1 would make a scene trigger fire once and never again. The few
+// that do (smoke: `sub_type` 0 = cleared, see EVENT_CLEARED_SUB_TYPES) return
+// the feature to 0 at once instead of raising a new detection.
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
 
-import { EVENT_FEATURE_SUFFIXES, EVENT_RESET_MS } from './constants.js';
+import { EVENT_FEATURE_SUFFIXES, EVENT_RESET_MS, EVENT_CLEARED_SUB_TYPES } from './constants.js';
 
 const logger = createLogger({ name: 'netatmo-events' });
 
@@ -127,6 +129,17 @@ export function createEvents({
         `Webhook event "${eventName}" for ${deviceExternalId}: feature not created in Gladys — ignored`,
       );
       return undefined;
+    }
+    const subType = payload.sub_type === undefined ? undefined : String(payload.sub_type);
+    if (subType !== undefined && (EVENT_CLEARED_SUB_TYPES[eventName] ?? []).includes(subType)) {
+      logger.info(`Netatmo event: ${eventName} cleared on ${deviceExternalId}`);
+      const pending = resetTimers.get(featureExternalId);
+      if (pending) {
+        timers.clearTimeout(pending);
+        resetTimers.delete(featureExternalId);
+      }
+      await publish(featureExternalId, 0);
+      return featureExternalId;
     }
     logger.info(`Netatmo event: ${eventName} on ${deviceExternalId}`);
     await publish(featureExternalId, 1);

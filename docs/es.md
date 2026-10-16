@@ -162,8 +162,9 @@ dedicadas, utilizables como **disparadores de escena**:
 | Detector de monóxido de carbono | **Monóxido de carbono** | una detección de monóxido de carbono |
 
 Cada detección pasa a **Sí** y vuelve a **No** por sí sola al cabo de un minuto
-(Netatmo no envía ningún evento de "fin de detección"). En una escena, utilice
-el disparador "el valor pasa a Sí".
+(Netatmo no envía ningún evento de "fin de detección", salvo para el humo: el
+evento "humo disipado" la devuelve a **No** de inmediato). En una escena,
+utilice el disparador "el valor pasa a Sí".
 
 > ⚠️ **Si sus cámaras ya existían en Gladys**, estas nuevas funcionalidades no
 > aparecen por sí solas: vaya a la pestaña **Descubrir** y haga clic en
