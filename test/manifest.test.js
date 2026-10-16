@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 import { DEFAULT_CONFIG } from '../src/config.js';
-import { WEBHOOK_KEY, CONNECTION_MESSAGES } from '../src/netatmo/constants.js';
+import { WEBHOOK_KEY, CONNECTION_MESSAGES, DEGRADED_MESSAGES } from '../src/netatmo/constants.js';
 import * as featureBuilders from '../src/netatmo/features.js';
 
 const manifest = JSON.parse(
@@ -159,6 +159,15 @@ test('every manifest text ships in every Gladys language', () => {
 test('every connection status message ships in every Gladys language', () => {
   for (const [key, message] of Object.entries(CONNECTION_MESSAGES)) {
     assert.deepEqual(Object.keys(message).sort(), [...GLADYS_LANGUAGES].sort(), `${key} languages`);
+  }
+});
+
+test('every degraded reason ships in every Gladys language, within the 200-character bound', () => {
+  for (const [key, message] of Object.entries(DEGRADED_MESSAGES)) {
+    assert.deepEqual(Object.keys(message).sort(), [...GLADYS_LANGUAGES].sort(), `${key} languages`);
+    for (const [language, text] of Object.entries(message)) {
+      assert.ok(text.length <= 200, `${key}.${language} has ${text.length} characters`);
+    }
   }
 });
 

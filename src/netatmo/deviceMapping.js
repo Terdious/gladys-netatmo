@@ -7,11 +7,18 @@
 
 import { DEVICE_FEATURE_CATEGORIES, DEVICE_FEATURE_TYPES } from '@gladysassistant/integration-sdk';
 
-import { THERM_MODE_PRESETS } from './constants.js';
+import { THERM_MODE_PRESETS, COVER_STATE, SHUTTER_POSITION } from './constants.js';
 
 const toBinary = (valueFromDevice) => (valueFromDevice === true || valueFromDevice === 1 ? 1 : 0);
 const toInteger = (valueFromDevice) => parseInt(valueFromDevice, 10);
 const identity = (valueFromDevice) => valueFromDevice;
+
+// Gladys cover state → /api/setstate target_position (pyatmo ShutterMixin).
+const SHUTTER_TARGET_BY_STATE = {
+  [COVER_STATE.OPEN]: SHUTTER_POSITION.OPEN,
+  [COVER_STATE.CLOSE]: SHUTTER_POSITION.CLOSE,
+  [COVER_STATE.STOP]: SHUTTER_POSITION.STOP,
+};
 
 // NRV modules report a `battery_state` string instead of a percentage.
 const BATTERY_LEVELS = {
@@ -53,6 +60,22 @@ export const writeValues = {
     [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: (valueFromGladys) =>
       valueFromGladys === 1 || valueFromGladys === true ? 'on' : 'off',
   },
+  [DEVICE_FEATURE_CATEGORIES.SHUTTER]: {
+    [DEVICE_FEATURE_TYPES.SHUTTER.STATE]: (valueFromGladys) => {
+      const target = SHUTTER_TARGET_BY_STATE[Number(valueFromGladys)];
+      if (target === undefined) {
+        throw new Error(`Unknown shutter state ${valueFromGladys}`);
+      }
+      return target;
+    },
+    [DEVICE_FEATURE_TYPES.SHUTTER.POSITION]: (valueFromGladys) => {
+      const position = Math.round(Number(valueFromGladys));
+      if (Number.isNaN(position)) {
+        throw new Error(`Invalid shutter position ${valueFromGladys}`);
+      }
+      return Math.min(SHUTTER_POSITION.OPEN, Math.max(SHUTTER_POSITION.CLOSE, position));
+    },
+  },
 };
 
 export const readValues = {
@@ -62,6 +85,10 @@ export const readValues = {
   },
   [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
     [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: toBinary,
+  },
+  [DEVICE_FEATURE_CATEGORIES.SHUTTER]: {
+    [DEVICE_FEATURE_TYPES.SHUTTER.STATE]: identity,
+    [DEVICE_FEATURE_TYPES.SHUTTER.POSITION]: toInteger,
   },
   [DEVICE_FEATURE_CATEGORIES.BATTERY]: {
     [DEVICE_FEATURE_TYPES.BATTERY.INTEGER]: (valueFromDevice) =>

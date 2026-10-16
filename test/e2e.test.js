@@ -21,6 +21,8 @@ import {
   FAKE_CLIENT_ID,
   FAKE_CLIENT_SECRET,
   FAKE_AUTH_CODE,
+  addShutterFixtures,
+  SHUTTER_BRIDGE_ID,
 } from './helpers/fakeNetatmo.js';
 
 const { EXTERNAL_INTEGRATION } = WEBSOCKET_MESSAGE_TYPES;
@@ -201,8 +203,54 @@ test('saving the configuration re-runs the discovery automatically', async () =>
   });
   await waitFor(() => core.state.discovered.length > discoveredCount);
   const republished = core.state.discovered.at(-1);
-  // 7 devices + 2 cameras + siren + door tag + smoke alarm.
-  assert.equal(republished.length, 12);
+  // 7 devices + 2 cameras + siren + door tag + smoke alarm + CO alarm.
+  assert.equal(republished.length, 13);
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:camera-1'));
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:doortag-1'));
+});
+
+test('a token lacking the doorbell scopes asks to click Connect again (issue #35)', async () => {
+  const statusCount = core.state.connectionStatuses.length;
+  // A token granted before the doorbell scopes existed: the refresh echoes the old scope set.
+  netatmo.state.grantedScopes = netatmo.state.grantedScopes.filter(
+    (scope) => !scope.includes('doorbell'),
+  );
+  await integration.oauth.refreshTokens();
+  const status = await waitFor(() => core.state.connectionStatuses[statusCount]);
+  // Still connected (everything else works), with an actionable hint.
+  assert.equal(status.connected, true);
+  assert.match(status.message.en, /click Connect again/);
+  assert.match(status.message.fr, /Connecter/);
+});
+
+test('enabling the roller shutters surfaces them, and a command reaches setstate', async () => {
+  addShutterFixtures(netatmo.state);
+  core.send(EXTERNAL_INTEGRATION.CONFIG_UPDATED, {
+    config: {
+      ...core.state.config,
+      client_id: FAKE_CLIENT_ID,
+      client_secret: FAKE_CLIENT_SECRET,
+      security_api: 'true',
+      shutter_api: 'true',
+    },
+  });
+  // Wait for THE publish carrying the shutters: a refresh cycle of the
+  // previous configuration may still re-publish the discovery meanwhile.
+  const shutter = await waitFor(() =>
+    core.state.discovered.at(-1)?.find((device) => device.external_id === 'ext:netatmo:0009999992'),
+  );
+  const state = shutter.features.find((f) => f.external_id.endsWith(':state'));
+
+  const result = await sendAndWaitResult(EXTERNAL_INTEGRATION.DEVICE_SET_VALUE, {
+    device: shutter,
+    device_feature: state,
+    value: 1,
+  });
+  assert.equal(result.success, true);
+  assert.deepEqual(netatmo.state.setStateRequests.at(-1), {
+    home: {
+      id: 'home-1',
+      modules: [{ id: '0009999992', target_position: 100, bridge: SHUTTER_BRIDGE_ID }],
+    },
+  });
 });

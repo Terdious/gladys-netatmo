@@ -48,14 +48,29 @@ capabilities land (Home + Security cameras, webhooks, …).
   rotation, local/VPN switch, user-edited quality) — the external-integrations
   framework silently upserts the params of created devices on every
   discovery publish.
+- **Video doorbell** (`NDB`, opt-in with the cameras): dashboard image
+  (snapshot on the VPN URL only — WebRTC cameras serve nothing locally),
+  WiFi quality and a **doorbell ring** feature fed by the webhooks
+  (`incoming_call`). No monitoring switch and no `CAMERA_URL` (WebRTC-only
+  stream). Requests the `read_doorbell` / `access_doorbell` scopes: a token
+  lacking them keeps working, with a "click Connect again" status.
 - **Camera-bridged security accessories** (opt-in with the cameras): the
   door/window tag (`NACamDoorTag`) as an opening sensor, the indoor siren
   (`NIS`) as a read-only sounding sensor, both with battery + RF quality; the
-  smoke alarm (`NSD`) is discovered with battery + signal — its smoke state is
-  webhook-driven and lands with the webhooks milestone. Net-new vs the core
-  service.
+  smoke alarm (`NSD`) and the carbon monoxide alarm (`NCO`) are discovered
+  with battery + signal — their smoke / CO state is webhook-driven. Net-new vs
+  the core service.
+- **Roller shutters** (opt-in via the `shutter_api` toggle): Bubendorff
+  shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`) with open / close /
+  stop, a writable position and RF quality (`/api/setstate` through the
+  gateway; new `read_bubendorff` / `write_bubendorff` scopes — existing users
+  reconnect once).
 - **Connection status** on the Configuration screen at every step (missing
-  credentials, not connected, connected, reconnect required).
+  credentials, not connected, connected, reconnect required), plus the
+  **degraded state**: an API family failing 3 cycles in a row is named under
+  the Connected status and the devices it leaves without fresh values get a
+  degraded badge — the weather measures fall back on homestatus, loaded
+  whenever any family is enabled (#33).
 
 - **Gladys Plus webhooks**: Netatmo events are relayed to the integration and
   trigger an immediate refresh (a setpoint change lands in ~2-3 s instead of

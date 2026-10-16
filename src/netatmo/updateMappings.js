@@ -8,7 +8,37 @@
 // (core PR #2617: legitimate zeros are values, absences are not).
 // -----------------------------------------------------------------------------
 
-import { SUPPORTED_MODULE_TYPE } from './constants.js';
+import { SUPPORTED_MODULE_TYPE, COVER_STATE } from './constants.js';
+
+/**
+ * Shutter position in percent from homestatus `current_position`. Anything
+ * outside 0-100 is not a position: pyatmo documents 101 as "never
+ * instructed" for actors that only echo the last commanded target.
+ */
+function shutterPosition(deviceNetatmo) {
+  const position = deviceNetatmo.current_position;
+  return typeof position === 'number' && position >= 0 && position <= 100 ? position : undefined;
+}
+
+/**
+ * Shutter state derived from the position, at the end stops only: 100 →
+ * OPEN, 0 → CLOSE. An intermediate position emits nothing, so the last
+ * command saved by Gladys (STOP, or a move still in progress) is never
+ * overwritten by a guess.
+ */
+function shutterState(deviceNetatmo) {
+  const position = shutterPosition(deviceNetatmo);
+  if (position === 100) return COVER_STATE.OPEN;
+  if (position === 0) return COVER_STATE.CLOSE;
+  return undefined;
+}
+
+// Bubendorff / iDiamant roller shutters (issue #34): radio, wired, solar.
+const SHUTTER_MAPPING = {
+  state: shutterState,
+  position: shutterPosition,
+  rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
+};
 
 export const UPDATE_MAPPINGS = {
   [SUPPORTED_MODULE_TYPE.PLUG]: {
@@ -110,6 +140,11 @@ export const UPDATE_MAPPINGS = {
         : deviceNetatmo.monitoring === 'on',
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
+  // Video doorbell (issue #35): only the wifi quality is pollable — the ring
+  // is webhook-driven (`incoming_call`).
+  [SUPPORTED_MODULE_TYPE.NDB]: {
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+  },
   // Camera-bridged door/window tag (issue #9). Homestatus `status` is a string:
   // "open"/"closed" (other values — "no_news"/"calibrating"/"undefined" — mean
   // "no reliable state", skipped). Battery is a percent or the string state.
@@ -145,6 +180,17 @@ export const UPDATE_MAPPINGS = {
       deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
+  // Carbon monoxide alarm (issue #36), same table as the smoke alarm: battery +
+  // signal emitted only when homestatus carries them, CO state webhook-driven.
+  // Field names to confirm on a real NCO payload.
+  [SUPPORTED_MODULE_TYPE.NCO]: {
+    battery_percent: (deviceNetatmo) =>
+      deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+  },
+  [SUPPORTED_MODULE_TYPE.NBR]: SHUTTER_MAPPING,
+  [SUPPORTED_MODULE_TYPE.NBO]: SHUTTER_MAPPING,
+  [SUPPORTED_MODULE_TYPE.NBS]: SHUTTER_MAPPING,
   [SUPPORTED_MODULE_TYPE.NAMODULE4]: {
     battery_percent: (deviceNetatmo) => deviceNetatmo.battery_percent,
     temperature: (deviceNetatmo) =>

@@ -56,6 +56,8 @@ function buildDefaultHomes() {
         // Smoke alarm: discovered with battery + signal; smoke state is
         // webhook-driven (issue #9 / #5).
         { id: 'smoke-1', type: 'NSD', name: 'Détecteur de fumée', bridge: 'camera-1' },
+        // Carbon monoxide alarm (issue #36): modelled on the smoke alarm.
+        { id: 'co-1', type: 'NCO', name: 'Détecteur de CO', room_id: 'room-1' },
       ],
     },
   ];
@@ -107,6 +109,8 @@ function buildDefaultHomeStatuses() {
             rf_strength: 68,
           },
           { id: 'smoke-1', type: 'NSD', battery_percent: 88, wifi_strength: 66 },
+          // No wifi field: the CO alarm must only publish what homestatus carries.
+          { id: 'co-1', type: 'NCO', battery_percent: 92 },
         ],
         errors: [{ code: 6, id: 'valve-2' }],
       },
@@ -178,6 +182,80 @@ function buildDefaultStationDevices() {
   ];
 }
 
+// -----------------------------------------------------------------------------
+// Bubendorff / iDiamant roller shutters (issue #34), modelled on the pyatmo
+// homesdata/homestatus fixtures: an iDiamant gateway (NBG, never exposed as a
+// device), a radio shutter (NBR, closed), a wired one (NBO, open — with the
+// "target_position:step" key spelling of the pyatmo fixture) and a solar one
+// (NBS) missing from homestatus (reported in `errors` → unreachable). Opt-in:
+// call it on `state` so the default fixtures (and their counts) stay intact.
+// -----------------------------------------------------------------------------
+
+export const SHUTTER_BRIDGE_ID = '12:34:56:30:d5:d4';
+
+export function addShutterFixtures(state, homeId = 'home-1') {
+  const home = state.homes.find((h) => h.id === homeId);
+  home.modules.push(
+    {
+      id: SHUTTER_BRIDGE_ID,
+      type: 'NBG',
+      name: 'module iDiamant',
+      room_id: 'room-1',
+      modules_bridged: ['0009999992', '0009999993', '0009999994'],
+    },
+    {
+      id: '0009999992',
+      type: 'NBR',
+      name: 'Entrance Blinds',
+      room_id: 'room-1',
+      bridge: SHUTTER_BRIDGE_ID,
+    },
+    {
+      id: '0009999993',
+      type: 'NBO',
+      name: 'Bubendorff blind',
+      room_id: 'room-2',
+      bridge: SHUTTER_BRIDGE_ID,
+    },
+    { id: '0009999994', type: 'NBS', name: 'Volet solaire', bridge: SHUTTER_BRIDGE_ID },
+  );
+  const status = state.homeStatuses[homeId].home;
+  status.modules.push(
+    {
+      id: SHUTTER_BRIDGE_ID,
+      type: 'NBG',
+      firmware_revision: 39,
+      wifi_strength: 65,
+      reachable: true,
+    },
+    {
+      id: '0009999992',
+      type: 'NBR',
+      current_position: 0,
+      target_position: 0,
+      target_position_step: 100,
+      firmware_revision: 16,
+      rf_strength: 0,
+      last_seen: 1638353156,
+      reachable: true,
+      bridge: SHUTTER_BRIDGE_ID,
+    },
+    {
+      id: '0009999993',
+      type: 'NBO',
+      current_position: 100,
+      target_position: 100,
+      'target_position:step': 100,
+      firmware_revision: 22,
+      rf_strength: 74,
+      last_seen: 1671395511,
+      reachable: true,
+      bridge: SHUTTER_BRIDGE_ID,
+    },
+  );
+  status.errors.push({ code: 6, id: '0009999994' });
+}
+
 export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
   const state = {
     tokenRequests: [], // every parsed form POSTed to /oauth2/token
@@ -200,6 +278,10 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
     failLocalSnapshot: false, // make the LOCAL snapshot fail (stale-cache fallback test)
     failAllSnapshots: false, // make EVERY snapshot fail (last-image fallback test)
+    // Scopes echoed in the token responses, like the real Netatmo: those
+    // requested by the authorization exchange, kept across refreshes. Tests
+    // overwrite it to simulate a token granted before new scopes existed.
+    grantedScopes: ['read_station'],
     baseUrl: '', // filled after listen()
     homes: buildDefaultHomes(),
     homeStatuses: buildDefaultHomeStatuses(),
@@ -217,7 +299,7 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
       access_token: accessToken,
       refresh_token: state.validRefreshToken,
       expires_in: expiresIn,
-      scope: ['read_station'],
+      scope: state.grantedScopes,
     };
   }
 
@@ -273,6 +355,9 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           if (form.code !== FAKE_AUTH_CODE) {
             respond({ error: 'invalid_grant' }, 400);
             return;
+          }
+          if (form.scope) {
+            state.grantedScopes = form.scope.split(' ');
           }
           respond(issueTokens());
           return;
