@@ -17,6 +17,8 @@
 import jpeg from 'jpeg-js';
 import { createLogger } from '@gladysassistant/integration-sdk';
 
+import { VPN_ONLY_CAMERA_MODULE_TYPES } from './constants.js';
+
 const logger = createLogger({ name: 'netatmo-camera' });
 
 const SNAPSHOT_PATH = '/live/snapshot_720.jpg';
@@ -167,7 +169,8 @@ export function createCameraImages({ fetchImpl = fetch, now = Date.now } = {}) {
     if (!vpnUrl) {
       return undefined;
     }
-    if (!isLocal) {
+    // WebRTC cameras (video doorbell) serve nothing on their local URL.
+    if (!isLocal || VPN_ONLY_CAMERA_MODULE_TYPES.includes(rawDevice.type)) {
       return vpnUrl;
     }
     const cachedUrl = baseUrls.get(id);

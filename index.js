@@ -73,11 +73,36 @@ export function setupIntegration(
     fetchImpl,
     ...(netatmoBaseUrl ? { baseUrl: netatmoBaseUrl } : {}),
   });
-  const telemetry = createTelemetry({
+  // Last connection status reported: the degraded message (an API family
+  // failing for several cycles, issue #33) only rides on a CONNECTED status —
+  // "reconnect required" or "unreachable" must never be overwritten by it.
+  let connected = null;
+  let telemetry = null;
+  // While connected, the status also carries the actionable hints: scopes the
+  // token lacks (added by a newer release, issue #35) first, then a degraded
+  // API family.
+  function connectedHint() {
+    if (oauth.missingScopes().length > 0) {
+      return CONNECTION_MESSAGES.MISSING_SCOPES;
+    }
+    return telemetry?.getDegradedMessage() ?? null;
+  }
+  async function setStatus(isConnected, message) {
+    connected = isConnected;
+    const shown = message ?? (isConnected ? connectedHint() : null);
+    await reportConnectionStatus(gladys, isConnected, shown ?? undefined);
+  }
+
+  telemetry = createTelemetry({
     gladys,
     client,
     fetchImpl,
     ...(refreshIntervalMs ? { refreshIntervalMs } : {}),
+    onDegradedChange: async () => {
+      if (connected) {
+        await setStatus(true);
+      }
+    },
   });
   // Gladys Plus webhooks (issue #5): a relayed event triggers an immediate
   // telemetry refresh (doctrine "trigger, not data"). Degrades to poll only
@@ -87,8 +112,8 @@ export function setupIntegration(
     client,
     refresh: () => telemetry.refreshValues(config),
   });
-  // Momentary detections (motion, person, smoke…): published as push features
-  // straight from the event payload — no API state ever reports them.
+  // Momentary detections (motion, person, smoke, doorbell ring…): published as
+  // push features straight from the event payload — no API state reports them.
   // Identity events (known person seen / gone, siren sounding) are fired as
   // scene events: the homes summaries give the person and home names.
   const events = createEvents({ gladys, getHomes: () => telemetry.getHomes() });
@@ -96,14 +121,23 @@ export function setupIntegration(
   // Tokens wiped after the 24h grace window: ask the user to reconnect.
   oauth.onAuthLost(async (message) => {
     telemetry.stop();
-    await reportConnectionStatus(gladys, false, message);
+    await setStatus(false, message);
   });
 
   // A scheduled refresh recovered after failures (Netatmo/DNS outage over):
   // reflect it on the Configuration screen and make sure telemetry runs.
   oauth.onRefreshRecovered(async () => {
-    await reportConnectionStatus(gladys, true);
+    await setStatus(true);
     telemetry.start(config);
+  });
+
+  // A token response revealed missing scopes (or a reconnect granted them):
+  // refresh the status shown on the Configuration screen.
+  // The rest of the account keeps working: only the new devices need it.
+  oauth.onMissingScopes(async () => {
+    if (oauth.hasTokens() && connected) {
+      await setStatus(true);
+    }
   });
 
   /**
@@ -117,19 +151,19 @@ export function setupIntegration(
       // Stop any running loop: the previous credentials are gone.
       telemetry.stop();
       logger.warn('Netatmo client id / client secret not configured yet');
-      await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.MISSING_CLIENT_CONFIG);
+      await setStatus(false, CONNECTION_MESSAGES.MISSING_CLIENT_CONFIG);
       return;
     }
     if (!oauth.hasTokens()) {
       telemetry.stop();
       logger.warn('Netatmo account not connected yet — waiting for the OAuth2 connection');
-      await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.NOT_CONNECTED);
+      await setStatus(false, CONNECTION_MESSAGES.NOT_CONNECTED);
       return;
     }
     try {
       await oauth.ensureFreshAccessToken();
       oauth.scheduleTokenRefresh();
-      await reportConnectionStatus(gladys, true);
+      await setStatus(true);
       // Start (or restart) the global value refresh loop for the devices the
       // user created in Gladys.
       telemetry.start(config);
@@ -140,7 +174,7 @@ export function setupIntegration(
     } catch (err) {
       if (err instanceof NotConnectedError) {
         telemetry.stop();
-        await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.NOT_CONNECTED);
+        await setStatus(false, CONNECTION_MESSAGES.NOT_CONNECTED);
         return;
       }
       if (err.transient) {
@@ -151,12 +185,12 @@ export function setupIntegration(
         logger.warn(`Netatmo unreachable at startup (${err.message}) — retrying in the background`);
         oauth.scheduleTokenRefresh();
         telemetry.start(config);
-        await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.NETATMO_UNREACHABLE);
+        await setStatus(false, CONNECTION_MESSAGES.NETATMO_UNREACHABLE);
         return;
       }
       logger.error(`Netatmo token check failed: ${err.message}`);
       telemetry.stop();
-      await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.RECONNECT_REQUIRED);
+      await setStatus(false, CONNECTION_MESSAGES.RECONNECT_REQUIRED);
     }
   }
 
@@ -177,7 +211,7 @@ export function setupIntegration(
       // The user filled the form but never saved it (the front does not save
       // on Connect): surface an actionable hint right on the config screen —
       // the front only shows a generic error for the failed command itself.
-      await reportConnectionStatus(gladys, false, CONNECTION_MESSAGES.SAVE_CREDENTIALS_FIRST);
+      await setStatus(false, CONNECTION_MESSAGES.SAVE_CREDENTIALS_FIRST);
       throw new Error('Netatmo client id / client secret must be saved first');
     }
     return oauth.buildAuthorizeUrl(redirectUri);
@@ -197,7 +231,7 @@ export function setupIntegration(
     } catch (err) {
       logger.warn(`Post-connect validation call failed (${err.message}) — the loop will retry`);
     }
-    await reportConnectionStatus(gladys, true);
+    await setStatus(true);
     telemetry.start(config);
   });
 
@@ -211,7 +245,12 @@ export function setupIntegration(
   gladys.onSetValue(async (device, feature, value) => {
     logger.info(`onSetValue <- ${feature.external_id} = ${value}`);
     await setDeviceValue(
-      { gladys, client, refresh: () => telemetry.refreshNow(config) },
+      {
+        gladys,
+        client,
+        refresh: () => telemetry.refreshNow(config),
+        scheduleRefresh: () => telemetry.scheduleRefresh(config),
+      },
       { device, feature, value },
     );
   });
@@ -265,7 +304,8 @@ export function setupIntegration(
     const togglesChanged =
       previous.energy_api !== config.energy_api ||
       previous.weather_api !== config.weather_api ||
-      previous.security_api !== config.security_api;
+      previous.security_api !== config.security_api ||
+      previous.shutter_api !== config.shutter_api;
     if (togglesChanged) {
       telemetry.resetDedup();
     }
