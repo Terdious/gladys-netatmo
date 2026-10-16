@@ -54,3 +54,14 @@ test('a 403 scope refusal (code 13) is NOT retried and burns no token refresh', 
   // The non-idempotent POST went out exactly once.
   assert.equal(netatmo.state.setpointRequests.length, 1);
 });
+
+test('setThermMode posts the home mode, with the endtime only for away / frost guard', async () => {
+  await client.setThermMode('home-1', 'away', 1_800_000_000.4);
+  await client.setThermMode('home-1', 'hg');
+  await client.setThermMode('home-1', 'schedule', 1_800_000_000);
+  assert.deepEqual(netatmo.state.setThermModeRequests, [
+    { home_id: 'home-1', mode: 'away', endtime: '1800000000' },
+    { home_id: 'home-1', mode: 'hg' },
+    { home_id: 'home-1', mode: 'schedule' },
+  ]);
+});

@@ -20,20 +20,33 @@
 //     `unreachable` for the modules rebuilt from the homestatus errors array
 //     (core PR #2620 surfaced as a badge instead of a raw param);
 //   - a PARTIAL load (an API family failed) never replaces the published
-//     discovery list: devices must not vanish during a Netatmo hiccup.
+//     discovery list: devices must not vanish during a Netatmo hiccup;
+//   - an API family failing for DEGRADED_AFTER_FAILED_LOADS loads in a row
+//     marks the devices it leaves without fresh values as degraded (badge
+//     tooltip) and reports it through `onDegradedChange` (connection status
+//     message) — until the first complete load (issue #33).
 // -----------------------------------------------------------------------------
 
-import { createLogger, DEVICE_TRANSPORTS } from '@gladysassistant/integration-sdk';
+import {
+  createLogger,
+  DEVICE_TRANSPORTS,
+  DEVICE_FEATURE_CATEGORIES,
+} from '@gladysassistant/integration-sdk';
 
 import {
   REFRESH_VALUES_INTERVAL_MS,
   STATE_KEEP_ALIVE_MS,
   MAX_ENTRIES_PER_REQUEST,
   SECURITY_MODULE_TYPES,
+  HLS_CAMERA_MODULE_TYPES,
   CAMERA_LIVE_QUALITIES,
   DEFAULT_CAMERA_LIVE_QUALITY,
   ROOM_DERIVED_SUFFIXES,
+  SHUTTER_REFRESH_DELAY_MS,
   PARAMS,
+  SUPPORTED_CATEGORY_TYPE,
+  DEGRADED_AFTER_FAILED_LOADS,
+  DEGRADED_MESSAGES,
 } from './constants.js';
 import { loadAccount, netatmoId } from './discovery.js';
 import { convertDevice } from './convert.js';
@@ -76,6 +89,9 @@ function withTimeout(promise, ms, message) {
  * @param {number} [deps.refreshIntervalMs] loop cadence override (tests)
  * @param {number} [deps.loadTtlMs] account-load cache TTL override (tests)
  * @param {typeof fetch} [deps.fetchImpl] fetch used for the camera endpoints
+ * @param {(message: object|null) => any} [deps.onDegradedChange] called with
+ *   the multi-language message when the account becomes degraded, with null
+ *   when it recovers
  */
 export function createTelemetry({
   gladys,
@@ -84,11 +100,13 @@ export function createTelemetry({
   refreshIntervalMs = REFRESH_VALUES_INTERVAL_MS,
   loadTtlMs = DEFAULT_LOAD_TTL_MS,
   fetchImpl = fetch,
+  onDegradedChange = () => {},
 }) {
   // Last published value per feature external_id: {state, at}.
   const published = new Map();
   let refreshTimer = null;
   let refreshInFlight = null;
+  let delayedRefreshTimer = null;
 
   const cameras = createCameraImages({ fetchImpl, now });
   // Last raw Netatmo payload per camera id (vpn_url, is_local...), refreshed
@@ -102,12 +120,38 @@ export function createTelemetry({
   // Last successfully published image per camera id: served as a fallback
   // when an on-demand snapshot cannot complete within the ack budget.
   const lastImages = new Map();
+  // Homesdata homes summaries (names, known persons, modules, heating mode),
+  // by home id — read by the scene triggers/actions (issue #39).
+  const homesById = new Map();
+  // Last raw Netatmo payload of every device, by id — read by the dashboard
+  // widgets (issue #40) for what no feature carries (battery health,
+  // reachability, camera monitoring).
+  const rawDevicesById = new Map();
+  // Change listeners (widget freshness nudges): notified with a kind —
+  // 'heating', 'weather' or 'cameras' — when the matching data changed.
+  const updateListeners = [];
+  // Last data signature per kind: a nudge only when something moved.
+  const signatures = new Map();
+  // Every device of the account seen by a load, by Netatmo id: during an
+  // outage, the devices a partial load misses still get a degraded badge.
+  const knownDevices = new Map();
+  // Consecutive loads in which each API family failed (`homes`, `energy`,
+  // `weather`, `aircare`), and the degraded message currently reported (null when ok).
+  const failedLoads = new Map();
+  let degradedMessage = null;
 
   // --- Account load (single-flight + short TTL) ------------------------------
   let loadCache = null; // {key, at, promise}
+  let lastLoadKey = null;
 
   function loadCacheKey(config) {
-    return `${config.energy_api}|${config.weather_api}|${config.security_api}`;
+    return [
+      config.energy_api,
+      config.weather_api,
+      config.security_api,
+      config.shutter_api,
+      config.aircare_api,
+    ].join('|');
   }
 
   /**
@@ -118,11 +162,21 @@ export function createTelemetry({
    */
   function loadAccountCached(config) {
     const key = loadCacheKey(config);
+    if (lastLoadKey !== null && lastLoadKey !== key) {
+      // Another set of families: the outage memory of the previous one no
+      // longer applies (a disabled family must not keep degraded badges).
+      knownDevices.clear();
+      failedLoads.clear();
+    }
+    lastLoadKey = key;
     if (loadCache && loadCache.key === key && now() - loadCache.at < loadTtlMs) {
       return loadCache.promise;
     }
     const promise = loadAccount(client, config).then((result) => {
       afterLoad(result);
+      notifyOnChange('heating', heatingSignature());
+      notifyOnChange('weather', weatherSignature());
+      notifyOnChange('cameras', camerasSignature());
       return result;
     });
     loadCache = { key, at: now(), promise };
@@ -138,8 +192,74 @@ export function createTelemetry({
   // Last "devices not supported" count: logged at info only when it changes.
   let lastNotHandledCount = null;
 
+  /**
+   * The API families failing for DEGRADED_AFTER_FAILED_LOADS loads in a row:
+   * one failed cycle is a hiccup, not worth a badge.
+   */
+  function degradedFamilies() {
+    return [...failedLoads]
+      .filter(([, count]) => count >= DEGRADED_AFTER_FAILED_LOADS)
+      .map(([family]) => family);
+  }
+
+  /** Count the failed families of a load and report the degraded transitions. */
+  function trackFailures(failed = []) {
+    for (const family of failedLoads.keys()) {
+      if (!failed.includes(family)) {
+        failedLoads.delete(family);
+      }
+    }
+    for (const family of failed) {
+      failedLoads.set(family, (failedLoads.get(family) ?? 0) + 1);
+    }
+    const families = degradedFamilies();
+    let message = null;
+    if (families.length > 0) {
+      message =
+        families.length === 1 && families[0] === 'weather'
+          ? DEGRADED_MESSAGES.WEATHER
+          : DEGRADED_MESSAGES.PARTIAL;
+    }
+    if (message !== degradedMessage) {
+      degradedMessage = message;
+      if (message) {
+        logger.warn(
+          `Netatmo API failing for ${DEGRADED_AFTER_FAILED_LOADS}+ cycles: ${families.join(', ')} — devices marked degraded`,
+        );
+      } else {
+        logger.info('Netatmo API recovered — degraded state cleared');
+      }
+      Promise.resolve()
+        .then(() => onDegradedChange(message))
+        .catch((err) => logger.debug(`onDegradedChange failed: ${err.message}`));
+    }
+  }
+
   /** Post-load bookkeeping: camera cache upkeep + stale-entry pruning. */
-  function afterLoad({ devices: rawDevices, partial }) {
+  function afterLoad({ devices: rawDevices, partial, failed, homes = [] }) {
+    trackFailures(failed);
+    for (const rawDevice of rawDevices) {
+      const id = netatmoId(rawDevice);
+      if (id) {
+        knownDevices.set(id, rawDevice);
+      }
+    }
+    // A partial load only refreshes the homes it did see: absence is not
+    // proof that a home is gone.
+    if (!partial) {
+      homesById.clear();
+      rawDevicesById.clear();
+    }
+    for (const home of homes) {
+      homesById.set(home.id, home);
+    }
+    for (const rawDevice of rawDevices) {
+      const id = netatmoId(rawDevice);
+      if (id && !rawDevice.not_handled) {
+        rawDevicesById.set(id, rawDevice);
+      }
+    }
+
     const notHandledCount = rawDevices.filter((rawDevice) => rawDevice.not_handled).length;
     if (!partial && notHandledCount !== lastNotHandledCount) {
       logger.info(`Netatmo devices not supported: ${notHandledCount}`);
@@ -165,6 +285,12 @@ export function createTelemetry({
       }
     }
     cameras.prune(cameraIds);
+    const loadedIds = new Set(rawDevices.map((rawDevice) => netatmoId(rawDevice)));
+    for (const id of knownDevices.keys()) {
+      if (!loadedIds.has(id)) {
+        knownDevices.delete(id);
+      }
+    }
     // Devices removed from the account must not pin dedup entries forever.
     const devicePrefixes = new Set(
       rawDevices
@@ -178,6 +304,67 @@ export function createTelemetry({
         published.delete(key);
       }
     }
+  }
+
+  // --- Change notifications (widget nudges, issue #40) -----------------------
+
+  /** Heating data the widget shows: mode and room temperatures per home. */
+  function heatingSignature() {
+    return JSON.stringify(
+      [...homesById.values()].map((home) => [home.id, home.therm_mode, home.rooms]),
+    );
+  }
+
+  /** Weather health the widget shows: battery and reachability per module. */
+  function weatherSignature() {
+    return JSON.stringify(
+      [...rawDevicesById.values()]
+        .filter((rawDevice) => /^NA(Main|Module[1-4])$/.test(rawDevice.type))
+        .map((rawDevice) => [
+          netatmoId(rawDevice),
+          rawDevice.reachable,
+          rawDevice.battery_percent ?? rawDevice.battery_state,
+        ]),
+    );
+  }
+
+  /** Camera data the widget shows: the monitoring state per camera. */
+  function camerasSignature() {
+    return JSON.stringify(
+      [...rawCamerasById.values()].map((rawDevice) => [netatmoId(rawDevice), rawDevice.monitoring]),
+    );
+  }
+
+  /** Notify the listeners of a kind whose data signature changed. */
+  function notifyOnChange(kind, signature) {
+    if (signatures.get(kind) === signature) {
+      return;
+    }
+    signatures.set(kind, signature);
+    notify(kind);
+  }
+
+  function notify(kind) {
+    for (const listener of updateListeners) {
+      try {
+        listener(kind);
+      } catch (err) {
+        logger.debug(`Update listener failed for ${kind}: ${err.message}`);
+      }
+    }
+  }
+
+  /**
+   * Register a change listener (widget freshness nudges).
+   * @param {(kind: 'heating'|'weather'|'cameras') => void} listener callback
+   */
+  function onUpdate(listener) {
+    updateListeners.push(listener);
+  }
+
+  /** The degraded message currently reported (null when every API answers). */
+  function getDegradedMessage() {
+    return degradedMessage;
   }
 
   /** Forget the dedup memory so the next refresh re-publishes every value. */
@@ -244,7 +431,13 @@ export function createTelemetry({
         continue; // unchanged and fresh: dedup
       }
       published.set(featureExternalId, { state, at: now() });
-      states.push({ device_feature_external_id: featureExternalId, state });
+      // Text features (e.g. the Home Coach air quality level) carry a string
+      // state, published as `text`.
+      states.push(
+        feature.category === DEVICE_FEATURE_CATEGORIES.TEXT
+          ? { device_feature_external_id: featureExternalId, text: String(state) }
+          : { device_feature_external_id: featureExternalId, state },
+      );
     }
     return states;
   }
@@ -255,19 +448,56 @@ export function createTelemetry({
   }
 
   /**
-   * Publish the per-device transport badges. Defensive: an older Gladys core
-   * without the endpoint must never crash the loop.
+   * Whether the load left this device without fresh values while an API
+   * family is degraded: the device is missing from the load, or it is a
+   * Weather device getstationsdata should have fed and homestatus did not
+   * carry (issue #33).
+   */
+  function isStale(rawDevice, loaded, families) {
+    if (families.length === 0) {
+      return false;
+    }
+    if (!loaded) {
+      return true;
+    }
+    return (
+      families.includes('weather') &&
+      rawDevice.categoryAPI === SUPPORTED_CATEGORY_TYPE.WEATHER &&
+      !rawDevice.homestatus
+    );
+  }
+
+  /**
+   * Publish the per-device transport badges: the devices of the load, plus
+   * the known devices it missed during an outage (degraded). An entry without
+   * `degraded` clears a previous degraded state. Defensive: an older Gladys
+   * core without the endpoint must never crash the loop.
    */
   async function publishTransports(rawDevices) {
-    const entries = rawDevices
+    const families = degradedFamilies();
+    const loadedIds = new Set(rawDevices.map((rawDevice) => netatmoId(rawDevice)));
+    const missed = [...knownDevices]
+      .filter(([id]) => !loadedIds.has(id))
+      .map(([, rawDevice]) => rawDevice);
+    const entries = [
+      ...rawDevices.map((rawDevice) => ({ rawDevice, loaded: true })),
+      ...missed.map((rawDevice) => ({ rawDevice, loaded: false })),
+    ]
       .filter(
-        (rawDevice) =>
+        ({ rawDevice }) =>
           !rawDevice.not_handled && !rawDevice.apiNotConfigured && netatmoId(rawDevice),
       )
-      .map((rawDevice) => ({
-        external_id: gladys.externalId(netatmoId(rawDevice)),
-        transport: transportOf(rawDevice),
-      }));
+      .map(({ rawDevice, loaded }) => {
+        const entry = {
+          external_id: gladys.externalId(netatmoId(rawDevice)),
+          transport: transportOf(rawDevice),
+        };
+        if (degradedMessage && isStale(rawDevice, loaded, families)) {
+          entry.degraded = true;
+          entry.message = degradedMessage;
+        }
+        return entry;
+      });
     try {
       await publishChunked((chunk) => gladys.publishTransports(chunk), entries);
     } catch (err) {
@@ -286,6 +516,9 @@ export function createTelemetry({
   async function buildCameraEnrichments(config) {
     const enrichments = new Map();
     for (const [id, rawDevice] of rawCamerasById) {
+      if (!HLS_CAMERA_MODULE_TYPES.includes(rawDevice.type)) {
+        continue; // no HLS live stream (video doorbell: WebRTC only)
+      }
       try {
         const baseUrl = await cameras.resolveBaseUrl(rawDevice);
         if (!baseUrl) {
@@ -351,6 +584,7 @@ export function createTelemetry({
    * through POST /camera/image. Failures are logged and never abort the cycle.
    */
   async function refreshCameraImages() {
+    let changed = false;
     for (const [id, rawDevice] of rawCamerasById) {
       const externalId = gladys.externalId(id);
       const hasCameraFeature = (findGladysDevice(id)?.features ?? []).some(
@@ -362,12 +596,17 @@ export function createTelemetry({
       try {
         const image = await cameras.getImage(rawDevice);
         if (image) {
+          changed = changed || lastImages.get(id) !== image;
           lastImages.set(id, image);
           await gladys.publishCameraImage(externalId, image);
         }
       } catch (err) {
         logger.warn(`Camera image refresh failed for ${id}: ${err.message}`);
       }
+    }
+    if (changed) {
+      // New snapshots: the cameras widget shows them under new image keys.
+      notify('cameras');
     }
   }
 
@@ -472,6 +711,22 @@ export function createTelemetry({
     });
   }
 
+  /**
+   * Refresh right now from a FRESH account load (after a command whose effect
+   * the next 120 s cycle would otherwise show late): the burst cache is
+   * bypassed, and a cycle already in flight — started before the command —
+   * is awaited first so it cannot hide the new state.
+   * @param {object} config normalized integration config
+   * @returns {Promise<number>} number of states published
+   */
+  async function refreshNow(config) {
+    if (refreshInFlight) {
+      await refreshInFlight.catch(() => {});
+    }
+    loadCache = null;
+    return refreshValues(config);
+  }
+
   /** Start the periodic refresh loop (immediate first cycle). */
   function start(config) {
     stop();
@@ -484,13 +739,80 @@ export function createTelemetry({
     refreshTimer.unref?.();
   }
 
-  /** Stop the periodic refresh loop. */
+  /** Cancel a pending one-shot refresh. */
+  function clearDelayedRefresh() {
+    if (delayedRefreshTimer) {
+      clearTimeout(delayedRefreshTimer);
+      delayedRefreshTimer = null;
+    }
+  }
+
+  /**
+   * Arm ONE refresh after `delayMs` (a shutter command moves a motor for a
+   * few dozen seconds): commands in a row re-arm the same timer instead of
+   * stacking API loads.
+   * @param {object} config normalized integration config
+   * @param {number} [delayMs] delay before the refresh
+   */
+  function scheduleRefresh(config, delayMs = SHUTTER_REFRESH_DELAY_MS) {
+    clearDelayedRefresh();
+    delayedRefreshTimer = setTimeout(() => {
+      delayedRefreshTimer = null;
+      refreshValues(config).catch((err) =>
+        logger.error(`Netatmo value refresh failed: ${err.message}`),
+      );
+    }, delayMs);
+    delayedRefreshTimer.unref?.();
+  }
+
+  /** Stop the periodic refresh loop (and any pending one-shot refresh). */
   function stop() {
     if (refreshTimer) {
       clearInterval(refreshTimer);
       refreshTimer = null;
     }
+    clearDelayedRefresh();
   }
 
-  return { syncDiscovery, refreshValues, getCameraSnapshot, resetDedup, start, stop };
+  /**
+   * Homes summaries of the last account load (see discovery summarizeHome).
+   * @returns {Array<object>} one entry per homesdata home
+   */
+  function getHomes() {
+    return [...homesById.values()];
+  }
+
+  /**
+   * Last raw Netatmo payload of a device (see rawDevicesById).
+   * @param {string} id Netatmo id
+   * @returns {object|undefined} the raw device
+   */
+  function getRawDevice(id) {
+    return rawDevicesById.get(id);
+  }
+
+  /**
+   * Last image published (or served on demand) for a camera.
+   * @param {string} id Netatmo camera id
+   * @returns {string|undefined} `image/jpg;base64,...` string
+   */
+  function getCameraImage(id) {
+    return lastImages.get(id);
+  }
+
+  return {
+    syncDiscovery,
+    refreshValues,
+    refreshNow,
+    getHomes,
+    getRawDevice,
+    getCameraImage,
+    onUpdate,
+    scheduleRefresh,
+    getCameraSnapshot,
+    getDegradedMessage,
+    resetDedup,
+    start,
+    stop,
+  };
 }

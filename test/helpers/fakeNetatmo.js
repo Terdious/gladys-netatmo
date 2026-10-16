@@ -3,7 +3,8 @@
 //   - POST /oauth2/token: authorization_code and refresh_token grants,
 //     with rotating refresh tokens (like the real Netatmo);
 //   - Bearer-protected API: homesdata, homestatus, getthermostatsdata,
-//     getstationsdata, setroomthermpoint (form), setstate (JSON);
+//     getstationsdata, setroomthermpoint, setthermmode, setpersonsaway and
+//     setpersonshome (form), gethomecoachsdata, setstate (JSON);
 //   - two fake cameras (/vpn/<id> and /local/<id>: command/ping + snapshot).
 // Behaviour toggles (`failTokenWith`, `rejectAccessToken`, `failSetpointWith`,
 // `failLocalSnapshot`) let the tests exercise the failure paths.
@@ -55,6 +56,13 @@ function buildDefaultHomes() {
         // Smoke alarm: discovered with battery + signal; smoke state is
         // webhook-driven (issue #9 / #5).
         { id: 'smoke-1', type: 'NSD', name: 'Détecteur de fumée', bridge: 'camera-1' },
+        // Carbon monoxide alarm (issue #36): modelled on the smoke alarm.
+        { id: 'co-1', type: 'NCO', name: 'Détecteur de CO', room_id: 'room-1' },
+      ],
+      // Persons known to the indoor camera (face recognition), homesdata shape.
+      persons: [
+        { id: 'person-1', pseudo: 'Alice', url: 'https://example.invalid/alice.jpg' },
+        { id: 'person-2', pseudo: 'Bob', url: 'https://example.invalid/bob.jpg' },
       ],
     },
   ];
@@ -65,6 +73,8 @@ function buildDefaultHomeStatuses() {
     'home-1': {
       home: {
         id: 'home-1',
+        // Heating mode of the home (issue #38), as homestatus reports it.
+        therm_mode: 'schedule',
         rooms: [
           {
             id: 'room-1',
@@ -104,6 +114,8 @@ function buildDefaultHomeStatuses() {
             rf_strength: 68,
           },
           { id: 'smoke-1', type: 'NSD', battery_percent: 88, wifi_strength: 66 },
+          // No wifi field: the CO alarm must only publish what homestatus carries.
+          { id: 'co-1', type: 'NCO', battery_percent: 92 },
         ],
         errors: [{ code: 6, id: 'valve-2' }],
       },
@@ -175,6 +187,126 @@ function buildDefaultStationDevices() {
   ];
 }
 
+// -----------------------------------------------------------------------------
+// Bubendorff / iDiamant roller shutters (issue #34), modelled on the pyatmo
+// homesdata/homestatus fixtures: an iDiamant gateway (NBG, never exposed as a
+// device), a radio shutter (NBR, closed), a wired one (NBO, open — with the
+// "target_position:step" key spelling of the pyatmo fixture) and a solar one
+// (NBS) missing from homestatus (reported in `errors` → unreachable). Opt-in:
+// call it on `state` so the default fixtures (and their counts) stay intact.
+// -----------------------------------------------------------------------------
+
+export const SHUTTER_BRIDGE_ID = '12:34:56:30:d5:d4';
+
+export function addShutterFixtures(state, homeId = 'home-1') {
+  const home = state.homes.find((h) => h.id === homeId);
+  home.modules.push(
+    {
+      id: SHUTTER_BRIDGE_ID,
+      type: 'NBG',
+      name: 'module iDiamant',
+      room_id: 'room-1',
+      modules_bridged: ['0009999992', '0009999993', '0009999994'],
+    },
+    {
+      id: '0009999992',
+      type: 'NBR',
+      name: 'Entrance Blinds',
+      room_id: 'room-1',
+      bridge: SHUTTER_BRIDGE_ID,
+    },
+    {
+      id: '0009999993',
+      type: 'NBO',
+      name: 'Bubendorff blind',
+      room_id: 'room-2',
+      bridge: SHUTTER_BRIDGE_ID,
+    },
+    { id: '0009999994', type: 'NBS', name: 'Volet solaire', bridge: SHUTTER_BRIDGE_ID },
+  );
+  const status = state.homeStatuses[homeId].home;
+  status.modules.push(
+    {
+      id: SHUTTER_BRIDGE_ID,
+      type: 'NBG',
+      firmware_revision: 39,
+      wifi_strength: 65,
+      reachable: true,
+    },
+    {
+      id: '0009999992',
+      type: 'NBR',
+      current_position: 0,
+      target_position: 0,
+      target_position_step: 100,
+      firmware_revision: 16,
+      rf_strength: 0,
+      last_seen: 1638353156,
+      reachable: true,
+      bridge: SHUTTER_BRIDGE_ID,
+    },
+    {
+      id: '0009999993',
+      type: 'NBO',
+      current_position: 100,
+      target_position: 100,
+      'target_position:step': 100,
+      firmware_revision: 22,
+      rf_strength: 74,
+      last_seen: 1671395511,
+      reachable: true,
+      bridge: SHUTTER_BRIDGE_ID,
+    },
+  );
+  status.errors.push({ code: 6, id: '0009999994' });
+}
+
+// Home Coach / Smart Indoor Air Quality Monitors (issue #37), shaped like the
+// pyatmo fixture gethomecoachsdata.json: one UNREACHABLE device without
+// dashboard_data, one reachable device whose generic `module_name` ("Indoor")
+// must not win over its `station_name`.
+function buildDefaultHomeCoachDevices() {
+  return [
+    {
+      _id: '12:34:56:26:69:0c',
+      type: 'NHC',
+      station_name: 'Bedroom',
+      wifi_status: 58,
+      reachable: false,
+      co2_calibrating: false,
+      firmware: 45,
+      data_type: ['Temperature', 'CO2', 'Humidity', 'Noise', 'Pressure', 'health_idx'],
+      place: { city: 'Frankfurt', country: 'DE', timezone: 'Europe/Berlin' },
+    },
+    {
+      _id: '12:34:56:3e:c5:46',
+      type: 'NHC',
+      station_name: 'Parents Bedroom',
+      module_name: 'Indoor',
+      wifi_status: 67,
+      reachable: true,
+      co2_calibrating: false,
+      firmware: 45,
+      data_type: ['Temperature', 'CO2', 'Humidity', 'Noise', 'Pressure', 'health_idx'],
+      place: { city: 'Frankfurt', country: 'DE', timezone: 'Europe/Berlin' },
+      dashboard_data: {
+        time_utc: 1572073816,
+        Temperature: 20.3,
+        CO2: 494,
+        Humidity: 63,
+        Noise: 42,
+        Pressure: 1014.5,
+        AbsolutePressure: 1004.1,
+        health_idx: 1,
+        min_temp: 20.3,
+        max_temp: 21.6,
+        date_max_temp: 1572059333,
+        date_min_temp: 1572073816,
+      },
+    },
+  ];
+}
+
 export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
   const state = {
     tokenRequests: [], // every parsed form POSTed to /oauth2/token
@@ -186,20 +318,31 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     failSetpointWith: null, // set to {status, body} to make setroomthermpoint fail
     setpointRequests: [], // every parsed form POSTed to /api/setroomthermpoint
     setStateRequests: [], // every parsed JSON body POSTed to /api/setstate
+    setThermModeRequests: [], // every parsed form POSTed to /api/setthermmode
+    setPersonsAwayRequests: [], // every raw form body POSTed to /api/setpersonsaway
+    setPersonsHomeRequests: [], // every raw form body POSTed to /api/setpersonshome
+    failPersonsWith: null, // set to {status, body} to make setpersonsaway/home fail
+    failSetThermModeWith: null, // set to {status, body} to make setthermmode fail
     failSetStateWith: null, // set to {status, body} to make setstate fail
     addWebhookRequests: [], // every parsed form POSTed to /api/addwebhook
     dropWebhookRequests: [], // every parsed form POSTed to /api/dropwebhook
     failAddWebhookWith: null, // set to an HTTP status to make addwebhook fail
     failStationsWith: null, // set to an HTTP status to make getstationsdata fail
+    failHomeCoachsWith: null, // set to {status, body} to make gethomecoachsdata fail
     cameraRequests: [], // every hit on the fake camera endpoints ({side, camId, path})
     snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
     failLocalSnapshot: false, // make the LOCAL snapshot fail (stale-cache fallback test)
     failAllSnapshots: false, // make EVERY snapshot fail (last-image fallback test)
+    // Scopes echoed in the token responses, like the real Netatmo: those
+    // requested by the authorization exchange, kept across refreshes. Tests
+    // overwrite it to simulate a token granted before new scopes existed.
+    grantedScopes: ['read_station'],
     baseUrl: '', // filled after listen()
     homes: buildDefaultHomes(),
     homeStatuses: buildDefaultHomeStatuses(),
     thermostatDevices: buildDefaultThermostatDevices(),
     stationDevices: buildDefaultStationDevices(),
+    homeCoachDevices: buildDefaultHomeCoachDevices(),
   };
   let tokenCounter = 0;
 
@@ -212,7 +355,7 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
       access_token: accessToken,
       refresh_token: state.validRefreshToken,
       expires_in: expiresIn,
-      scope: ['read_station'],
+      scope: state.grantedScopes,
     };
   }
 
@@ -269,6 +412,9 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
             respond({ error: 'invalid_grant' }, 400);
             return;
           }
+          if (form.scope) {
+            state.grantedScopes = form.scope.split(' ');
+          }
           respond(issueTokens());
           return;
         }
@@ -319,10 +465,48 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           respond({ status: 'ok', body: { devices: state.stationDevices } });
           return;
         }
+        if (req.url.startsWith('/api/gethomecoachsdata')) {
+          if (state.failHomeCoachsWith) {
+            respond(state.failHomeCoachsWith.body, state.failHomeCoachsWith.status);
+            return;
+          }
+          respond({ status: 'ok', body: { devices: state.homeCoachDevices } });
+          return;
+        }
         if (req.method === 'POST' && req.url.startsWith('/api/setroomthermpoint')) {
           state.setpointRequests.push(Object.fromEntries(new URLSearchParams(body)));
           if (state.failSetpointWith) {
             respond(state.failSetpointWith.body, state.failSetpointWith.status);
+            return;
+          }
+          respond({ status: 'ok' });
+          return;
+        }
+        if (req.method === 'POST' && req.url.startsWith('/api/setthermmode')) {
+          const form = Object.fromEntries(new URLSearchParams(body));
+          state.setThermModeRequests.push(form);
+          if (state.failSetThermModeWith) {
+            respond(state.failSetThermModeWith.body, state.failSetThermModeWith.status);
+            return;
+          }
+          // Like the real cloud: the next homestatus reports the new mode.
+          const homeStatus = state.homeStatuses[form.home_id];
+          if (homeStatus) {
+            homeStatus.home.therm_mode = form.mode;
+          }
+          respond({ status: 'ok' });
+          return;
+        }
+        const personsMatch = req.url.match(/^\/api\/setpersons(away|home)/);
+        if (req.method === 'POST' && personsMatch) {
+          // Raw body kept: setpersonshome repeats the `person_ids[]` field.
+          const requests =
+            personsMatch[1] === 'away'
+              ? state.setPersonsAwayRequests
+              : state.setPersonsHomeRequests;
+          requests.push(body);
+          if (state.failPersonsWith) {
+            respond(state.failPersonsWith.body, state.failPersonsWith.status);
             return;
           }
           respond({ status: 'ok' });

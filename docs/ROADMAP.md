@@ -23,8 +23,17 @@
   animal, vehicle, smoke (PR #22).
 - **v1.3.0**: Cloud catalog tag (#23, PR #24), catalog categories, SDK
   0.15.0, Gladys >= 4.86.0 (PR #25), German and Spanish (PR #26).
-- **Unreleased**: catalog-update and migration docs (PR #31), GitHub Release
-  notes like gladys-tuya (PR #32).
+- **Unreleased** (next release, Gladys >= 5.2.0):
+  - reliability: weather values kept when `getstationsdata` fails, degraded
+    state for a failing API family (#33, PR #43); "smoke cleared" no longer
+    raises a detection (PR #51);
+  - new devices: Bubendorff / iDiamant roller shutters (#34, PR #45), video
+    doorbell (#35, PR #47), carbon monoxide alarm (#36, PR #46), Home Coach
+    (#37, PR #44);
+  - Gladys 5.2 wave: heating mode as a thermostat preset (#38, PR #48), scene
+    triggers and actions (#39, PR #49), dashboard widgets (#40, PR #50);
+  - docs: catalog update and migration (PR #31), GitHub Release notes like
+    gladys-tuya (PR #32), roadmap and forum links (PR #42).
 - Upstream, shipped in Gladys: live-stream latency (GladysAssistant/Gladys#2698,
   4.84.1, see #11), device migration with history
   (GladysAssistant/Gladys#2737, 4.84.1, hardened in #2778).
@@ -35,32 +44,14 @@ Tracking: [#7](https://github.com/Terdious/gladys-netatmo/issues/7). Forum
 topic:
 [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308).
 
-### Reliability
+### To confirm on real hardware
 
-- [#33](https://github.com/Terdious/gladys-netatmo/issues/33) Weather keeps
-  working when `getstationsdata` answers 503 (read `homestatus` too) and a
-  failing API family is reported as a degraded state.
-
-### New devices
-
-- [#34](https://github.com/Terdious/gladys-netatmo/issues/34) Bubendorff /
-  iDiamant roller shutters (NBR, NBO, NBS) — requested on the forum.
-- [#35](https://github.com/Terdious/gladys-netatmo/issues/35) Video doorbell
-  (NDB): ring, image, live stream.
-- [#36](https://github.com/Terdious/gladys-netatmo/issues/36) Carbon monoxide
-  alarm (NCO).
-- [#37](https://github.com/Terdious/gladys-netatmo/issues/37) Home Coach
-  (NHC).
-
-### Enrichments (Gladys 5.2 wave: `gladys_version >= 5.2.0`)
-
-- [#38](https://github.com/Terdious/gladys-netatmo/issues/38) Heating mode
-  (schedule / away / frost guard) as `thermostat/preset`.
-- [#39](https://github.com/Terdious/gladys-netatmo/issues/39) Scene triggers
-  (known person arrives / leaves, siren sounding) and scene actions (heating
-  mode, persons home / away).
-- [#40](https://github.com/Terdious/gladys-netatmo/issues/40) Dashboard
-  widgets: weather, heating, cameras.
+The new devices follow the Netatmo API as implemented by pyatmo (Home
+Assistant) and openHAB; a few payload details still need a real device:
+battery / WiFi field names of the CO alarm, the doorbell id field of
+`incoming_call` and its VPN-only snapshot, intermediate shutter positions,
+and the `person_away` / `siren_sounding` payloads. Feedback welcome on the
+forum topic.
 
 ### Waiting on others
 
@@ -69,6 +60,8 @@ topic:
 - [#19](https://github.com/Terdious/gladys-netatmo/issues/19) Battery level
   on the Devices tab — core PR GladysAssistant/Gladys#3207 (nothing to do
   here: the battery feature is already published).
+- Translated option labels (the Home Coach air quality level is in French
+  only): proposed core change accepting `{ en, fr, de, es }` option labels.
 - [#41](https://github.com/Terdious/gladys-netatmo/issues/41) Siren control
   — blocked: the public API rejects `siren_status`.
 - [#12](https://github.com/Terdious/gladys-netatmo/issues/12) Test-coverage

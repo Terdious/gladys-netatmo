@@ -18,7 +18,12 @@ import {
   DEVICE_FEATURE_UNITS,
 } from '@gladysassistant/integration-sdk';
 
-import { SUPPORTED_MODULE_TYPE, CAMERA_MODULE_TYPES, PARAMS } from './constants.js';
+import {
+  SUPPORTED_MODULE_TYPE,
+  CAMERA_MODULE_TYPES,
+  SHUTTER_MODULE_TYPES,
+  PARAMS,
+} from './constants.js';
 import { netatmoId } from './discovery.js';
 import {
   buildFeatureBattery,
@@ -26,6 +31,7 @@ import {
   buildFeatureWifiStrength,
   buildFeatureTemperature,
   buildFeatureThermSetpointTemperature,
+  buildFeatureThermPreset,
   buildFeatureBoilerStatus,
   buildFeatureHeatingPowerRequest,
   buildFeaturePlugConnectedBoiler,
@@ -37,8 +43,10 @@ import {
   buildFeatureAnimal,
   buildFeatureVehicle,
   buildFeatureSmoke,
+  buildFeatureCarbonMonoxide,
   buildFeatureMonitoring,
   buildFeatureCamera,
+  buildFeatureDoorbellRing,
   buildFeatureCo2,
   buildFeatureHumidity,
   buildFeatureNoise,
@@ -46,6 +54,10 @@ import {
   buildFeatureWindStrength,
   buildFeatureWindAngle,
   buildFeatureRain,
+  buildFeatureShutterState,
+  buildFeatureShutterPosition,
+  buildFeatureHealthIndex,
+  buildFeatureHealthLevel,
 } from './features.js';
 
 const logger = createLogger({ name: 'netatmo-convert' });
@@ -64,6 +76,18 @@ const BATTERY_MODULE_TYPES = [
 ];
 
 const BRIDGE_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.PLUG, SUPPORTED_MODULE_TYPE.NAMAIN];
+
+/** plug_id / plug_name params of a bridged module (its bridge = "plug"). */
+function bridgeParams(plug) {
+  const plugId = netatmoId(plug ?? {});
+  if (!plugId) {
+    return [];
+  }
+  return [
+    { name: PARAMS.PLUG_ID, value: plugId },
+    { name: PARAMS.PLUG_NAME, value: plug.name || plug.module_name || plug.station_name },
+  ];
+}
 
 /** Append the min_temp / max_temp features shared by the indoor/outdoor modules. */
 function pushMinMaxTemp(features, roomName, externalId) {
@@ -84,6 +108,17 @@ function pushMinMaxTemp(features, roomName, externalId) {
 }
 
 /**
+ * Append the heating mode feature (issue #38) — only when the device belongs
+ * to a homesdata home: setthermmode needs the home id, and a legacy-only
+ * thermostat has none.
+ */
+function pushThermPreset(features, homeId, nameDevice, externalId) {
+  if (homeId) {
+    features.push(buildFeatureThermPreset(nameDevice, externalId));
+  }
+}
+
+/**
  * Convert one raw Netatmo device to a Gladys discovery payload.
  * @param {object} gladys SDK instance (external_id builder)
  * @param {object} netatmoDevice raw device from loadDevices()
@@ -97,7 +132,12 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
   const homeId = home || netatmoDevice.home_id;
   // A module present in homestatus but missing from homesdata has no name:
   // fall back to its id rather than shipping the string "undefined".
-  const nameDevice = name || netatmoDevice.module_name || netatmoDevice.station_name || id;
+  // A Home Coach carries a generic `module_name` ("Indoor") next to the name
+  // the user gave it (`station_name`, e.g. "Bedroom"): the latter wins.
+  const homeCoachName =
+    model === SUPPORTED_MODULE_TYPE.NHC ? netatmoDevice.station_name : undefined;
+  const nameDevice =
+    name || homeCoachName || netatmoDevice.module_name || netatmoDevice.station_name || id;
   if (netatmoDevice.not_handled || !id) {
     logger.debug(`Skipping unsupported Netatmo device "${nameDevice ?? id}" (${model})`);
     return null;
@@ -122,14 +162,17 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       buildFeatureBattery(nameDevice, externalId),
       buildFeatureRfStrength(nameDevice, externalId),
     );
-    const plugId = netatmoId(plug ?? {});
-    if (plugId) {
-      const plugName = plug.name || plug.module_name || plug.station_name;
-      params = [
-        { name: PARAMS.PLUG_ID, value: plugId },
-        { name: PARAMS.PLUG_NAME, value: plugName },
-      ];
-    }
+    params = bridgeParams(plug);
+  }
+  if (SHUTTER_MODULE_TYPES.includes(model)) {
+    // Roller shutter (issue #34): its "plug" is the iDiamant gateway (NBG),
+    // whose id must ride along with every /api/setstate command.
+    features.push(
+      buildFeatureShutterState(nameDevice, externalId),
+      buildFeatureShutterPosition(nameDevice, externalId),
+      buildFeatureRfStrength(nameDevice, externalId),
+    );
+    params = bridgeParams(netatmoId(plug ?? {}) ? plug : { id: netatmoDevice.bridge });
   }
   if (BRIDGE_MODULE_TYPES.includes(model) || CAMERA_MODULE_TYPES.includes(model)) {
     features.push(buildFeatureWifiStrength(nameDevice, externalId));
@@ -167,6 +210,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeatureOpenWindow(nameDevice, externalId),
         buildFeatureBoilerStatus(nameDevice, externalId),
       );
+      pushThermPreset(features, homeId, nameDevice, externalId);
       break;
     case SUPPORTED_MODULE_TYPE.PLUG:
       features.push(buildFeaturePlugConnectedBoiler(nameDevice, externalId));
@@ -184,6 +228,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeatureOpenWindow(nameDevice, externalId),
         buildFeatureHeatingPowerRequest(nameDevice, externalId),
       );
+      pushThermPreset(features, homeId, nameDevice, externalId);
       break;
     case SUPPORTED_MODULE_TYPE.NAMAIN:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));
@@ -257,6 +302,26 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeatureSmoke(nameDevice, externalId),
       );
       break;
+    case SUPPORTED_MODULE_TYPE.NCO:
+      // Carbon monoxide alarm (issue #36), modelled on the smoke alarm:
+      // battery + signal are pollable when homestatus carries them, the CO
+      // state only exists in the webhook event stream (`co_detected`).
+      features.push(
+        buildFeatureBattery(nameDevice, externalId),
+        buildFeatureWifiStrength(nameDevice, externalId),
+        buildFeatureCarbonMonoxide(nameDevice, externalId),
+      );
+      break;
+    case SUPPORTED_MODULE_TYPE.NDB:
+      // Video doorbell (issue #35): dashboard image (VPN snapshot) + the ring,
+      // fed by the webhook event stream. No monitoring switch (the API offers
+      // none for the doorbell) and no CAMERA_URL: it streams over WebRTC only,
+      // which the core rtsp-camera service cannot play.
+      features.push(
+        buildFeatureCamera(nameDevice, externalId),
+        buildFeatureDoorbellRing(nameDevice, externalId),
+      );
+      break;
     case SUPPORTED_MODULE_TYPE.NACAMERA:
     case SUPPORTED_MODULE_TYPE.NOC: {
       features.push(buildFeatureMonitoring(nameDevice, externalId));
@@ -288,6 +353,11 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       }
       break;
     }
+    case SUPPORTED_MODULE_TYPE.NBR:
+    case SUPPORTED_MODULE_TYPE.NBO:
+    case SUPPORTED_MODULE_TYPE.NBS:
+      // Features built above (state, position, RF quality).
+      break;
     case SUPPORTED_MODULE_TYPE.NAMODULE4:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));
       if (room.id) {
@@ -299,6 +369,25 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       features.push(
         buildFeatureCo2(nameDevice, externalId),
         buildFeatureHumidity(nameDevice, externalId),
+      );
+      break;
+    case SUPPORTED_MODULE_TYPE.NHC:
+      // Home Coach / Smart Indoor Air Quality Monitor (issue #37): standalone
+      // wifi device, same measures (and suffixes) as the weather indoor
+      // modules, plus the health index.
+      features.push(
+        buildFeatureWifiStrength(nameDevice, externalId),
+        buildFeatureTemperature(nameDevice, externalId, 'temperature'),
+      );
+      pushMinMaxTemp(features, nameDevice, externalId);
+      features.push(
+        buildFeatureCo2(nameDevice, externalId),
+        buildFeatureHumidity(nameDevice, externalId),
+        buildFeatureNoise(nameDevice, externalId),
+        buildFeaturePressure(`Pressure - ${nameDevice}`, externalId, 'pressure'),
+        buildFeaturePressure(`Absolute pressure - ${nameDevice}`, externalId, 'absolute_pressure'),
+        buildFeatureHealthIndex(nameDevice, externalId),
+        buildFeatureHealthLevel(nameDevice, externalId),
       );
       break;
     default:
