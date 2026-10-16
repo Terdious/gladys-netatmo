@@ -1,7 +1,8 @@
 # Netatmo-Integration für Gladys Assistant
 
 Verbinde deine **Netatmo**-Geräte — Wetterstation, Thermostate und
-Heizkörperventile, Innen- und Außenkameras samt Zubehör — mit Gladys Assistant.
+Heizkörperventile, Innen- und Außenkameras samt Zubehör, Bubendorff-Rollläden —
+mit Gladys Assistant.
 
 Diese Integration kommuniziert in deinem Namen mit der Netatmo-Cloud: Du
 erstellst einmalig deine eigene Netatmo-Connect-Anwendung, verbindest dein
@@ -36,9 +37,9 @@ Gladys und deinem Netatmo-Konto bleiben.
 
 Du musst im Portal **keine** Berechtigungen (Scopes) und keine Redirect-URI
 konfigurieren: Gladys fordert die benötigten Berechtigungen (Lesen + Schreiben,
-für Energie, Wetter und Sicherheit einschließlich Kameras und Video-Türklingel)
-beim Verbinden automatisch an und kümmert sich selbst um die
-OAuth2-Weiterleitung.
+für Energie, Wetter, Sicherheit einschließlich Kameras und Video-Türklingel
+sowie die Rollläden) beim Verbinden automatisch an und kümmert sich selbst um
+die OAuth2-Weiterleitung.
 
 ---
 
@@ -74,6 +75,7 @@ Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 | **Energie**    | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)                      |
 | **Wetter**     | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                     |
 | **Sicherheit** | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör |
+| **Rollläden**  | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                         |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -222,6 +224,37 @@ verknüpfte Zubehör erkannt:
 
 ---
 
+## Rollläden (Bubendorff / iDiamant)
+
+Aktiviere **Rollläden (Bubendorff / iDiamant)** unter **Zu erkennende Geräte**
+(standardmäßig aus), um die Bubendorff-Rollläden zu erkennen, die mit deinem
+iDiamant-Gateway verbunden sind: Funk- (`NBR`), kabelgebundene (`NBO`) und
+Solarmodelle (`NBS`). Jeder Rollladen wird erstellt mit:
+
+- einer Steuerung **öffnen / schließen / stoppen**;
+- einer **Position** (0 % = geschlossen, 100 % = offen), die du auch einstellen
+  kannst;
+- der Qualität seines **Funksignals (RF)**.
+
+Das iDiamant-Gateway selbst wird nicht als Gerät erstellt: Seine ID wird im
+Parameter `plug_id` des Rollladens gespeichert, jeder Befehl läuft darüber.
+Nach einem Befehl aktualisiert Gladys die Werte etwa 30 Sekunden später, damit
+die neue Position erscheint, ohne auf den nächsten 2-Minuten-Zyklus zu warten.
+
+> ⚠️ **Schon vor der Rollladen-Unterstützung verbunden?** Die Rollläden
+> benötigen zwei neue Netatmo-Berechtigungen. Klicke im Konfigurationsbildschirm
+> erneut auf **Verbinden** und autorisiere Gladys — deine Geräte und
+> Einstellungen bleiben erhalten. Bis dahin schlägt ein Rollladenbefehl fehl,
+> und der Konfigurationsbildschirm fordert dich auf, dich erneut zu verbinden.
+
+**Zwischenpositionen:** Je nach Modell und Motor können manche
+Bubendorff-Rollläden nur ganz öffnen oder ganz schließen. Eine Zwischenposition
+kann dann vom Rollladen ignoriert oder gerundet werden, und die gemeldete
+Position spiegelt eventuell nur den letzten Befehl wider — nutze bei diesen
+Modellen öffnen / schließen / stoppen.
+
+---
+
 ## Die Integration aktualisieren
 
 **Aus dem Katalog installiert** (der übliche Fall): Gladys prüft den Store
@@ -315,6 +348,9 @@ verschiebt nur, was noch übrig ist.
 - **Ein Kamerawert oder ein Überwachungsbefehl schlägt einmal mit einer Meldung
   „erneut verbinden“ fehl:** Deiner Netatmo-Autorisierung fehlt die
   Kamera-Berechtigung — verbinde dein Konto erneut.
+- **Ein Rollladenbefehl schlägt mit einer Meldung „erneut verbinden“ fehl:**
+  Deine Netatmo-Autorisierung stammt aus der Zeit vor der
+  Rollladen-Unterstützung — klicke erneut auf Verbinden.
 - **Kein Kameraton:** Siehe den Mikrofon-Tipp im Abschnitt Kameras oben.
 - **Status „einige Netatmo-Berechtigungen fehlen“:** Eine neuere Version hat
   Berechtigungen hinzugefügt (Video-Türklingel) — klicke erneut auf Verbinden

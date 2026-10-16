@@ -99,12 +99,18 @@ export const SUPPORTED_MODULE_TYPE = {
   // Smart video doorbell (issue #35): a camera of its own (snapshot + wifi),
   // plus the ring, which only exists in the webhook event stream.
   NDB: 'NDB',
+  // Bubendorff roller shutters, bridged by the iDiamant gateway (NBG, not
+  // exposed as a device): NBR (radio), NBO (wired), NBS (solar), issue #34.
+  NBR: 'NBR',
+  NBO: 'NBO',
+  NBS: 'NBS',
 };
 
 export const SUPPORTED_CATEGORY_TYPE = {
   ENERGY: 'Energy',
   WEATHER: 'Weather',
   SECURITY: 'Security',
+  SHUTTER: 'Shutter',
   UNKNOWN: 'unknown',
 };
 
@@ -155,6 +161,35 @@ export const SECURITY_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NSD,
   SUPPORTED_MODULE_TYPE.NCO,
 ];
+
+// Bubendorff / iDiamant roller shutters (issue #34): homesdata/homestatus
+// modules like the Energy ones, gated by their own `shutter_api` toggle.
+export const SHUTTER_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.NBR,
+  SUPPORTED_MODULE_TYPE.NBO,
+  SUPPORTED_MODULE_TYPE.NBS,
+];
+
+// Gladys cover states (server/utils/constants.js COVER_STATE — not exported
+// by the SDK).
+export const COVER_STATE = {
+  STOP: 0,
+  OPEN: 1,
+  CLOSE: -1,
+};
+
+// /api/setstate `target_position` values of a roller shutter (pyatmo
+// ShutterMixin): fully open, fully closed, stop where it is.
+export const SHUTTER_POSITION = {
+  OPEN: 100,
+  CLOSE: 0,
+  STOP: -1,
+};
+
+// A shutter command moves a motor for a few dozen seconds: refresh the values
+// once after this delay so the position lands without waiting for the next
+// 120s cycle.
+export const SHUTTER_REFRESH_DELAY_MS = 30 * 1000;
 
 // Device params persisted on the Gladys device (same names as the core:
 // home_id/room_id are required by setroomthermpoint).
@@ -252,6 +287,9 @@ export const OAUTH_SCOPES = [
   'access_doorbell',
   // Aircare
   'read_homecoach',
+  // Bubendorff / iDiamant roller shutters (issue #34)
+  'read_bubendorff',
+  'write_bubendorff',
 ];
 
 // Refresh the access token at 80% of its lifetime (core PR #2618 hardening),
@@ -311,5 +349,13 @@ export const CONNECTION_MESSAGES = {
     fr: 'Le cloud Netatmo est injoignable, nouvelle tentative automatique.',
     de: 'Die Netatmo-Cloud ist nicht erreichbar, neuer Versuch erfolgt automatisch.',
     es: 'La nube de Netatmo no está disponible, se reintentará automáticamente.',
+  },
+  // Connected, but the token predates the shutter scopes (issue #34): shown
+  // as an info line on the Configuration screen until the next connection.
+  SHUTTER_SCOPE_MISSING: {
+    en: 'Netatmo refused the roller shutter command: reconnect your Netatmo account (Connect button) to grant the shutter permissions.',
+    fr: 'Netatmo a refusé la commande du volet roulant : reconnectez votre compte Netatmo (bouton Connecter) pour accorder les autorisations des volets.',
+    de: 'Netatmo hat den Rollladenbefehl abgelehnt: Verbinde dein Netatmo-Konto erneut (Schaltfläche Verbinden), um die Rollladen-Berechtigungen zu erteilen.',
+    es: 'Netatmo rechazó la orden de la persiana: vuelva a conectar su cuenta Netatmo (botón Conectar) para conceder los permisos de las persianas.',
   },
 };

@@ -1,8 +1,8 @@
 # Intégration Netatmo pour Gladys Assistant
 
 Connectez vos appareils **Netatmo** — station météo, thermostats et vannes de
-radiateur, caméras intérieure/extérieure et leurs accessoires — à Gladys
-Assistant.
+radiateur, caméras intérieure/extérieure et leurs accessoires, volets roulants
+Bubendorff — à Gladys Assistant.
 
 Cette intégration communique avec le cloud Netatmo pour vous : vous créez une
 fois votre propre application Netatmo Connect, connectez votre compte, et Gladys
@@ -36,9 +36,9 @@ votre compte Netatmo.
 
 Vous n'avez **pas** besoin de configurer de scopes ni d'URL de redirection sur
 le portail : Gladys demande automatiquement les scopes requis (lecture +
-écriture, couvrant l'Énergie, la Météo et la Sécurité y compris les caméras et
-la sonnette vidéo) au moment de la connexion, et gère lui-même la redirection
-OAuth2.
+écriture, couvrant l'Énergie, la Météo, la Sécurité y compris les caméras et la
+sonnette vidéo, et les volets roulants) au moment de la connexion, et gère
+lui-même la redirection OAuth2.
 
 ---
 
@@ -66,11 +66,12 @@ vous invite à vous reconnecter.
 
 Sous **Appareils à découvrir**, activez les familles que vous possédez :
 
-| Interrupteur | Découvre                                                                                              |
-| ------------ | ----------------------------------------------------------------------------------------------------- |
-| **Énergie**  | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`)                               |
-| **Météo**    | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                     |
-| **Sécurité** | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires |
+| Interrupteur        | Découvre                                                                                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Énergie**         | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`)                               |
+| **Météo**           | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                     |
+| **Sécurité**        | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires |
+| **Volets roulants** | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                     |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -222,6 +223,37 @@ Quand la famille Sécurité est activée, les accessoires liés à vos caméras 
 
 ---
 
+## Volets roulants (Bubendorff / iDiamant)
+
+Activez **Volets roulants (Bubendorff / iDiamant)** sous **Appareils à
+découvrir** (désactivé par défaut) pour découvrir les volets Bubendorff reliés
+à votre passerelle iDiamant : modèles radio (`NBR`), filaires (`NBO`) et
+solaires (`NBS`). Chaque volet est créé avec :
+
+- une commande **ouvrir / fermer / stop** ;
+- une **position** (0 % = fermé, 100 % = ouvert), que vous pouvez aussi régler ;
+- la qualité de son **signal RF**.
+
+La passerelle iDiamant elle-même n'est pas créée comme appareil : son
+identifiant est conservé dans le paramètre `plug_id` du volet, chaque commande
+passe par elle. Après une commande, Gladys rafraîchit les valeurs environ
+30 secondes plus tard pour que la nouvelle position s'affiche sans attendre le
+prochain cycle de 2 minutes.
+
+> ⚠️ **Déjà connecté avant la prise en charge des volets ?** Les volets
+> demandent deux nouvelles autorisations Netatmo. Recliquez sur **Connecter**
+> dans l'écran de configuration et autorisez Gladys — vos appareils et
+> réglages sont conservés. D'ici là, une commande de volet échoue et l'écran de
+> configuration vous invite à vous reconnecter.
+
+**Positions intermédiaires :** selon le modèle et le moteur, certains volets
+Bubendorff ne savent que s'ouvrir ou se fermer complètement. Une position
+intermédiaire peut alors être ignorée ou arrondie par le volet, et la position
+remontée peut ne refléter que la dernière commande — utilisez ouvrir / fermer /
+stop sur ces modèles.
+
+---
+
 ## Mettre à jour l'intégration
 
 **Installée depuis le catalogue** (le cas habituel) : Gladys consulte
@@ -315,6 +347,9 @@ peut être relancée : elle ne déplace que ce qui reste.
 - **Une valeur de caméra ou une commande monitoring échoue une fois avec un
   message « reconnecter » :** votre autorisation Netatmo n'a pas le scope
   caméra — reconnectez votre compte.
+- **Une commande de volet échoue avec un message « reconnecter » :** votre
+  autorisation Netatmo date d'avant la prise en charge des volets — recliquez
+  sur Connecter.
 - **Pas de son sur la caméra :** voir l'astuce microphone dans la section
   Caméras ci-dessus.
 - **Statut « des autorisations Netatmo manquent » :** une version plus récente

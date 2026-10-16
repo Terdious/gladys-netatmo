@@ -57,6 +57,11 @@ capabilities land (Home + Security cameras, webhooks, …).
   smoke alarm (`NSD`) and the carbon monoxide alarm (`NCO`) are discovered
   with battery + signal — their smoke / CO state is webhook-driven. Net-new vs
   the core service.
+- **Roller shutters** (opt-in via the `shutter_api` toggle): Bubendorff
+  shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`) with open / close /
+  stop, a writable position and RF quality (`/api/setstate` through the
+  gateway; new `read_bubendorff` / `write_bubendorff` scopes — existing users
+  reconnect once).
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required), plus the
   **degraded state**: an API family failing 3 cycles in a row is named under

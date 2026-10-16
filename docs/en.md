@@ -1,7 +1,8 @@
 # Netatmo integration for Gladys Assistant
 
 Connect your **Netatmo** devices — weather station, thermostats and radiator
-valves, indoor/outdoor cameras and their accessories — to Gladys Assistant.
+valves, indoor/outdoor cameras and their accessories, Bubendorff roller
+shutters — to Gladys Assistant.
 
 This integration talks to the Netatmo cloud on your behalf: you create your own
 Netatmo Connect application once, connect your account, and Gladys discovers
@@ -33,9 +34,9 @@ application, so your data stays between your Gladys and your Netatmo account.
    - **client secret**
 
 You do **not** need to configure scopes or a redirect URI on the portal: Gladys
-requests the required scopes (read + write, covering Energy, Weather and
-Security including cameras and the video doorbell) automatically during the
-connection, and handles the OAuth2 redirect itself.
+requests the required scopes (read + write, covering Energy, Weather, Security
+including cameras and the video doorbell, and the roller shutters)
+automatically during the connection, and handles the OAuth2 redirect itself.
 
 ---
 
@@ -62,11 +63,12 @@ expires beyond repair, the Configuration screen tells you to reconnect.
 
 Under **Devices to discover**, enable the families you own:
 
-| Toggle       | Discovers                                                                                       |
-| ------------ | ----------------------------------------------------------------------------------------------- |
-| **Energy**   | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`)                         |
-| **Weather**  | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                               |
-| **Security** | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories |
+| Toggle              | Discovers                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`)                         |
+| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                               |
+| **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories |
+| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -205,6 +207,34 @@ discovered too:
 
 ---
 
+## Roller shutters (Bubendorff / iDiamant)
+
+Enable **Roller shutters (Bubendorff / iDiamant)** under **Devices to
+discover** (off by default) to discover the Bubendorff shutters linked to your
+iDiamant gateway: radio (`NBR`), wired (`NBO`) and solar (`NBS`) models. Each
+shutter is created with:
+
+- an **open / close / stop** control;
+- a **position** (0% = closed, 100% = open), which you can also set;
+- its **RF signal** quality.
+
+The iDiamant gateway itself is not created as a device: its id is kept as the
+shutter's `plug_id` parameter, every command goes through it. After a command,
+Gladys refreshes the values about 30 seconds later so the new position shows
+up without waiting for the next 2-minute cycle.
+
+> ⚠️ **Already connected before shutter support?** The shutters need two new
+> Netatmo permissions. Click **Connect** again on the Configuration screen and
+> authorize Gladys — your devices and settings are kept. Until then, a shutter
+> command fails and the Configuration screen asks you to reconnect.
+
+**Intermediate positions:** depending on the model and motor, some Bubendorff
+shutters only open or close fully. An intermediate position may then be
+ignored or rounded by the shutter, and the reported position may only reflect
+the last command — use open / close / stop on those.
+
+---
+
 ## Updating the integration
 
 **Installed from the catalog** (the usual case): Gladys checks the store
@@ -290,6 +320,8 @@ moves what is left.
 - **A camera value or monitoring command fails once with a "reconnect" message:**
   your Netatmo authorization is missing the camera scope — reconnect your
   account.
+- **A shutter command fails with a "reconnect" message:** your Netatmo
+  authorization predates the shutter support — click Connect again.
 - **No camera sound:** see the microphone tip in the Cameras section above.
 - **"Some Netatmo permissions are missing" status:** a newer version added
   permissions (video doorbell) — click Connect again and accept them. The

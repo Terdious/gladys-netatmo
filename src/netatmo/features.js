@@ -386,3 +386,37 @@ export function buildFeatureRain(name, externalId, featureName, unit) {
     max: 100,
   });
 }
+
+// --- Roller shutters (Bubendorff / iDiamant, issue #34) ---------------------
+
+// Open / close / stop command (Gladys COVER_STATE: CLOSE -1, STOP 0, OPEN 1),
+// sent as an /api/setstate target_position (0 / -1 / 100).
+export function buildFeatureShutterState(name, externalId) {
+  return feature({
+    name: `Shutter - ${name}`,
+    external_id: `${externalId}:state`,
+    selector: `${externalId}:state`,
+    category: DEVICE_FEATURE_CATEGORIES.SHUTTER,
+    type: DEVICE_FEATURE_TYPES.SHUTTER.STATE,
+    read_only: false,
+    keep_history: false,
+    min: -1,
+    max: 1,
+  });
+}
+
+// Position in percent (0 = closed, 100 = open), read from the homestatus
+// `current_position` and writable as a target_position.
+export function buildFeatureShutterPosition(name, externalId) {
+  return feature({
+    name: `Position - ${name}`,
+    external_id: `${externalId}:position`,
+    selector: `${externalId}:position`,
+    category: DEVICE_FEATURE_CATEGORIES.SHUTTER,
+    type: DEVICE_FEATURE_TYPES.SHUTTER.POSITION,
+    unit: DEVICE_FEATURE_UNITS.PERCENT,
+    read_only: false,
+    min: 0,
+    max: 100,
+  });
+}

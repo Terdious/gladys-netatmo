@@ -185,6 +185,24 @@
       "default": false
     },
     {
+      "key": "shutter_api",
+      "type": "boolean",
+      "label": {
+        "en": "Roller shutters (Bubendorff / iDiamant)",
+        "fr": "Volets roulants (Bubendorff / iDiamant)",
+        "de": "Rollläden (Bubendorff / iDiamant)",
+        "es": "Persianas enrollables (Bubendorff / iDiamant)"
+      },
+      "description": {
+        "en": "Discover the Bubendorff roller shutters linked to an iDiamant gateway (open, close, stop, position). Already connected? Click Connect again to grant the shutter permissions.",
+        "fr": "Découvrir les volets roulants Bubendorff reliés à une passerelle iDiamant (ouvrir, fermer, stop, position). Déjà connecté ? Cliquez à nouveau sur Connecter pour accorder les autorisations des volets.",
+        "de": "Bubendorff-Rollläden erkennen, die mit einem iDiamant-Gateway verbunden sind (öffnen, schließen, stoppen, Position). Schon verbunden? Klicke erneut auf Verbinden, um die Rollladen-Berechtigungen zu erteilen.",
+        "es": "Descubrir las persianas enrollables Bubendorff conectadas a una pasarela iDiamant (abrir, cerrar, parar, posición). ¿Ya está conectado? Vuelva a hacer clic en Conectar para conceder los permisos de las persianas."
+      },
+      "required": false,
+      "default": false
+    },
+    {
       "key": "camera_quality",
       "type": "select",
       "label": {

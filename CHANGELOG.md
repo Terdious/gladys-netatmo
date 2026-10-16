@@ -12,6 +12,15 @@ the notes of the version's GitHub Release.
 
 ### Added
 
+- Bubendorff / iDiamant roller shutters (`NBR` radio, `NBO` wired, `NBS`
+  solar), behind a new **Roller shutters (Bubendorff / iDiamant)** toggle (off
+  by default): open / close / stop, a writable position (0-100 %, read from
+  `current_position`) and the RF quality, commanded through `/api/setstate`
+  via the iDiamant gateway, with a values refresh 30 seconds after each
+  command. The `read_bubendorff` / `write_bubendorff` scopes are requested:
+  already connected users click **Connect** again to grant them — a refused
+  shutter command says so on the Configuration screen, in the four languages
+  ([#34](https://github.com/Terdious/gladys-netatmo/issues/34)).
 - Netatmo video doorbell (`NDB`), behind the Security toggle: dashboard image
   (snapshot fetched on the Netatmo VPN URL — the doorbell serves nothing on the
   local network), Wifi quality and a **Doorbell** ring fed by the webhooks

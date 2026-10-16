@@ -1,8 +1,8 @@
 # Integración Netatmo para Gladys Assistant
 
 Conecte sus dispositivos **Netatmo** — estación meteorológica, termostatos y
-válvulas de radiador, cámaras de interior/exterior y sus accesorios — a Gladys
-Assistant.
+válvulas de radiador, cámaras de interior/exterior y sus accesorios, persianas
+enrollables Bubendorff — a Gladys Assistant.
 
 Esta integración se comunica con la nube de Netatmo en su nombre: usted crea una
 sola vez su propia aplicación Netatmo Connect, conecta su cuenta, y Gladys
@@ -36,9 +36,9 @@ cuenta Netatmo.
 
 **No** necesita configurar permisos (scopes) ni una URI de redirección en el
 portal: Gladys solicita automáticamente los permisos necesarios (lectura +
-escritura, que cubren Energía, Meteorología y Seguridad, cámaras y timbre con
-vídeo incluidos) durante la conexión, y gestiona por sí mismo la redirección
-OAuth2.
+escritura, que cubren Energía, Meteorología, Seguridad, cámaras y timbre con
+vídeo incluidos, y las persianas enrollables) durante la conexión, y gestiona
+por sí mismo la redirección OAuth2.
 
 ---
 
@@ -67,11 +67,12 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor      | Descubre                                                                                             |
-| ---------------- | ---------------------------------------------------------------------------------------------------- |
-| **Energía**      | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)                               |
-| **Meteorología** | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                      |
-| **Seguridad**    | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios |
+| Interruptor               | Descubre                                                                                             |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)                               |
+| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                      |
+| **Seguridad**             | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios |
+| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                  |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -222,6 +223,36 @@ vinculados a sus cámaras:
 
 ---
 
+## Persianas enrollables (Bubendorff / iDiamant)
+
+Active **Persianas enrollables (Bubendorff / iDiamant)** en **Dispositivos a
+descubrir** (desactivado por defecto) para descubrir las persianas Bubendorff
+conectadas a su pasarela iDiamant: modelos por radio (`NBR`), cableados
+(`NBO`) y solares (`NBS`). Cada persiana se crea con:
+
+- un control **abrir / cerrar / parar**;
+- una **posición** (0 % = cerrada, 100 % = abierta), que también puede ajustar;
+- la calidad de su **señal RF**.
+
+La pasarela iDiamant no se crea como dispositivo: su identificador se guarda en
+el parámetro `plug_id` de la persiana, y cada orden pasa por ella. Tras una
+orden, Gladys actualiza los valores unos 30 segundos después para que la nueva
+posición aparezca sin esperar al siguiente ciclo de 2 minutos.
+
+> ⚠️ **¿Ya estaba conectado antes de la compatibilidad con las persianas?** Las
+> persianas necesitan dos nuevos permisos de Netatmo. Vuelva a hacer clic en
+> **Conectar** en la pantalla de configuración y autorice a Gladys — sus
+> dispositivos y ajustes se conservan. Hasta entonces, una orden de persiana
+> falla y la pantalla de configuración le pide que vuelva a conectarse.
+
+**Posiciones intermedias:** según el modelo y el motor, algunas persianas
+Bubendorff solo se abren o se cierran por completo. Una posición intermedia
+puede entonces ser ignorada o redondeada por la persiana, y la posición
+reportada puede reflejar solo la última orden — use abrir / cerrar / parar en
+esos modelos.
+
+---
+
 ## Actualizar la integración
 
 **Instalada desde el catálogo** (el caso habitual): Gladys consulta el store
@@ -315,6 +346,9 @@ relanzarse: solo mueve lo que queda.
 - **Un valor de cámara o un comando de vigilancia falla una vez con un mensaje
   de "reconectar":** a su autorización Netatmo le falta el permiso de cámara —
   vuelva a conectar su cuenta.
+- **Una orden de persiana falla con un mensaje de "reconectar":** su
+  autorización Netatmo es anterior a la compatibilidad con las persianas —
+  vuelva a hacer clic en Conectar.
 - **No hay sonido en la cámara:** consulte el consejo sobre el micrófono en la
   sección Cámaras más arriba.
 - **Estado "faltan algunos permisos de Netatmo":** una versión más reciente

@@ -136,15 +136,17 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
   }
 
   /**
-   * Set the state of a module (camera monitoring on/off), through the JSON
-   * /api/setstate endpoint (core PR #2623).
-   * @param {{homeId: string, moduleId: string, monitoring: string}} state target
+   * Set the state of a module through the JSON /api/setstate endpoint: camera
+   * monitoring on/off (core PR #2623) or a roller shutter target_position +
+   * bridge (issue #34). Every field besides homeId/moduleId goes into the
+   * module entry as is.
+   * @param {{homeId: string, moduleId: string}} state target + module fields
    * @returns {Promise<object>} parsed response body
    */
-  async function setState({ homeId, moduleId, monitoring }) {
+  async function setState({ homeId, moduleId, ...fields }) {
     return request(API_PATHS.SET_STATE, {
       method: 'POST',
-      json: { home: { id: homeId, modules: [{ id: moduleId, monitoring }] } },
+      json: { home: { id: homeId, modules: [{ id: moduleId, ...fields }] } },
     });
   }
 

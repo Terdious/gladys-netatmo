@@ -38,6 +38,7 @@ import {
   CAMERA_LIVE_QUALITIES,
   DEFAULT_CAMERA_LIVE_QUALITY,
   ROOM_DERIVED_SUFFIXES,
+  SHUTTER_REFRESH_DELAY_MS,
   PARAMS,
   SUPPORTED_CATEGORY_TYPE,
   DEGRADED_AFTER_FAILED_LOADS,
@@ -101,6 +102,7 @@ export function createTelemetry({
   const published = new Map();
   let refreshTimer = null;
   let refreshInFlight = null;
+  let delayedRefreshTimer = null;
 
   const cameras = createCameraImages({ fetchImpl, now });
   // Last raw Netatmo payload per camera id (vpn_url, is_local...), refreshed
@@ -127,7 +129,9 @@ export function createTelemetry({
   let lastLoadKey = null;
 
   function loadCacheKey(config) {
-    return `${config.energy_api}|${config.weather_api}|${config.security_api}`;
+    return [config.energy_api, config.weather_api, config.security_api, config.shutter_api].join(
+      '|',
+    );
   }
 
   /**
@@ -612,17 +616,45 @@ export function createTelemetry({
     refreshTimer.unref?.();
   }
 
-  /** Stop the periodic refresh loop. */
+  /** Cancel a pending one-shot refresh. */
+  function clearDelayedRefresh() {
+    if (delayedRefreshTimer) {
+      clearTimeout(delayedRefreshTimer);
+      delayedRefreshTimer = null;
+    }
+  }
+
+  /**
+   * Arm ONE refresh after `delayMs` (a shutter command moves a motor for a
+   * few dozen seconds): commands in a row re-arm the same timer instead of
+   * stacking API loads.
+   * @param {object} config normalized integration config
+   * @param {number} [delayMs] delay before the refresh
+   */
+  function scheduleRefresh(config, delayMs = SHUTTER_REFRESH_DELAY_MS) {
+    clearDelayedRefresh();
+    delayedRefreshTimer = setTimeout(() => {
+      delayedRefreshTimer = null;
+      refreshValues(config).catch((err) =>
+        logger.error(`Netatmo value refresh failed: ${err.message}`),
+      );
+    }, delayMs);
+    delayedRefreshTimer.unref?.();
+  }
+
+  /** Stop the periodic refresh loop (and any pending one-shot refresh). */
   function stop() {
     if (refreshTimer) {
       clearInterval(refreshTimer);
       refreshTimer = null;
     }
+    clearDelayedRefresh();
   }
 
   return {
     syncDiscovery,
     refreshValues,
+    scheduleRefresh,
     getCameraSnapshot,
     getDegradedMessage,
     resetDedup,
