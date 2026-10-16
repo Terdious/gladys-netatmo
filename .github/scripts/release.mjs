@@ -7,8 +7,12 @@
 //     `## [Unreleased]` section of CHANGELOG.md under `## [<version>] - <today>`.
 //
 //   node .github/scripts/release.mjs notes <version> < CHANGELOG.md
-//     Prints the changelog section of <version> (nothing when there is none):
-//     the notes of its GitHub Release.
+//     Prints the changelog section of <version> (nothing when there is none),
+//     one line per bullet: the notes of its GitHub Release.
+//
+// `prepare` refuses to run (exit 1, nothing written) when the Unreleased
+// section of CHANGELOG.md lists no change: a release always says what it
+// ships.
 //
 // Both files are edited in place instead of being re-printed (jq,
 // JSON.stringify...), so the release commit keeps the Prettier layout and
@@ -166,7 +170,53 @@ export function releaseNotes(text, version) {
     return '';
   }
   const bodyStart = match.index + match[0].length;
-  return text.slice(bodyStart, sectionEnd(text, bodyStart)).trim();
+  return unwrapMarkdown(text.slice(bodyStart, sectionEnd(text, bodyStart)).trim());
+}
+
+/**
+ * Join the hard-wrapped lines of a Markdown text. CHANGELOG.md is wrapped at
+ * 80 columns for reading in an editor, but a GitHub Release renders every
+ * newline as a line break: each bullet must be a single line there. Headings,
+ * list items, quotes, tables, blank lines and fenced code keep their lines.
+ * @param {string} text - Markdown text.
+ * @returns {string} The same text, one line per paragraph or list item.
+ */
+export function unwrapMarkdown(text) {
+  const blockStart = /^\s*(?:#|[-*+]\s|\d+[.)]\s|>|\||```|~~~)/;
+  const lines = [];
+  let inFence = false;
+  for (const line of text.split('\n')) {
+    const fence = /^\s*(?:```|~~~)/.test(line);
+    const previous = lines[lines.length - 1];
+    const joinable =
+      !inFence &&
+      !fence &&
+      line.trim() !== '' &&
+      !blockStart.test(line) &&
+      previous !== undefined &&
+      previous.trim() !== '' &&
+      !/^\s*(?:#|```|~~~|\|)/.test(previous);
+    if (joinable) {
+      lines[lines.length - 1] = `${previous.trimEnd()} ${line.trim()}`;
+    } else {
+      lines.push(line);
+    }
+    if (fence) {
+      inFence = !inFence;
+    }
+  }
+  return lines.join('\n');
+}
+
+/**
+ * Whether the Unreleased section of a changelog lists at least one change: a
+ * release always says what it ships, so the Release workflow refuses an empty
+ * one (before anything is pushed).
+ * @param {string} text - CHANGELOG.md content.
+ * @returns {boolean} True when Unreleased holds at least one list item.
+ */
+export function hasUnreleasedChanges(text) {
+  return /^\s*[-*+]\s/m.test(releaseNotes(text, 'Unreleased'));
 }
 
 const isMain = import.meta.url === pathToFileURL(process.argv[1] ?? '').href;
@@ -180,6 +230,13 @@ if (isMain) {
 
   if (command === 'prepare') {
     const [dockerImage, repoUrl] = args;
+    if (existsSync(CHANGELOG_FILE) && !hasUnreleasedChanges(readFileSync(CHANGELOG_FILE, 'utf8'))) {
+      console.error(
+        `::error::${CHANGELOG_FILE}: the "${UNRELEASED_HEADING}" section lists no change.` +
+          ' Describe what this release ships there before releasing.',
+      );
+      process.exit(1);
+    }
     writeFileSync(
       MANIFEST_FILE,
       bumpManifest(readFileSync(MANIFEST_FILE, 'utf8'), version, dockerImage),
