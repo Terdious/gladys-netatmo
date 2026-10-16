@@ -257,11 +257,15 @@ nie aus — die Funktion **Person erkannt** der Kamera deckt alle Personen ab.
 
 ### Aktionen
 
-| Aktion                            | Was sie tut                                                                                                                                  |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Heizmodus ändern**              | Zeitplan, Abwesend oder Frostschutz für das ganze Zuhause; optionale Dauer in Minuten (Abwesend und Frostschutz: danach zurück zum Zeitplan) |
-| **Person als abwesend markieren** | eine bekannte Person oder — Person leer gelassen — das ganze Zuhause leer (aktiviert die anwesenheitsabhängige Kameraüberwachung wieder)     |
-| **Person als anwesend markieren** | eine bekannte Person oder — Person leer gelassen — alle bekannten Personen                                                                   |
+| Aktion                              | Was sie tut                                                                                                                                                                                                      |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Heizmodus ändern**                | Zeitplan, Abwesend oder Frostschutz für das ganze Zuhause; optionale Dauer in Minuten (Abwesend und Frostschutz: danach zurück zum Zeitplan)                                                                     |
+| **Person als abwesend markieren**   | eine bekannte Person oder — Person leer gelassen — das ganze Zuhause leer (aktiviert die anwesenheitsabhängige Kameraüberwachung wieder)                                                                         |
+| **Person als anwesend markieren**   | eine bekannte Person oder — Person leer gelassen — alle bekannten Personen                                                                                                                                       |
+| **Sollwert eines Raums einstellen** | manueller Sollwert (7 bis 30 °C) des Raums des gewählten Thermostats oder Ventils; optionale Dauer in Minuten, danach zurück zum Zeitplan (leer: die Standarddauer eines manuellen Sollwerts in der Netatmo-App) |
+| **Raum boosten**                    | heizt den Raum des gewählten Thermostats oder Ventils mit voller Leistung (Boost); optionale Dauer in Minuten (leer: die Standarddauer des Boosts in der Netatmo-App)                                            |
+| **Zurück zum Zeitplan**             | beendet den manuellen Sollwert oder den Boost des Raums: Er folgt wieder dem Zeitplan                                                                                                                            |
+| **Heizzeitplan auswählen**          | aktiviert einen der Heizzeitpläne des Zuhauses                                                                                                                                                                   |
 
 Das **Zuhause** ist das des Geräts, das du in der Aktion wählst (ein Thermostat
 oder Ventil für die Heizung, eine Kamera für die Personen). Lass es leer, wenn
@@ -269,6 +273,14 @@ dein Konto nur ein Zuhause hat. Das Personenfeld akzeptiert eine
 Szenen-Variable: „Eine bekannte Person kommt an → Person als anwesend
 markieren“ mit der Information **Person**. Jede Aktion gibt den Namen des
 **Zuhauses** an die folgenden Schritte weiter.
+
+Die drei **Raum**-Aktionen gelten für den Raum des gewählten Thermostats oder
+Ventils (Pflichtfeld) und geben auch den Namen des **Raums** weiter.
+**Heizzeitplan auswählen** erwartet den **Namen des Zeitplans genau wie in der
+Netatmo-App** (Groß-/Kleinschreibung egal): Der Szenen-Editor kann die
+Netatmo-Zeitpläne nicht auflisten. Ein unbekannter Name lässt die Aktion
+fehlschlagen, und die Szenen-Logs nennen die Zeitpläne des Zuhauses. Sie gibt
+auch den Namen des **Zeitplans** weiter.
 
 ---
 
@@ -278,11 +290,11 @@ Drei Widgets erscheinen in der Widget-Auswahl des Dashboards (Gladys **5.1**
 oder neuer): **Dashboard bearbeiten**, ein Widget hinzufügen und nach „Netatmo“
 suchen.
 
-| Widget              | Zeigt                                                                                                                                                      | Einstellungen                                                                                             |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind |
-| **Netatmo-Heizung** | den Heizmodus des Zuhauses, eine Zeile pro Raum (gemessene Temperatur → Sollwert) und die Schaltflächen Zeitplan / Frostschutz / Abwesend                  | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause)                                     |
-| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                    | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                |
+| Widget              | Zeigt                                                                                                                                                                                                                                                                                                                                 | Einstellungen                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung                                                                                                                                                                            | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind |
+| **Netatmo-Heizung** | den Heizmodus und den aktiven Zeitplan des Zuhauses, eine Zeile pro Raum (gemessene Temperatur → Sollwert, mit Manuell oder Boost markiert, wenn der Sollwert nicht vom Zeitplan kommt), die Schaltflächen Zeitplan / Frostschutz / Abwesend und, bei mehreren Zeitplänen, eine Schaltfläche **Zeitplan wechseln**, die sie auflistet | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause)                                     |
+| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                                                                                                                                                                                               | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                |
 
 Die Kacheln folgen den Werten live; der Rest wird mit der Integration
 aktualisiert (2 Minuten, oder sobald sich der Heizmodus, die Überwachung oder

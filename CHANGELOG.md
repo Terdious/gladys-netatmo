@@ -12,6 +12,15 @@ the notes of the version's GitHub Release.
 
 ### Added
 
+- Advanced heating: four new scene actions — "Set a room setpoint" (7 to 30 °C,
+  optional duration), "Boost a room" (optional duration), "Back to the
+  schedule" (room of the chosen thermostat or valve, setroomthermpoint `manual`
+  / `max` / `home` with `endtime`) and "Choose the heating schedule" (by its
+  Netatmo name, switchhomeschedule; an unknown name lists the available ones).
+  The Netatmo heating widget shows the active schedule, marks the rooms whose
+  setpoint is manual or a boost, and gets a "Change schedule" button listing the
+  heating schedules of the home
+  ([#58](https://github.com/Terdious/gladys-netatmo/issues/58)).
 - Presence of the persons known to the Netatmo cameras: with the Security
   family enabled, each home gets a "<home> - Known persons" device with one
   presence feature per person named in the Netatmo app (Presence detected =

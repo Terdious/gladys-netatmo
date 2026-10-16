@@ -257,11 +257,15 @@ cámara cubre a todas las personas.
 
 ### Acciones
 
-| Acción                                 | Qué hace                                                                                                                                    |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Cambiar el modo de calefacción**     | Programación, Ausencia o Antihielo para toda la casa; duración opcional en minutos (Ausencia y Antihielo: vuelta a la programación después) |
-| **Marcar a una persona como ausente**  | una persona conocida o — persona vacía — toda la casa vacía (reactiva la vigilancia de las cámaras configurada para seguir la presencia)    |
-| **Marcar a una persona como presente** | una persona conocida o — persona vacía — todas las personas conocidas                                                                       |
+| Acción                                    | Qué hace                                                                                                                                                                                                                         |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cambiar el modo de calefacción**        | Programación, Ausencia o Antihielo para toda la casa; duración opcional en minutos (Ausencia y Antihielo: vuelta a la programación después)                                                                                      |
+| **Marcar a una persona como ausente**     | una persona conocida o — persona vacía — toda la casa vacía (reactiva la vigilancia de las cámaras configurada para seguir la presencia)                                                                                         |
+| **Marcar a una persona como presente**    | una persona conocida o — persona vacía — todas las personas conocidas                                                                                                                                                            |
+| **Ajustar la consigna de una habitación** | consigna manual (7 a 30 °C) de la habitación del termostato o la válvula elegidos; duración opcional en minutos, luego vuelta a la programación (vacío: la duración por defecto de una consigna manual en la aplicación Netatmo) |
+| **Potenciar una habitación**              | calienta a plena potencia (boost) la habitación del termostato o la válvula elegidos; duración opcional en minutos (vacío: la duración por defecto del boost en la aplicación Netatmo)                                           |
+| **Volver a la programación**              | termina la consigna manual o el boost de la habitación: vuelve a seguir la programación                                                                                                                                          |
+| **Elegir la programación de calefacción** | activa una de las programaciones de calefacción de la casa                                                                                                                                                                       |
 
 La **casa** es la del dispositivo que elija en la acción (un termostato o una
 válvula para la calefacción, una cámara para las personas). Déjelo vacío si su
@@ -270,6 +274,15 @@ cuenta tiene una sola casa. El campo persona acepta una variable de escena:
 información **Persona**. Cada acción devuelve el nombre de la **Casa** a los
 pasos siguientes.
 
+Las tres acciones de **habitación** se aplican a la habitación del termostato o
+la válvula elegidos (obligatorio) y también devuelven el nombre de la
+**Habitación**. **Elegir la programación de calefacción** espera el **nombre de
+la programación exactamente como aparece en la aplicación Netatmo** (sin
+distinguir mayúsculas): el editor de escenas no puede listar las programaciones
+de Netatmo. Un nombre inexistente hace fallar la acción, y los registros de la
+escena citan las programaciones de la casa. También devuelve el nombre de la
+**Programación**.
+
 ---
 
 ## Widgets del panel
@@ -277,11 +290,11 @@ pasos siguientes.
 Tres widgets se suman al selector de widgets del panel (Gladys **5.1** o
 posterior): **Editar panel**, añada un widget y busque «Netatmo».
 
-| Widget                  | Muestra                                                                                                                                                          | Ajustes                                                                                                    |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Tiempo Netatmo**      | las fichas en directo de la estación (temperaturas, humedad, CO2, ruido, presión, lluvia, viento) y una fila de estado por módulo con batería baja o inaccesible | la estación (vacío: la primera) y las mediciones mostradas: Resumen, Interior, o Exterior, lluvia y viento |
-| **Calefacción Netatmo** | el modo de calefacción de la casa, una fila por habitación (temperatura medida → consigna) y los botones Programación / Antihielo / Ausencia                     | un termostato o una válvula de la casa (vacío: su única casa)                                              |
-| **Cámaras Netatmo**     | la última imagen de cada cámara, su vigilancia y botones para activarla / desactivarla                                                                           | una cámara mostrada en grande (vacío: todas las cámaras en lista)                                          |
+| Widget                  | Muestra                                                                                                                                                                                                                                                                                                                   | Ajustes                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Tiempo Netatmo**      | las fichas en directo de la estación (temperaturas, humedad, CO2, ruido, presión, lluvia, viento) y una fila de estado por módulo con batería baja o inaccesible                                                                                                                                                          | la estación (vacío: la primera) y las mediciones mostradas: Resumen, Interior, o Exterior, lluvia y viento |
+| **Calefacción Netatmo** | el modo de calefacción y la programación activa de la casa, una fila por habitación (temperatura medida → consigna, marcada Manual o Boost cuando la consigna no viene de la programación), los botones Programación / Antihielo / Ausencia y, con varias programaciones, un botón **Cambiar programación** que las lista | un termostato o una válvula de la casa (vacío: su única casa)                                              |
+| **Cámaras Netatmo**     | la última imagen de cada cámara, su vigilancia y botones para activarla / desactivarla                                                                                                                                                                                                                                    | una cámara mostrada en grande (vacío: todas las cámaras en lista)                                          |
 
 Las fichas siguen los valores en directo; el resto se actualiza con la
 integración (2 minutos, o en cuanto cambian el modo de calefacción, la

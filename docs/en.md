@@ -240,17 +240,28 @@ detected** feature of the camera covers every person.
 
 ### Actions
 
-| Action                       | What it does                                                                                                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Change the heating mode**  | Schedule, Away or Frost protection for the whole home; optional duration in minutes (Away and Frost protection: back to the schedule afterwards) |
-| **Mark a person as away**    | one known person, or — person left empty — the whole home empty (re-arms the camera monitoring set to follow the presence)                       |
-| **Mark a person as at home** | one known person, or — person left empty — every known person                                                                                    |
+| Action                          | What it does                                                                                                                                                                                              |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Change the heating mode**     | Schedule, Away or Frost protection for the whole home; optional duration in minutes (Away and Frost protection: back to the schedule afterwards)                                                          |
+| **Mark a person as away**       | one known person, or — person left empty — the whole home empty (re-arms the camera monitoring set to follow the presence)                                                                                |
+| **Mark a person as at home**    | one known person, or — person left empty — every known person                                                                                                                                             |
+| **Set a room setpoint**         | manual setpoint (7 to 30 °C) of the room of the chosen thermostat or valve; optional duration in minutes, then back to the schedule (empty: the default duration of a manual setpoint in the Netatmo app) |
+| **Boost a room**                | full-power heating (boost) of the room of the chosen thermostat or valve; optional duration in minutes (empty: the default boost duration of the Netatmo app)                                             |
+| **Back to the schedule**        | ends the manual setpoint or the boost of the room: it follows the schedule again                                                                                                                          |
+| **Choose the heating schedule** | makes one of the heating schedules of the home the active one                                                                                                                                             |
 
 The **home** is the one of the device you choose in the action (a thermostat or
 valve for the heating, a camera for the persons). Leave it empty when your
 account has a single home. The person field accepts a scene variable: "A known
 person arrives → Mark a person as at home" with the **Person** information.
 Each action returns the **Home** name to the following steps.
+
+The three **room** actions apply to the room of the thermostat or valve you
+choose (required) and also return the **Room** name. **Choose the heating
+schedule** takes the schedule **name exactly as shown in the Netatmo app**
+(upper / lower case ignored): the scene editor cannot list the Netatmo
+schedules. A name that does not exist fails the action, and the scene logs name
+the schedules of the home. It also returns the **Schedule** name.
 
 ---
 
@@ -259,11 +270,11 @@ Each action returns the **Home** name to the following steps.
 Three widgets join the dashboard widget picker (Gladys **5.1** or later): **Edit
 dashboard**, add a widget and search for "Netatmo".
 
-| Widget              | Shows                                                                                                                                               | Settings                                                                                               |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Netatmo weather** | live tiles of the station (temperatures, humidity, CO2, noise, pressure, rain, wind) and a health row per module with a low battery or out of reach | the station (empty: the first one) and the readings shown: Overview, Indoor, or Outdoor, rain and wind |
-| **Netatmo heating** | the heating mode of the home, one row per room (measured → setpoint temperature) and the Schedule / Frost protection / Away buttons                 | a thermostat or valve of the home (empty: your single home)                                            |
-| **Netatmo cameras** | the latest picture of each camera, its monitoring, and buttons to turn it on / off                                                                  | one camera shown large (empty: every camera in a list)                                                 |
+| Widget              | Shows                                                                                                                                                                                                                                                                                                     | Settings                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Netatmo weather** | live tiles of the station (temperatures, humidity, CO2, noise, pressure, rain, wind) and a health row per module with a low battery or out of reach                                                                                                                                                       | the station (empty: the first one) and the readings shown: Overview, Indoor, or Outdoor, rain and wind |
+| **Netatmo heating** | the heating mode and the active schedule of the home, one row per room (measured → setpoint temperature, marked Manual or Boost when the setpoint does not come from the schedule), the Schedule / Frost protection / Away buttons and, with several schedules, a **Change schedule** button listing them | a thermostat or valve of the home (empty: your single home)                                            |
+| **Netatmo cameras** | the latest picture of each camera, its monitoring, and buttons to turn it on / off                                                                                                                                                                                                                        | one camera shown large (empty: every camera in a list)                                                 |
 
 The tiles follow the values live; the rest refreshes with the integration (2
 minutes, or as soon as the heating mode, the monitoring or a picture changes).

@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { normalizeConfig } from '../../src/config.js';
 import { createNetatmoClient } from '../../src/netatmo/client.js';
 import {
+  heatingSchedulesOf,
   loadAccount,
   loadDevices,
   netatmoId,
@@ -265,6 +266,39 @@ test('an empty homesdata (energy only) takes the legacy Energy fallback without 
     ['plug-1', 'therm-1'],
   );
   assert.deepEqual(byId(devices, 'plug-1').modules_bridged, ['therm-1']);
+});
+
+test('the home summary exposes the heating schedules and the room setpoint modes (issue #58)', async () => {
+  const { homes } = await loadAccount(client, normalizeConfig());
+  assert.deepEqual(homes[0].schedules, [
+    { id: 'schedule-week', name: 'Semaine', selected: true },
+    { id: 'schedule-holidays', name: 'Vacances', selected: false },
+  ]);
+  const rooms = Object.fromEntries(homes[0].rooms.map((room) => [room.id, room]));
+  assert.equal(rooms['room-1'].therm_setpoint_mode, 'schedule');
+  assert.equal(rooms['room-1'].therm_setpoint_end_time, undefined);
+  assert.equal(rooms['room-2'].therm_setpoint_mode, 'manual');
+  assert.equal(rooms['room-2'].therm_setpoint_end_time, 1800003600);
+});
+
+test('heatingSchedulesOf keeps the heating schedules only, an untyped one included', () => {
+  assert.deepEqual(heatingSchedulesOf({}), []);
+  assert.deepEqual(
+    heatingSchedulesOf({
+      schedules: [
+        null,
+        { name: 'no id', type: 'therm' },
+        { id: 'a', name: 'Default', type: 'cooling', selected: true },
+        { id: 'b', type: 'therm', selected: 'yes' },
+        { id: 'c', name: 'Old account' },
+        { id: 'd', name: 'Event', type: 'event' },
+      ],
+    }),
+    [
+      { id: 'b', name: 'b', selected: false },
+      { id: 'c', name: 'Old account', selected: false },
+    ],
+  );
 });
 
 test('a homestatus without home flags the load partial, the legacy families still load', async () => {

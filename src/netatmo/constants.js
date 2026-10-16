@@ -22,6 +22,7 @@ export const API_PATHS = {
   GET_HOME_COACHS: '/api/gethomecoachsdata',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
   SET_THERM_MODE: '/api/setthermmode',
+  SWITCH_HOME_SCHEDULE: '/api/switchhomeschedule',
   SET_PERSONS_AWAY: '/api/setpersonsaway',
   SET_PERSONS_HOME: '/api/setpersonshome',
   SET_STATE: '/api/setstate',
@@ -87,6 +88,11 @@ export const SCENE_ACTION_KEYS = {
   SET_HEATING_MODE: 'set_heating_mode',
   SET_PERSONS_AWAY: 'set_persons_away',
   SET_PERSONS_HOME: 'set_persons_home',
+  // Advanced heating (issue #58).
+  SET_ROOM_SETPOINT: 'set_room_setpoint',
+  BOOST_ROOM: 'boost_room',
+  ROOM_BACK_TO_SCHEDULE: 'room_back_to_schedule',
+  SET_HEATING_SCHEDULE: 'set_heating_schedule',
 };
 
 // Webhooks may be re-delivered: the last scene events fired are remembered
@@ -289,6 +295,27 @@ export const NETATMO_THERM_MODES = {
   AWAY: 'away',
   FROST_GUARD: 'hg',
 };
+
+// Setpoint mode of a ROOM (issue #58), the `mode` of POST
+// /api/setroomthermpoint: a manual setpoint (optional `temp` + `endtime`), a
+// boost at the maximum temperature (`max`, optional `endtime`) or back to the
+// home's schedule (`home`). homestatus reports it as `rooms[].therm_setpoint_mode`
+// (`schedule` once back on the schedule; `away` / `hg` / `off` follow the home
+// mode) with `therm_setpoint_end_time`.
+export const NETATMO_SETPOINT_MODES = {
+  MANUAL: 'manual',
+  MAX: 'max',
+  HOME: 'home',
+};
+
+// Netatmo accepts a room setpoint between these temperatures (°C), by steps
+// of 0.5 °C (the Netatmo app's range).
+export const ROOM_SETPOINT_MIN_CELSIUS = 7;
+export const ROOM_SETPOINT_MAX_CELSIUS = 30;
+
+// homesdata `homes[].schedules[].type` of a heating schedule (the same home
+// may also carry cooling, electricity or event schedules).
+export const HEATING_SCHEDULE_TYPE = 'therm';
 
 // Gladys THERMOSTAT_PRESET values (server/utils/constants.js), the enum of the
 // `thermostat/preset` feature type (Gladys 5.2.0+). The SDK does not export

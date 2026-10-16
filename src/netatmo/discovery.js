@@ -31,6 +31,7 @@ import {
   SHUTTER_MODULE_TYPES,
   AIRCARE_MODULE_TYPES,
   HOMES_CONCURRENCY,
+  HEATING_SCHEDULE_TYPE,
   VIRTUAL_DEVICE_TYPE,
   KNOWN_PERSONS_ID_PREFIX,
 } from './constants.js';
@@ -311,15 +312,38 @@ function isScopeRefusal(err) {
 }
 
 /**
+ * The heating schedules of a homesdata home (issue #58), in the Netatmo order:
+ * `type: "therm"` — or no type at all, the shape of the accounts that only
+ * know heating schedules — never the cooling / electricity / event ones.
+ * @param {object} homeData one entry of the homesdata `homes` array
+ * @returns {Array<{id: string, name: string, selected: boolean}>} the schedules
+ */
+export function heatingSchedulesOf(homeData) {
+  return (homeData.schedules ?? [])
+    .filter(
+      (schedule) =>
+        schedule &&
+        typeof schedule.id === 'string' &&
+        (schedule.type === undefined || schedule.type === HEATING_SCHEDULE_TYPE),
+    )
+    .map((schedule) => ({
+      id: schedule.id,
+      name: schedule.name || schedule.id,
+      selected: schedule.selected === true,
+    }));
+}
+
+/**
  * Summary of one homesdata home for the features that are not device states
  * (issue #39 scene triggers and actions, issue #40 widgets): its name, its
  * known persons (face recognition, homesdata `persons`), its modules, its
- * heated rooms and its heating mode — live from homestatus through the home's devices, homesdata
- * snapshot otherwise.
+ * heated rooms, its heating schedules (issue #58) and its heating mode — live
+ * from homestatus through the home's devices, homesdata snapshot otherwise.
  * @param {object} homeData one entry of the homesdata `homes` array
  * @param {Array} devices raw devices loaded for this home
  * @returns {{id: string, name: string, persons: Array<{id: string, pseudo: string}>,
  *   modules: Array<{id: string, name: string, type: string}>, rooms: Array<object>,
+ *   schedules: Array<{id: string, name: string, selected: boolean}>,
  *   therm_mode: string|undefined, therm_mode_endtime: number|undefined}} the home summary
  */
 export function summarizeHome(homeData, devices = []) {
@@ -340,6 +364,10 @@ export function summarizeHome(homeData, devices = []) {
         therm_setpoint_temperature: room.therm_setpoint_temperature,
         heating_power_request: room.heating_power_request,
         open_window: room.open_window,
+        // Where the setpoint comes from (issue #58): `schedule`, `manual`,
+        // `max` (boost), or the home mode (`away`, `hg`, `off`), and until when.
+        therm_setpoint_mode: room.therm_setpoint_mode,
+        therm_setpoint_end_time: room.therm_setpoint_end_time,
       });
     }
   }
@@ -355,6 +383,7 @@ export function summarizeHome(homeData, devices = []) {
       type: module.type,
     })),
     rooms: [...rooms.values()],
+    schedules: heatingSchedulesOf(homeData),
     therm_mode: withMode ? withMode.therm_mode : homeData.therm_mode,
     therm_mode_endtime: withMode ? withMode.therm_mode_endtime : homeData.therm_mode_endtime,
   };
