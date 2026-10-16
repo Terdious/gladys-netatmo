@@ -21,6 +21,12 @@
 // The anti-CSRF state is SINGLE-USE: it is consumed by the first callback, so
 // a replayed callback (the bug fixed in the front by core PR #2628) is
 // rejected instead of burning a second token exchange.
+//
+// Netatmo echoes the GRANTED scopes in every token response (exchange AND
+// refresh). A token obtained before a release added scopes (video doorbell,
+// issue #35) keeps its old set until the user clicks Connect again: the
+// missing ones are tracked so the Configuration screen can say so instead of
+// letting the new devices silently fail.
 // -----------------------------------------------------------------------------
 
 import crypto from 'node:crypto';
@@ -68,6 +74,22 @@ function describeNetatmoError(body) {
 }
 
 /**
+ * Parse the `scope` field of a Netatmo token response (an array, or a
+ * space-separated string per the OAuth2 standard).
+ * @param {unknown} scope raw `scope` field
+ * @returns {string[]|null} granted scopes, or null when the response has none
+ */
+export function parseGrantedScopes(scope) {
+  if (Array.isArray(scope)) {
+    return scope.filter((item) => typeof item === 'string');
+  }
+  if (typeof scope === 'string' && scope.trim()) {
+    return scope.trim().split(/[\s,]+/);
+  }
+  return null;
+}
+
+/**
  * Create the OAuth2 manager.
  * @param {object} deps dependencies
  * @param {object} deps.gladys SDK instance (setConfig is the token store)
@@ -107,6 +129,12 @@ export function createNetatmoOAuth({
   // Called when a SCHEDULED refresh succeeds after failures: the connection
   // recovered in the background and the caller can resume (telemetry, status).
   let refreshRecoveredCallback = null;
+
+  // Scopes requested but not granted by the current token (empty while the
+  // granted set is unknown: no token response seen since the start).
+  let missingScopeList = [];
+  // Called when that list changes (a refresh revealed it, a reconnect fixed it).
+  let missingScopesCallback = null;
 
   /** Sync the in-memory tokens from the (normalized) config store. */
   function loadFromConfig(config) {
@@ -190,6 +218,7 @@ export function createNetatmoOAuth({
       refreshToken: data.refresh_token,
       expiresAt: expiresInSeconds > 0 ? now() + expiresInSeconds * 1000 : 0,
     };
+    await trackGrantedScopes(data.scope);
     try {
       await gladys.setConfig({
         access_token: tokens.accessToken,
@@ -204,6 +233,29 @@ export function createNetatmoOAuth({
       // persists again.
       err.transient = true;
       throw err;
+    }
+  }
+
+  /** Update the missing-scope list from a token response, notify on change. */
+  async function trackGrantedScopes(scope) {
+    const granted = parseGrantedScopes(scope);
+    if (!granted) {
+      return; // nothing echoed: keep what we knew
+    }
+    const missing = OAUTH_SCOPES.filter((requested) => !granted.includes(requested));
+    if (missing.join(' ') === missingScopeList.join(' ')) {
+      return;
+    }
+    missingScopeList = missing;
+    if (missing.length > 0) {
+      logger.warn(
+        `Netatmo did not grant these scopes: ${missing.join(', ')} — click Connect again on the Configuration screen to grant them`,
+      );
+    }
+    try {
+      await missingScopesCallback?.(missing);
+    } catch (cbErr) {
+      logger.error(`Missing-scopes callback failed: ${cbErr.message}`);
     }
   }
 
@@ -371,6 +423,14 @@ export function createNetatmoOAuth({
     refreshTokens,
     ensureFreshAccessToken,
     scheduleTokenRefresh,
+    /** Requested scopes the current token was not granted (empty when unknown). */
+    missingScopes() {
+      return [...missingScopeList];
+    },
+    /** Register the callback invoked when the missing-scope list changes. */
+    onMissingScopes(callback) {
+      missingScopesCallback = callback;
+    },
     /** Register the callback invoked when the tokens are wiped for good. */
     onAuthLost(callback) {
       authLostCallback = callback;

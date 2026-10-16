@@ -34,9 +34,9 @@ application, so your data stays between your Gladys and your Netatmo account.
    - **client secret**
 
 You do **not** need to configure scopes or a redirect URI on the portal: Gladys
-requests the required scopes (read + write, covering Energy, Weather,
-Security including cameras, and the roller shutters) automatically during the connection, and handles the
-OAuth2 redirect itself.
+requests the required scopes (read + write, covering Energy, Weather, Security
+including cameras and the video doorbell, and the roller shutters)
+automatically during the connection, and handles the OAuth2 redirect itself.
 
 ---
 
@@ -63,12 +63,12 @@ expires beyond repair, the Configuration screen tells you to reconnect.
 
 Under **Devices to discover**, enable the families you own:
 
-| Toggle              | Discovers                                                               |
-| ------------------- | ----------------------------------------------------------------------- |
-| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`) |
-| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules       |
-| **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, plus their accessories |
-| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)        |
+| Toggle              | Discovers                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`)                         |
+| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                               |
+| **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories |
+| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -101,6 +101,29 @@ When the Security family is enabled, each camera is created with:
   enable the Microphone_. If it is off there, no client (Gladys, Netatmo web,
   Netatmo app) gets audio. Gladys transports the audio whenever the stream
   carries it — there is nothing to configure on the Gladys side.
+
+---
+
+## Video doorbell
+
+When the Security family is enabled, the Netatmo video doorbell (`NDB`) is
+created with:
+
+- a **dashboard image** (a snapshot, refreshed automatically) — fetched through
+  the Netatmo VPN URL: the doorbell does not serve it on the local network;
+- a **Doorbell** feature that shows **Ringing** when someone presses the button,
+  usable as a scene trigger (**If the doorbell rings**) — it needs the Gladys
+  Plus webhooks (see below): polling alone cannot report a ring;
+- its **Wifi** link quality.
+
+There is no monitoring switch (Netatmo offers none for the doorbell) and no live
+stream button: the doorbell streams over WebRTC only, which the Gladys camera
+live view cannot play.
+
+> ⚠️ **Netatmo account connected before this version?** The doorbell needs two
+> new Netatmo permissions (`read_doorbell`, `access_doorbell`): click
+> **Connect** again on the Configuration screen and accept them. Until then the
+> connection status shows a "click Connect again" hint.
 
 ---
 
@@ -150,10 +173,15 @@ triggers**:
 | Outdoor camera (Presence)  | **Animal detected**  | an animal detected             |
 | Outdoor camera (Presence)  | **Vehicle detected** | a vehicle detected             |
 | Smoke alarm                | **Smoke**            | a smoke detection              |
+| Carbon monoxide alarm      | **Carbon monoxide**  | a carbon monoxide detection    |
+| Video doorbell             | **Doorbell**         | someone rings                  |
 
 Each detection goes to **Yes** and returns to **No** by itself after one minute
-(Netatmo sends no "detection over" event). In a scene, use the "value becomes
-Yes" trigger.
+(Netatmo sends no "detection over" event, except for smoke and carbon monoxide:
+the "cleared" / "back to normal" event returns it to **No** at once). In a
+scene, use the "value becomes Yes" trigger — for the doorbell, the **If the
+doorbell rings** trigger. A ring fires once: the follow-up "call answered" /
+"call missed" events of the Netatmo app are not separate triggers.
 
 > ⚠️ **If your cameras already existed in Gladys**, these new features do not
 > appear on their own: go to the **Discovery** screen and click **Update** on
@@ -173,6 +201,9 @@ discovered too:
 - **Smoke alarm** (`NSD`) — discovered with its battery and signal, plus a
   **Smoke** feature fed by the webhooks (see the section above): polling alone
   cannot report that state.
+- **Carbon monoxide alarm** (`NCO`) — same as the smoke alarm: battery and
+  signal (when Netatmo reports them), plus a **Carbon monoxide** feature fed by
+  the webhooks.
 
 ---
 
@@ -279,9 +310,19 @@ moves what is left.
   battery, powered off, out of range). Gladys stops publishing its last-known
   values so you are not misled by stale data; the badge clears when the device
   comes back.
+- **A device shows a "Degraded" badge, or the status carries a message while
+  Connected:** a part of the Netatmo cloud has been failing for several
+  minutes (for instance the weather service). Gladys keeps publishing what the
+  rest of the cloud still provides — station and module measures come from the
+  home status too — and marks the devices left without fresh values. Nothing to
+  do: both clear on their own on the first complete refresh. If it lasts, the
+  integration **Logs** name the failing API.
 - **A camera value or monitoring command fails once with a "reconnect" message:**
   your Netatmo authorization is missing the camera scope — reconnect your
   account.
 - **A shutter command fails with a "reconnect" message:** your Netatmo
   authorization predates the shutter support — click Connect again.
 - **No camera sound:** see the microphone tip in the Cameras section above.
+- **"Some Netatmo permissions are missing" status:** a newer version added
+  permissions (video doorbell) — click Connect again and accept them. The
+  integration **Logs** list the missing ones.

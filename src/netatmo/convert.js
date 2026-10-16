@@ -42,8 +42,10 @@ import {
   buildFeatureAnimal,
   buildFeatureVehicle,
   buildFeatureSmoke,
+  buildFeatureCarbonMonoxide,
   buildFeatureMonitoring,
   buildFeatureCamera,
+  buildFeatureDoorbellRing,
   buildFeatureCo2,
   buildFeatureHumidity,
   buildFeatureNoise,
@@ -277,6 +279,26 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeatureBattery(nameDevice, externalId),
         buildFeatureWifiStrength(nameDevice, externalId),
         buildFeatureSmoke(nameDevice, externalId),
+      );
+      break;
+    case SUPPORTED_MODULE_TYPE.NCO:
+      // Carbon monoxide alarm (issue #36), modelled on the smoke alarm:
+      // battery + signal are pollable when homestatus carries them, the CO
+      // state only exists in the webhook event stream (`co_detected`).
+      features.push(
+        buildFeatureBattery(nameDevice, externalId),
+        buildFeatureWifiStrength(nameDevice, externalId),
+        buildFeatureCarbonMonoxide(nameDevice, externalId),
+      );
+      break;
+    case SUPPORTED_MODULE_TYPE.NDB:
+      // Video doorbell (issue #35): dashboard image (VPN snapshot) + the ring,
+      // fed by the webhook event stream. No monitoring switch (the API offers
+      // none for the doorbell) and no CAMERA_URL: it streams over WebRTC only,
+      // which the core rtsp-camera service cannot play.
+      features.push(
+        buildFeatureCamera(nameDevice, externalId),
+        buildFeatureDoorbellRing(nameDevice, externalId),
       );
       break;
     case SUPPORTED_MODULE_TYPE.NACAMERA:

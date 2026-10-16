@@ -161,6 +161,21 @@ export function buildFeatureCamera(name, externalId) {
 }
 
 // --- Momentary event features (webhook-driven, issue #5) --------------------
+
+// Video doorbell (NDB, issue #35): the ring (`incoming_call` event). Gladys
+// renders it as "Ringing" then the time of the last ring, and its scene
+// trigger fires on every 1 — a 1 -> 0 pulse like the other detections.
+export function buildFeatureDoorbellRing(name, externalId) {
+  return feature({
+    name: `Doorbell - ${name}`,
+    external_id: `${externalId}:ring`,
+    selector: `${externalId}:ring`,
+    category: DEVICE_FEATURE_CATEGORIES.DOORBELL,
+    type: DEVICE_FEATURE_TYPES.DOORBELL.RING,
+    min: 0,
+    max: 1,
+  });
+}
 // These exist only in the Netatmo event stream: no API state reports them, so
 // they are published from the webhook payload and reset after EVENT_RESET_MS.
 
@@ -221,6 +236,20 @@ export function buildFeatureSmoke(name, externalId) {
     external_id: `${externalId}:smoke`,
     selector: `${externalId}:smoke`,
     category: DEVICE_FEATURE_CATEGORIES.SMOKE_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// Carbon monoxide alarm (NCO, issue #36): like the smoke alarm, the CO state
+// is webhook-only (`co_detected` event) — the homestatus payload never reports it.
+export function buildFeatureCarbonMonoxide(name, externalId) {
+  return feature({
+    name: `Carbon monoxide - ${name}`,
+    external_id: `${externalId}:carbon_monoxide`,
+    selector: `${externalId}:carbon_monoxide`,
+    category: DEVICE_FEATURE_CATEGORIES.CO_SENSOR,
     type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
     min: 0,
     max: 1,

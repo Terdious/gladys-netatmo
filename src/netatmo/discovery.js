@@ -9,7 +9,8 @@
 // discovered and saved).
 //
 // Three API families, gated by the manifest toggles:
-//   - Energy topology: homesdata + per-home homestatus (concurrency 2);
+//   - Home topology: homesdata + per-home homestatus (concurrency 2) — the
+//     Energy modules, the cameras, and the current Weather measures too;
 //   - Energy legacy: getthermostatsdata, merged by id/_id (adds
 //     `modules_bridged` on plugs and richer thermostat data);
 //   - Weather: getstationsdata, merged the same way (dashboard_data etc.).
@@ -142,10 +143,14 @@ export async function loadDeviceDetails(client, config, homeData) {
     return moduleSupported ? device : { ...device, not_handled: true };
   }
 
+  // `homestatus: true` marks the modules whose current values came with this
+  // homestatus: a Weather module keeps fresh measures from it even when
+  // getstationsdata fails (issue #33).
   const reachableDevices = modulesHomestatus.map((module) =>
     buildDevice(
       module,
       modulesHomeData.find((mod) => mod.id === module.id),
+      { homestatus: true },
     ),
   );
 
@@ -232,33 +237,37 @@ export async function loadDevices(client, config) {
  * Same load, with a `partial` flag: true when any API family failed (or a
  * home's status was unavailable). A partial load must never REPLACE the
  * published discovery list — devices would vanish from the Discovery screen
- * for the duration of a Netatmo hiccup.
+ * for the duration of a Netatmo hiccup. `failed` names the families that
+ * failed: `homes` (homesdata/homestatus), `energy` (getthermostatsdata),
+ * `weather` (getstationsdata).
  * @param {object} client Netatmo API client
  * @param {object} config normalized integration config
- * @returns {Promise<{devices: Array, partial: boolean}>} raw devices + flag
+ * @returns {Promise<{devices: Array, partial: boolean, failed: string[]}>} raw devices + flags
  */
 export async function loadAccount(client, config) {
   let listDevices = [];
-  let partial = false;
+  const failed = [];
 
-  // Cameras and roller shutters ride in the same homesdata/homestatus
-  // payloads as the Energy modules (no dedicated API call), so the topology
-  // load also runs when only the Security or the shutter API is enabled. NOTE — divergence from the core `loadDevices`
+  // Cameras and roller shutters ride in the same homesdata/homestatus payloads
+  // as the Energy modules (no dedicated API call), and homestatus carries the
+  // current Weather measures as well: the topology load runs whenever any
+  // family is enabled, so a getstationsdata outage no longer freezes the
+  // station values (issue #33). NOTE — divergence from the core `loadDevices`
   // gating, on purpose: the core treats "no API configured at all" as "load
   // everything" (its variables may simply be unset); the manifest toggles are
   // always defined with sensible defaults, so here OFF means OFF.
-  if (config.energy_api || config.security_api || config.shutter_api) {
+  if (config.energy_api || config.security_api || config.weather_api || config.shutter_api) {
     try {
       const homes = await client.getHomesData();
       const results = await mapWithConcurrency(homes, HOMES_CONCURRENCY, async (home) =>
         home.modules && home.modules.length > 0 ? loadDeviceDetails(client, config, home) : [],
       );
       if (results.includes(null)) {
-        partial = true;
+        failed.push('homes');
       }
       listDevices = results.filter(Boolean).flat();
     } catch (err) {
-      partial = true;
+      failed.push('homes');
       logger.error(`homesdata load failed: ${err.message}`);
     }
   }
@@ -301,7 +310,7 @@ export async function loadAccount(client, config) {
         }
       }
     } catch (err) {
-      partial = true;
+      failed.push('energy');
       logger.error(`getthermostatsdata load failed: ${err.message}`);
     }
   }
@@ -352,7 +361,7 @@ export async function loadAccount(client, config) {
         }
       }
     } catch (err) {
-      partial = true;
+      failed.push('weather');
       logger.error(`getstationsdata load failed: ${err.message}`);
     }
   }
@@ -364,5 +373,5 @@ export async function loadAccount(client, config) {
     // logging it here would repeat the same line every 120s cycle.
     logger.debug(`Netatmo devices not supported: ${notHandled}`);
   }
-  return { devices: listDevices, partial };
+  return { devices: listDevices, partial: failed.length > 0, failed };
 }

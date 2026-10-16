@@ -13,6 +13,7 @@ import { createNetatmoClient } from '../../src/netatmo/client.js';
 import { createTelemetry } from '../../src/netatmo/telemetry.js';
 import { setDeviceValue } from '../../src/netatmo/setValue.js';
 import { startFakeNetatmo } from '../helpers/fakeNetatmo.js';
+import { DEGRADED_AFTER_FAILED_LOADS, DEGRADED_MESSAGES } from '../../src/netatmo/constants.js';
 
 let netatmo;
 let client;
@@ -149,8 +150,8 @@ test('unchanged values are deduped, then re-published after the 30-minute keep-a
 test('cameras are discovered and updated when security_api is enabled (core #2621)', async () => {
   const configSecurity = normalizeConfig({ security_api: 'true' });
   gladys.devices = await telemetry.syncDiscovery(configSecurity);
-  // 7 Energy/Weather devices + 2 cameras + siren + door tag + smoke alarm.
-  assert.equal(gladys.devices.length, 12);
+  // 7 Energy/Weather devices + 2 cameras + siren + door tag + smoke + CO alarms.
+  assert.equal(gladys.devices.length, 13);
 
   await telemetry.refreshValues(configSecurity);
   // monitoring 'off'/'on' → binary, wifi_status fallback (core mapping).
@@ -204,6 +205,11 @@ test('the camera-bridged security accessories publish their states (issue #9)', 
   assert.deepEqual(stateOf('ext:netatmo:smoke-1:battery_percent'), [88]);
   assert.deepEqual(stateOf('ext:netatmo:smoke-1:wifi_strength'), [66]);
 
+  // CO alarm (issue #36): only what homestatus carries — battery, no wifi.
+  assert.deepEqual(stateOf('ext:netatmo:co-1:battery_percent'), [92]);
+  assert.deepEqual(stateOf('ext:netatmo:co-1:wifi_strength'), []);
+  assert.deepEqual(stateOf('ext:netatmo:co-1:carbon_monoxide'), []); // webhook-only
+
   // A door opening flows on the next cycle.
   const doortag = netatmo.state.homeStatuses['home-1'].home.modules.find(
     (m) => m.id === 'doortag-1',
@@ -211,6 +217,65 @@ test('the camera-bridged security accessories publish their states (issue #9)', 
   doortag.status = 'closed';
   await telemetry.refreshValues(configSecurity);
   assert.deepEqual(stateOf('ext:netatmo:doortag-1:opening'), [1, 0]);
+});
+
+/** Add a video doorbell (pyatmo fixture shape, issue #35) to the fake account. */
+function addDoorbell() {
+  netatmo.state.homes[0].modules.push({
+    id: 'doorbell-1',
+    type: 'NDB',
+    name: 'Netatmo-Doorbell',
+    room_id: 'room-1',
+    reachable: true,
+  });
+  netatmo.state.homeStatuses['home-1'].home.modules.push({
+    type: 'NDB',
+    id: 'doorbell-1',
+    vpn_url: `${netatmo.url}/vpn/doorbell-1`,
+    // Claims a LAN path: the WebRTC doorbell must still go through the VPN.
+    is_local: true,
+    alim_status: 2,
+    connection: 'wifi',
+    sd_status: 4,
+    wifi_strength: 66,
+    wifi_state: 'medium',
+  });
+}
+
+test('the video doorbell is discovered behind security_api, with image and ring (issue #35)', async () => {
+  addDoorbell();
+  // Security off (default): the doorbell stays out of the discovery.
+  const withoutSecurity = await telemetry.syncDiscovery(config);
+  assert.ok(!withoutSecurity.some((d) => d.external_id === 'ext:netatmo:doorbell-1'));
+
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  const doorbell = gladys.devices.find((d) => d.external_id === 'ext:netatmo:doorbell-1');
+  assert.ok(doorbell);
+  assert.deepEqual(
+    doorbell.features.map((f) => f.external_id.replace('ext:netatmo:doorbell-1:', '')),
+    ['wifi_strength', 'camera', 'ring'],
+  );
+  // WebRTC only: no HLS live URL for the core rtsp-camera service.
+  assert.equal(
+    doorbell.params.find((p) => p.name === 'CAMERA_URL'),
+    undefined,
+  );
+
+  await telemetry.refreshValues(configSecurity);
+  assert.deepEqual(stateOf('ext:netatmo:doorbell-1:wifi_strength'), [66]);
+  assert.deepEqual(stateOf('ext:netatmo:doorbell-1:ring'), []); // webhook-only
+  // Dashboard image fetched on the VPN URL, without any LAN resolution.
+  const image = gladys.cameraImages.find((c) => c.deviceExternalId === 'ext:netatmo:doorbell-1');
+  assert.match(image.image, /^image\/jpg;base64,/);
+  const doorbellRequests = netatmo.state.cameraRequests.filter((r) => r.camId === 'doorbell-1');
+  assert.ok(doorbellRequests.every((r) => r.side === 'vpn'));
+  assert.ok(!doorbellRequests.some((r) => r.path === '/command/ping'));
+
+  // A second cycle must not re-publish the discovery for a "changed" live URL.
+  const discoveredCount = gladys.discovered.length;
+  await telemetry.refreshValues(configSecurity);
+  assert.equal(gladys.discovered.length, discoveredCount);
 });
 
 test('cameras carry a local-first CAMERA_URL and the camera_quality param (core #2625)', async () => {
@@ -400,6 +465,107 @@ test('a partial load never replaces the published discovery list', async () => {
   netatmo.state.failStationsWith = null;
   await telemetry.syncDiscovery(config);
   assert.equal(gladys.discovered.length, 2);
+});
+
+/** The weather station in homesdata/homestatus, as Netatmo returns it. */
+function addStationToHome(state) {
+  state.homes[0].modules.push(
+    { id: 'station-1', type: 'NAMain', name: 'Station', modules_bridged: ['outdoor-1'] },
+    { id: 'outdoor-1', type: 'NAModule1', name: 'Extérieur', bridge: 'station-1' },
+  );
+  state.homeStatuses['home-1'].home.modules.push(
+    { id: 'station-1', type: 'NAMain', wifi_strength: 45, temperature: 22.5, co2: 610 },
+    { id: 'outdoor-1', type: 'NAModule1', rf_strength: 42, reachable: true, temperature: 5.8 },
+  );
+}
+
+/** Latest transport entry published for one device. */
+function lastTransport(externalId) {
+  return gladys.transports.filter((t) => t.external_id === externalId).at(-1);
+}
+
+test('a getstationsdata outage: homestatus values keep flowing, then degraded badges and status (issue #33)', async () => {
+  addStationToHome(netatmo.state);
+  const weatherOnly = normalizeConfig({ energy_api: 'false', weather_api: 'true' });
+  const changes = [];
+  const engine = createTelemetry({
+    gladys,
+    client,
+    now: () => clock,
+    loadTtlMs: 0,
+    onDegradedChange: (message) => changes.push(message),
+  });
+  gladys.devices = await engine.syncDiscovery(weatherOnly);
+  assert.deepEqual(gladys.devices.map((device) => device.external_id).sort(), [
+    'ext:netatmo:outdoor-1',
+    'ext:netatmo:station-1',
+    'ext:netatmo:wind-1',
+  ]);
+  await engine.refreshValues(weatherOnly);
+
+  netatmo.state.failStationsWith = 503;
+  netatmo.state.homeStatuses['home-1'].home.modules.find((m) => m.id === 'station-1').co2 = 640;
+  for (let cycle = 1; cycle < DEGRADED_AFTER_FAILED_LOADS; cycle += 1) {
+    clock += 120 * 1000;
+    await engine.refreshValues(weatherOnly);
+  }
+  // A hiccup is not worth a badge, but the homestatus measures already flow.
+  assert.deepEqual(stateOf('ext:netatmo:station-1:co2'), [610, 640]);
+  assert.equal(lastTransport('ext:netatmo:wind-1').degraded, undefined);
+  assert.equal(engine.getDegradedMessage(), null);
+
+  clock += 120 * 1000;
+  await engine.refreshValues(weatherOnly);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(engine.getDegradedMessage(), DEGRADED_MESSAGES.WEATHER);
+  assert.deepEqual(changes, [DEGRADED_MESSAGES.WEATHER]);
+  // The station and the outdoor module are fed by homestatus: no badge.
+  assert.deepEqual(lastTransport('ext:netatmo:station-1'), {
+    external_id: 'ext:netatmo:station-1',
+    transport: 'cloud',
+  });
+  assert.equal(lastTransport('ext:netatmo:outdoor-1').degraded, undefined);
+  // The anemometer is only known to getstationsdata: degraded, with the reason.
+  assert.deepEqual(lastTransport('ext:netatmo:wind-1'), {
+    external_id: 'ext:netatmo:wind-1',
+    transport: 'unreachable',
+    degraded: true,
+    message: DEGRADED_MESSAGES.WEATHER,
+  });
+
+  // Recovery: the first complete load clears the badge and the status.
+  netatmo.state.failStationsWith = null;
+  clock += 120 * 1000;
+  await engine.refreshValues(weatherOnly);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(changes, [DEGRADED_MESSAGES.WEATHER, null]);
+  assert.equal(lastTransport('ext:netatmo:wind-1').degraded, undefined);
+  engine.stop();
+});
+
+test('a total outage marks every known device degraded with the generic reason', async () => {
+  const changes = [];
+  const engine = createTelemetry({
+    gladys,
+    client,
+    now: () => clock,
+    loadTtlMs: 0,
+    onDegradedChange: (message) => changes.push(message),
+  });
+  gladys.devices = await engine.syncDiscovery(config);
+
+  netatmo.state.rejectAccessToken = 'seeded-token';
+  for (let cycle = 0; cycle < DEGRADED_AFTER_FAILED_LOADS; cycle += 1) {
+    await engine.refreshValues(config);
+  }
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(changes, [DEGRADED_MESSAGES.PARTIAL]);
+  for (const device of gladys.devices) {
+    const entry = lastTransport(device.external_id);
+    assert.equal(entry.degraded, true, `${device.external_id} degraded`);
+    assert.equal(entry.message, DEGRADED_MESSAGES.PARTIAL);
+  }
+  engine.stop();
 });
 
 test('the on-demand snapshot serves the last published image when the camera dies', async () => {

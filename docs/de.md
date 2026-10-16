@@ -37,8 +37,9 @@ Gladys und deinem Netatmo-Konto bleiben.
 
 Du musst im Portal **keine** Berechtigungen (Scopes) und keine Redirect-URI
 konfigurieren: Gladys fordert die benötigten Berechtigungen (Lesen + Schreiben,
-für Energie, Wetter, Sicherheit einschließlich Kameras sowie die Rollläden) beim
-Verbinden automatisch an und kümmert sich selbst um die OAuth2-Weiterleitung.
+für Energie, Wetter, Sicherheit einschließlich Kameras und Video-Türklingel
+sowie die Rollläden) beim Verbinden automatisch an und kümmert sich selbst um
+die OAuth2-Weiterleitung.
 
 ---
 
@@ -69,12 +70,12 @@ Konfiguration auf, dich erneut zu verbinden.
 
 Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
-| Schalter       | Erkennt                                                                |
-| -------------- | ---------------------------------------------------------------------- |
-| **Energie**    | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)  |
-| **Wetter**     | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule |
-| **Sicherheit** | Innen- (`NACamera`) und Außenkameras (`NOC`) sowie deren Zubehör       |
-| **Rollläden**  | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)     |
+| Schalter       | Erkennt                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| **Energie**    | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)                      |
+| **Wetter**     | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                     |
+| **Sicherheit** | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör |
+| **Rollläden**  | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                         |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -109,6 +110,32 @@ Wenn die Familie Sicherheit aktiviert ist, wird jede Kamera erstellt mit:
   Client (Gladys, Netatmo-Web, Netatmo-App) Ton. Gladys überträgt den Ton,
   sobald der Stream ihn enthält — auf der Seite von Gladys ist nichts zu
   konfigurieren.
+
+---
+
+## Video-Türklingel
+
+Wenn die Familie Sicherheit aktiviert ist, wird die Netatmo-Video-Türklingel
+(`NDB`) erstellt mit:
+
+- einem **Dashboard-Bild** (ein Schnappschuss, automatisch aktualisiert) —
+  abgerufen über die Netatmo-VPN-URL: Die Türklingel stellt es nicht im lokalen
+  Netzwerk bereit;
+- einer Funktion **Türklingel**, die **Klingelt** anzeigt, wenn jemand den
+  Knopf drückt, nutzbar als Szenen-Auslöser (**Wenn die Türklingel klingelt**)
+  — sie benötigt die Gladys-Plus-Webhooks (siehe unten): Die Abfrage allein kann
+  kein Klingeln melden;
+- der Qualität ihrer **WLAN**-Verbindung.
+
+Es gibt keinen Überwachungsschalter (Netatmo bietet keinen für die Türklingel)
+und keine Livestream-Schaltfläche: Die Türklingel streamt nur über WebRTC, das
+die Kamera-Liveansicht von Gladys nicht abspielen kann.
+
+> ⚠️ **Netatmo-Konto vor dieser Version verbunden?** Die Türklingel benötigt
+> zwei neue Netatmo-Berechtigungen (`read_doorbell`, `access_doorbell`): Klicke
+> auf dem Konfigurationsbildschirm erneut auf **Verbinden** und akzeptiere sie.
+> Bis dahin zeigt der Verbindungsstatus einen Hinweis, erneut auf Verbinden zu
+> klicken.
 
 ---
 
@@ -160,10 +187,16 @@ die als **Szenen-Auslöser** nutzbar sind:
 | Außenkamera (Presence)  | **Tier erkannt**     | ein erkanntes Tier                    |
 | Außenkamera (Presence)  | **Fahrzeug erkannt** | ein erkanntes Fahrzeug                |
 | Rauchmelder             | **Rauch**            | eine Raucherkennung                   |
+| Kohlenmonoxidmelder     | **Kohlenmonoxid**    | eine Kohlenmonoxid-Erkennung          |
+| Video-Türklingel        | **Türklingel**       | jemand klingelt                       |
 
 Jede Erkennung wechselt auf **Ja** und kehrt nach einer Minute von selbst auf
-**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“). Verwende in
-einer Szene den Auslöser „Wert wird Ja“.
+**Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“, außer bei
+Rauch und Kohlenmonoxid: Das Ereignis „Rauch verschwunden“ / „wieder normal“
+setzt sie sofort auf **Nein**). Verwende in einer Szene den Auslöser „Wert wird
+Ja“ — für die Türklingel den Auslöser **Wenn die Türklingel klingelt**. Ein
+Klingeln löst einmal aus: Die Folgeereignisse „Anruf angenommen“ / „Anruf
+verpasst“ der Netatmo-App sind keine eigenen Auslöser.
 
 > ⚠️ **Wenn deine Kameras bereits in Gladys existierten**, erscheinen diese
 > neuen Funktionen nicht von selbst: Gehe in den Tab **Entdecken** und klicke
@@ -185,6 +218,9 @@ verknüpfte Zubehör erkannt:
 - **Rauchmelder** (`NSD`) — erkannt mit Batterie und Signal, dazu eine Funktion
   **Rauch**, die von den Webhooks gespeist wird (siehe Abschnitt oben): Die
   Abfrage allein kann diesen Zustand nicht melden.
+- **Kohlenmonoxidmelder** (`NCO`) — wie der Rauchmelder: Batterie und Signal
+  (sofern Netatmo sie meldet), dazu eine Funktion **Kohlenmonoxid**, die von
+  den Webhooks gespeist wird.
 
 ---
 
@@ -301,6 +337,14 @@ verschiebt nur, was noch übrig ist.
   veröffentlicht seine zuletzt bekannten Werte nicht mehr, damit du nicht durch
   veraltete Daten getäuscht wirst; das Badge verschwindet, sobald das Gerät
   wieder erreichbar ist.
+- **Ein Gerät zeigt ein Badge „Beeinträchtigt“, oder der Status zeigt trotz
+  Verbunden eine Meldung:** Ein Teil der Netatmo-Cloud fällt seit einigen
+  Minuten aus (zum Beispiel der Wetterdienst). Gladys veröffentlicht weiter,
+  was der Rest der Cloud liefert — die Messwerte der Station und ihrer Module
+  kommen auch aus dem Hausstatus — und markiert die Geräte, die keine frischen
+  Werte mehr erhalten. Nichts zu tun: Beides verschwindet von selbst bei der
+  ersten vollständigen Aktualisierung. Hält es an, nennen die **Logs** der
+  Integration die ausfallende API.
 - **Ein Kamerawert oder ein Überwachungsbefehl schlägt einmal mit einer Meldung
   „erneut verbinden“ fehl:** Deiner Netatmo-Autorisierung fehlt die
   Kamera-Berechtigung — verbinde dein Konto erneut.
@@ -308,3 +352,6 @@ verschiebt nur, was noch übrig ist.
   Deine Netatmo-Autorisierung stammt aus der Zeit vor der
   Rollladen-Unterstützung — klicke erneut auf Verbinden.
 - **Kein Kameraton:** Siehe den Mikrofon-Tipp im Abschnitt Kameras oben.
+- **Status „einige Netatmo-Berechtigungen fehlen“:** Eine neuere Version hat
+  Berechtigungen hinzugefügt (Video-Türklingel) — klicke erneut auf Verbinden
+  und akzeptiere sie. Die **Logs** der Integration nennen die fehlenden.

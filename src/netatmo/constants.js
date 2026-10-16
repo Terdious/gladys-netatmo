@@ -40,8 +40,9 @@ export const WEBHOOK_DEBOUNCE_MS = 2 * 1000;
 // possible.
 //
 // Netatmo sends `push_type: "<module type>-<event>"` (e.g. "NACamera-movement",
-// "NOC-human", "NSD-smoke"). We key on the EVENT part so every module type is
-// handled by one table, and unknown events are ignored instead of guessed.
+// "NOC-human", "NSD-smoke", "NCO-co_detected"). We key on the EVENT part so
+// every module type is handled by one table, and unknown events are ignored
+// instead of guessed.
 export const EVENT_FEATURE_SUFFIXES = {
   movement: 'motion',
   human: 'human',
@@ -49,6 +50,22 @@ export const EVENT_FEATURE_SUFFIXES = {
   animal: 'animal',
   vehicle: 'vehicle',
   smoke: 'smoke',
+  co_detected: 'carbon_monoxide',
+  // Video doorbell (NDB, issue #35): someone pressed the button. The follow-up
+  // `accepted_call` / `missed_call` events describe the SAME ring (answered or
+  // not in the Netatmo app): they are deliberately not mapped, so one ring
+  // fires a scene once instead of twice.
+  incoming_call: 'ring',
+};
+
+// Webhook `sub_type` values that report the END of a detection rather than a
+// new one (Netatmo security webhook documentation: smoke 0 = cleared,
+// 1 = detected; co_detected 0 = OK, 1 = pre-alarm, 2 = alarm). Such an event
+// returns the feature to 0 at once — publishing it as a detection would raise
+// a false alarm right after a real one.
+export const EVENT_CLEARED_SUB_TYPES = {
+  smoke: ['0'],
+  co_detected: ['0'],
 };
 
 // A momentary event has no "cleared" counterpart in the Netatmo stream: the
@@ -76,6 +93,12 @@ export const SUPPORTED_MODULE_TYPE = {
   // homestatus payload carries them); its SMOKE state is webhook-driven and
   // lands with the webhooks milestone (issue #5).
   NSD: 'NSD',
+  // Smart carbon monoxide alarm (issue #36): same shape as the smoke alarm —
+  // battery + signal when homestatus carries them, CO state webhook-driven.
+  NCO: 'NCO',
+  // Smart video doorbell (issue #35): a camera of its own (snapshot + wifi),
+  // plus the ring, which only exists in the webhook event stream.
+  NDB: 'NDB',
   // Bubendorff roller shutters, bridged by the iDiamant gateway (NBG, not
   // exposed as a device): NBR (radio), NBO (wired), NBS (solar), issue #34.
   NBR: 'NBR',
@@ -105,8 +128,23 @@ export const WEATHER_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NAMODULE4,
 ];
 
-// Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621.
-export const CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
+// Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621, and
+// the video doorbell (NDB, issue #35).
+export const CAMERA_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.NACAMERA,
+  SUPPORTED_MODULE_TYPE.NOC,
+  SUPPORTED_MODULE_TYPE.NDB,
+];
+
+// Cameras streaming over HLS: the only ones whose live stream the core
+// rtsp-camera service can play through the CAMERA_URL param. The doorbell
+// streams over WebRTC only (pyatmo `WebRTCCameraMixin`): it gets no CAMERA_URL
+// rather than a live button that cannot work.
+export const HLS_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
+
+// WebRTC cameras do not serve their snapshot on the local URL (pyatmo forces
+// the VPN URL for them): no `/command/ping` resolution, VPN URL only.
+export const VPN_ONLY_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NDB];
 
 // Camera-bridged security accessories (radio-linked to a camera): door/window
 // tag (NACamDoorTag) and indoor siren (NIS). Net-new vs the core service — the
@@ -121,6 +159,7 @@ export const SECURITY_MODULE_TYPES = [
   ...CAMERA_MODULE_TYPES,
   ...CAMERA_BRIDGED_SECURITY_TYPES,
   SUPPORTED_MODULE_TYPE.NSD,
+  SUPPORTED_MODULE_TYPE.NCO,
 ];
 
 // Bubendorff / iDiamant roller shutters (issue #34): homesdata/homestatus
@@ -203,6 +242,27 @@ export const HOMES_CONCURRENCY = 2;
 // request (host API contract; the SDK does not export the constant).
 export const MAX_ENTRIES_PER_REQUEST = 100;
 
+// An API family failing for this many loads in a row (~6 minutes at the
+// 120 s cadence) marks the account degraded: one failed cycle is a hiccup.
+export const DEGRADED_AFTER_FAILED_LOADS = 3;
+
+// Degraded reasons: shown as the connection status message and in the device
+// badge tooltip (at most 200 characters per language).
+export const DEGRADED_MESSAGES = {
+  WEATHER: {
+    en: 'The Netatmo weather service is not responding: values come from the home status when available, retrying automatically.',
+    fr: "Le service météo Netatmo ne répond pas : les valeurs viennent de l'état de la maison quand il les fournit, nouvelle tentative automatique.",
+    de: 'Der Netatmo-Wetterdienst antwortet nicht: Die Werte kommen, soweit verfügbar, aus dem Hausstatus, neuer Versuch erfolgt automatisch.',
+    es: 'El servicio meteorológico de Netatmo no responde: los valores proceden del estado de la casa cuando está disponible, se reintentará automáticamente.',
+  },
+  PARTIAL: {
+    en: 'Part of the Netatmo cloud is not responding: some values are no longer refreshed, retrying automatically.',
+    fr: 'Une partie du cloud Netatmo ne répond pas : certaines valeurs ne sont plus actualisées, nouvelle tentative automatique.',
+    de: 'Ein Teil der Netatmo-Cloud antwortet nicht: Einige Werte werden nicht mehr aktualisiert, neuer Versuch erfolgt automatisch.',
+    es: 'Una parte de la nube de Netatmo no responde: algunos valores ya no se actualizan, se reintentará automáticamente.',
+  },
+};
+
 // The full scope set is requested in one go — like the core, where a single
 // (re)connection covers every device family, including the camera scopes the
 // Security milestone needs (read/write/access on camera + presence).
@@ -221,6 +281,10 @@ export const OAUTH_SCOPES = [
   'access_presence',
   'read_carbonmonoxidedetector',
   'read_smokedetector',
+  // Video doorbell (issue #35) — added after 1.3.0: an account connected
+  // before must click Connect again to grant them (see OAuth missingScopes).
+  'read_doorbell',
+  'access_doorbell',
   // Aircare
   'read_homecoach',
   // Bubendorff / iDiamant roller shutters (issue #34)
@@ -271,6 +335,14 @@ export const CONNECTION_MESSAGES = {
     fr: 'La session Netatmo a expiré, veuillez reconnecter votre compte Netatmo.',
     de: 'Die Netatmo-Sitzung ist abgelaufen, bitte verbinde dein Netatmo-Konto erneut.',
     es: 'La sesión de Netatmo ha caducado, vuelva a conectar su cuenta Netatmo.',
+  },
+  // Connected, but the token lacks requested scopes (typically scopes added by
+  // a newer release, like the video doorbell ones): the exact list is logged.
+  MISSING_SCOPES: {
+    en: 'Connected, but some Netatmo permissions are missing (for example the video doorbell, added in a recent version): click Connect again to grant them.',
+    fr: 'Connecté, mais des autorisations Netatmo manquent (par exemple la sonnette vidéo, ajoutée dans une version récente) : cliquez à nouveau sur Connecter pour les accorder.',
+    de: 'Verbunden, aber einige Netatmo-Berechtigungen fehlen (zum Beispiel für die Video-Türklingel, in einer neueren Version hinzugefügt): Klicke erneut auf Verbinden, um sie zu erteilen.',
+    es: 'Conectado, pero faltan algunos permisos de Netatmo (por ejemplo, el timbre con vídeo, añadido en una versión reciente): vuelva a hacer clic en Conectar para concederlos.',
   },
   NETATMO_UNREACHABLE: {
     en: 'Netatmo cloud is unreachable, retrying automatically.',

@@ -21,6 +21,25 @@ the notes of the version's GitHub Release.
   already connected users click **Connect** again to grant them — a refused
   shutter command says so on the Configuration screen, in the four languages
   ([#34](https://github.com/Terdious/gladys-netatmo/issues/34)).
+- Netatmo video doorbell (`NDB`), behind the Security toggle: dashboard image
+  (snapshot fetched on the Netatmo VPN URL — the doorbell serves nothing on the
+  local network), Wifi quality and a **Doorbell** ring fed by the webhooks
+  (`incoming_call` event), usable as an "If the doorbell rings" scene trigger
+  and reset after 60 s. No monitoring switch (none in the Netatmo API for the
+  doorbell) and no live stream button (WebRTC only)
+  ([#35](https://github.com/Terdious/gladys-netatmo/issues/35)).
+- New `read_doorbell` and `access_doorbell` OAuth scopes: an account connected
+  before must click **Connect** again. The integration reads the scopes
+  Netatmo granted to the token and, while some are missing, the Configuration
+  screen shows "click Connect again" next to the connected status
+  ([#35](https://github.com/Terdious/gladys-netatmo/issues/35)).
+- Netatmo carbon monoxide alarm (`NCO`), behind the Security toggle and
+  modelled on the smoke alarm: battery and signal (published when Netatmo
+  reports them), plus a **Carbon monoxide** detection fed by the webhooks
+  (`co_detected` event: pre-alarm and alarm are detections, "back to normal"
+  returns it to No), usable as a scene trigger and reset after 60 s. The
+  `read_carbonmonoxidedetector` scope was already requested: no reconnection
+  needed ([#36](https://github.com/Terdious/gladys-netatmo/issues/36)).
 
 ### Changed
 
@@ -39,6 +58,21 @@ the notes of the version's GitHub Release.
   the migration section gives the procedure of the Gladys **Migrate** button
   (4.84.1+), which keeps the history, scenes and dashboards of the devices of
   the built-in Netatmo service.
+
+### Fixed
+
+- Weather values no longer freeze when the Netatmo weather service
+  (getstationsdata) fails: the station and module measures also come from the
+  home status, now loaded whenever a device family is enabled
+  ([#33](https://github.com/Terdious/gladys-netatmo/issues/33)).
+- A Netatmo API failing for 3 refresh cycles in a row no longer goes unnoticed:
+  the devices it leaves without fresh values get a degraded badge with the
+  reason, the Configuration screen shows it under the Connected status, and
+  both clear on the first complete refresh
+  ([#33](https://github.com/Terdious/gladys-netatmo/issues/33)).
+- The "smoke cleared" webhook event (`sub_type` 0) no longer raises a smoke
+  detection: it returns the Smoke feature to No at once, so a scene triggered
+  by smoke does not fire a second time when the smoke clears.
 
 ## [1.3.0] - 2026-10-16
 

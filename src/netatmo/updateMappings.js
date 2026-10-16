@@ -136,6 +136,11 @@ export const UPDATE_MAPPINGS = {
         : deviceNetatmo.monitoring === 'on',
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
+  // Video doorbell (issue #35): only the wifi quality is pollable — the ring
+  // is webhook-driven (`incoming_call`).
+  [SUPPORTED_MODULE_TYPE.NDB]: {
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+  },
   // Camera-bridged door/window tag (issue #9). Homestatus `status` is a string:
   // "open"/"closed" (other values — "no_news"/"calibrating"/"undefined" — mean
   // "no reliable state", skipped). Battery is a percent or the string state.
@@ -167,6 +172,14 @@ export const UPDATE_MAPPINGS = {
   // only when the homestatus payload carries them. Smoke state is webhook-driven
   // (issue #5). Field names to confirm on a real NSD payload.
   [SUPPORTED_MODULE_TYPE.NSD]: {
+    battery_percent: (deviceNetatmo) =>
+      deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+  },
+  // Carbon monoxide alarm (issue #36), same table as the smoke alarm: battery +
+  // signal emitted only when homestatus carries them, CO state webhook-driven.
+  // Field names to confirm on a real NCO payload.
+  [SUPPORTED_MODULE_TYPE.NCO]: {
     battery_percent: (deviceNetatmo) =>
       deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,

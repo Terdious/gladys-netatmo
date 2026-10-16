@@ -9,7 +9,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import jpeg from 'jpeg-js';
 
-import { encodeUnderLimit, MAX_RAW_JPEG_SIZE } from '../../src/netatmo/camera.js';
+import {
+  createCameraImages,
+  encodeUnderLimit,
+  MAX_RAW_JPEG_SIZE,
+} from '../../src/netatmo/camera.js';
 
 function noiseJpeg(width, height, quality) {
   const data = Buffer.alloc(width * height * 4);
@@ -68,4 +72,22 @@ test('a snapshot too heavy even at the lowest quality is downscaled, never skipp
 test('an oversized non-JPEG payload is dropped instead of crashing', () => {
   const garbage = Buffer.alloc(MAX_RAW_JPEG_SIZE + 1000, 7);
   assert.equal(encodeUnderLimit(garbage), null);
+});
+
+test('the video doorbell (WebRTC) snapshots on its VPN URL only, never pinging the LAN', async () => {
+  const requests = [];
+  const fetchImpl = async (url) => {
+    requests.push(url);
+    return new Response(Buffer.from('doorbell-jpeg'), { status: 200 });
+  };
+  const cameras = createCameraImages({ fetchImpl });
+  const vpnUrl = 'https://prodvpn-eu-6.netatmo.net/10.20.30.40/1111111111111/2222222222222,,';
+  // Even when it claims `is_local`, pyatmo never uses the local URL of a
+  // WebRTC camera: no /command/ping resolution.
+  const doorbell = { id: '12:34:56:10:f1:66', type: 'NDB', vpn_url: vpnUrl, is_local: true };
+
+  assert.equal(await cameras.resolveBaseUrl(doorbell), vpnUrl);
+  const image = await cameras.getImage(doorbell);
+  assert.equal(image, `image/jpg;base64,${Buffer.from('doorbell-jpeg').toString('base64')}`);
+  assert.deepEqual(requests, [`${vpnUrl}/live/snapshot_720.jpg`]);
 });
