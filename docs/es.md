@@ -67,13 +67,13 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor               | Descubre                                                                                             |
-| ------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)                               |
-| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                      |
-| **Seguridad**             | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios |
-| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                  |
-| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                   |
+| Interruptor               | Descubre                                                                                                                      |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)                                                        |
+| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                                               |
+| **Seguridad**             | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios y las personas conocidas |
+| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                                           |
+| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                                            |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -306,6 +306,30 @@ vinculados a sus cámaras:
 - **Detector de monóxido de carbono** (`NCO`) — igual que el detector de humo:
   batería y señal (cuando Netatmo las reporta), más una funcionalidad
   **Monóxido de carbono** alimentada por los webhooks.
+
+---
+
+## Personas conocidas
+
+Cuando la familia Seguridad está activada, cada casa cuyas cámaras reconocen
+rostros obtiene un dispositivo **«<casa> - Known persons»**, con una
+funcionalidad **Presence** por cada persona con nombre en la aplicación Netatmo:
+**Presencia detectada** cuando Netatmo considera que la persona está en casa,
+**Sin presencia** cuando está ausente — el estado que muestra la aplicación
+Netatmo. Úsela en sus escenas como cualquier sensor de presencia.
+
+- Solo las personas **con nombre** tienen una funcionalidad: un rostro
+  desconocido (sin nombre en la aplicación Netatmo) se ignora.
+- La presencia se actualiza cada 2 minutos, e **inmediatamente** con los
+  webhooks de Gladys Plus (una persona conocida llega / se va) o después de las
+  acciones de escena **Marcar a una persona como ausente / presente**.
+- Cuando Netatmo no reporta la presencia de una persona, no se publica nada: se
+  conserva el último valor conocido.
+- Una persona añadida, renombrada o eliminada en la aplicación Netatmo: haga
+  clic en **Actualizar** en el dispositivo en la pestaña **Descubrir**
+  para añadir, renombrar o quitar la funcionalidad. La funcionalidad sigue el
+  identificador Netatmo de la persona: un cambio de nombre conserva su
+  historial.
 
 ---
 

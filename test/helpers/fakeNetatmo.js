@@ -121,6 +121,12 @@ function buildDefaultHomeStatuses() {
           { id: 'co-1', type: 'NCO', battery_percent: 92 },
         ],
         errors: [{ code: 6, id: 'valve-2' }],
+        // Presence of the known persons (issue #57), pyatmo homestatus shape:
+        // out_of_sight true = away.
+        persons: [
+          { id: 'person-1', last_seen: 1557071156, out_of_sight: false },
+          { id: 'person-2', last_seen: 1559282761, out_of_sight: true },
+        ],
       },
     },
   };
