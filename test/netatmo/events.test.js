@@ -109,6 +109,27 @@ test('person, animal, vehicle and smoke events each drive their own feature', as
   assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:smoke'), [1]);
 });
 
+test('Indoor Camera Advance events (NPC- prefix) drive the camera detections (issue #55)', async () => {
+  const gladys = fakeGladys();
+  const timers = fakeTimers();
+  const events = createEvents({ gladys, timers });
+
+  assert.equal(
+    await events.handleWebhook({ push_type: 'NPC-movement', camera_id: 'camera-1' }),
+    'ext:netatmo:camera-1:motion',
+  );
+  await events.handleWebhook({ push_type: 'NPC-person', camera_id: 'camera-1' });
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:motion'), [1]);
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:human'), [1]);
+  // The connection event (known to pyatmo) carries no momentary state.
+  assert.equal(
+    await events.handleWebhook({ push_type: 'NPC-connection', camera_id: 'camera-1' }),
+    undefined,
+  );
+  await timers.flush();
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:motion'), [1, 0]);
+});
+
 test('a carbon monoxide event (NCO-co_detected) publishes 1, then resets (issue #36)', async () => {
   const gladys = fakeGladys();
   const timers = fakeTimers();

@@ -13,7 +13,7 @@ import { normalizeConfig } from '../../src/config.js';
 import { createNetatmoClient } from '../../src/netatmo/client.js';
 import { createTelemetry } from '../../src/netatmo/telemetry.js';
 import { setDeviceValue } from '../../src/netatmo/setValue.js';
-import { startFakeNetatmo } from '../helpers/fakeNetatmo.js';
+import { startFakeNetatmo, addIndoorCameraAdvance, NPC_ID } from '../helpers/fakeNetatmo.js';
 import { waitFor } from '../helpers/fakeGladysCore.js';
 import { DEGRADED_AFTER_FAILED_LOADS, DEGRADED_MESSAGES } from '../../src/netatmo/constants.js';
 
@@ -278,6 +278,58 @@ test('the video doorbell is discovered behind security_api, with image and ring 
   const discoveredCount = gladys.discovered.length;
   await telemetry.refreshValues(configSecurity);
   assert.equal(gladys.discovered.length, discoveredCount);
+});
+
+test('the Indoor Camera Advance is discovered behind security_api, like NACamera (issue #55)', async () => {
+  addIndoorCameraAdvance(netatmo.state);
+  const npcExternalId = `ext:netatmo:${NPC_ID}`;
+  // Security off (default): the camera stays out of the discovery.
+  const withoutSecurity = await telemetry.syncDiscovery(config);
+  assert.ok(!withoutSecurity.some((d) => d.external_id === npcExternalId));
+
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  const npc = gladys.devices.find((d) => d.external_id === npcExternalId);
+  assert.ok(npc);
+  assert.equal(npc.model, 'NPC');
+  assert.deepEqual(
+    npc.features.map((f) => f.external_id.replace(`${npcExternalId}:`, '')),
+    ['wifi_strength', 'monitoring', 'camera', 'motion', 'human'],
+  );
+  // WebRTC only: no HLS live URL for the core rtsp-camera service.
+  assert.equal(
+    npc.params.find((p) => p.name === 'CAMERA_URL'),
+    undefined,
+  );
+
+  await telemetry.refreshValues(configSecurity);
+  assert.deepEqual(stateOf(`${npcExternalId}:monitoring`), [1]);
+  assert.deepEqual(stateOf(`${npcExternalId}:wifi_strength`), [58]);
+  assert.deepEqual(stateOf(`${npcExternalId}:motion`), []); // webhook-only
+  const badge = Object.fromEntries(gladys.transports.map((t) => [t.external_id, t.transport]));
+  assert.equal(badge[npcExternalId], 'cloud');
+  // Dashboard image fetched on the VPN URL, without any LAN resolution even
+  // though homestatus says `is_local: true`.
+  const image = gladys.cameraImages.find((c) => c.deviceExternalId === npcExternalId);
+  assert.match(image.image, /^image\/jpg;base64,/);
+  const npcRequests = netatmo.state.cameraRequests.filter((r) => r.camId === NPC_ID);
+  assert.ok(npcRequests.length > 0);
+  assert.ok(npcRequests.every((r) => r.side === 'vpn'));
+  assert.ok(!npcRequests.some((r) => r.path === '/command/ping'));
+
+  // Monitoring goes through /api/setstate, like NACamera.
+  const monitoring = npc.features.find((f) => f.external_id.endsWith(':monitoring'));
+  await setDeviceValue({ gladys, client }, { device: npc, feature: monitoring, value: 0 });
+  assert.deepEqual(netatmo.state.setStateRequests, [
+    { home: { id: 'home-1', modules: [{ id: NPC_ID, monitoring: 'off' }] } },
+  ]);
+
+  // A token without the camerapro write scope: the actionable reconnect message.
+  netatmo.state.failSetStateWith = { status: 403, body: { error: { code: 13, message: 'scope' } } };
+  await assert.rejects(
+    setDeviceValue({ gladys, client }, { device: npc, feature: monitoring, value: 1 }),
+    /reconnect your Netatmo/,
+  );
 });
 
 test('cameras carry a local-first CAMERA_URL and the camera_quality param (core #2625)', async () => {

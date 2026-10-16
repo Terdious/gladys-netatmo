@@ -56,6 +56,11 @@ capabilities land (Home + Security cameras, webhooks, …).
   rotation, local/VPN switch, user-edited quality) — the external-integrations
   framework silently upserts the params of created devices on every
   discovery publish.
+- **Indoor Camera Advance** (`NPC`, opt-in with the cameras, own
+  `read_camerapro` / `write_camerapro` / `access_camerapro` scopes): the
+  NACamera feature set (monitoring switch, dashboard image, motion / person
+  detections, cameras widget). It is a WebRTC camera like the doorbell: the
+  snapshot is fetched on the VPN URL only, and it gets no `CAMERA_URL`.
 - **Video doorbell** (`NDB`, opt-in with the cameras): dashboard image
   (snapshot on the VPN URL only — WebRTC cameras serve nothing locally),
   WiFi quality and a **doorbell ring** feature fed by the webhooks

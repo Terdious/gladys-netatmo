@@ -10,6 +10,19 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Netatmo Indoor Camera Advance (`NPC`), discovered with the Security family:
+  the same features as the indoor camera — **dashboard image**, writable
+  **monitoring** switch (`/api/setstate`), **Motion** and **Person detected**
+  from the Gladys Plus webhooks (`NPC-` events) — and it joins the **Netatmo
+  cameras** widget. As a WebRTC camera (like the video doorbell), its snapshot
+  is fetched on the Netatmo VPN URL only and it gets no live stream
+  (`CAMERA_URL`). It needs three new Netatmo permissions (`read_camerapro`,
+  `write_camerapro`, `access_camerapro`): an account connected before must
+  click **Connect** again, which the connection status asks for
+  ([#55](https://github.com/Terdious/gladys-netatmo/issues/55)).
+
 ## [2.0.1] - 2026-10-16
 
 ### Fixed

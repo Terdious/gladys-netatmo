@@ -21,6 +21,7 @@ import {
 import {
   SUPPORTED_MODULE_TYPE,
   CAMERA_MODULE_TYPES,
+  HLS_CAMERA_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
   PARAMS,
 } from './constants.js';
@@ -326,7 +327,10 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       );
       break;
     case SUPPORTED_MODULE_TYPE.NACAMERA:
-    case SUPPORTED_MODULE_TYPE.NOC: {
+    case SUPPORTED_MODULE_TYPE.NOC:
+    case SUPPORTED_MODULE_TYPE.NPC: {
+      // The Indoor Camera Advance (issue #55) gets the NACamera feature set.
+      // It streams over WebRTC only: no live-stream params (HLS only, below).
       features.push(buildFeatureMonitoring(nameDevice, externalId));
       features.push(buildFeatureCamera(nameDevice, externalId));
       // Momentary detections, fed by the webhook event stream (issue #5) —
@@ -347,7 +351,9 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       // on every discovery re-publish, so refreshing the URL is just
       // re-publishing. camera_quality carries the CURRENT device value so the
       // upsert never overwrites a user edit.
-      const enrichment = cameraEnrichments?.get(id);
+      const enrichment = HLS_CAMERA_MODULE_TYPES.includes(model)
+        ? cameraEnrichments?.get(id)
+        : undefined;
       if (enrichment) {
         params.push(
           { name: PARAMS.CAMERA_URL, value: enrichment.liveUrl },

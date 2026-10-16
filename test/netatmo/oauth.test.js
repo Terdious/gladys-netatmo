@@ -143,6 +143,20 @@ test('scopes missing from the token are tracked until Connect grants them (issue
   assert.deepEqual(notified.at(-1), []);
 });
 
+test('a token predating the Indoor Camera Advance reports the camerapro scopes missing (issue #55)', async () => {
+  assert.ok(OAUTH_SCOPES.includes('read_camerapro'));
+  assert.ok(OAUTH_SCOPES.includes('write_camerapro'));
+  assert.ok(OAUTH_SCOPES.includes('access_camerapro'));
+  await connectAccount();
+  netatmo.state.grantedScopes = OAUTH_SCOPES.filter((scope) => !scope.endsWith('_camerapro'));
+  await oauth.refreshTokens();
+  assert.deepEqual(oauth.missingScopes(), [
+    'read_camerapro',
+    'write_camerapro',
+    'access_camerapro',
+  ]);
+});
+
 test('handleCallback rejects a state mismatch', async () => {
   oauth.buildAuthorizeUrl(REDIRECT_URI);
   await assert.rejects(
