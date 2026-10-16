@@ -187,20 +187,73 @@ Quand la famille Sécurité est activée, les accessoires liés à vos caméras 
 
 ## Mettre à jour l'intégration
 
-Le bouton **« Forcer la mise à jour »** de l'onglet Supervision récupère une
-nouvelle **image Docker (le runtime)**. La **version affichée** et les **champs
-de configuration** proviennent du **manifest** que vous avez installé. Si une
-mise à jour ajoute de nouveaux champs de configuration, réinstallez / recollez
-le manifest à jour pour les récupérer.
+**Installée depuis le catalogue** (le cas habituel) : Gladys consulte
+régulièrement le store. Quand une nouvelle version sort, l'intégration affiche
+un badge **« Mise à jour disponible »** (également compté à côté de
+**Intégrations** dans le menu), et son onglet **Supervision** indique la version
+proposée, avec un lien vers ses notes de version. Cliquez sur **Mettre à jour** :
+Gladys récupère la nouvelle image **et** applique le nouveau manifest — les
+nouveaux champs de configuration apparaissent d'eux-mêmes, il n'y a rien à
+recoller. Votre configuration et vos appareils sont conservés.
+
+Gladys peut mettre jusqu'à environ une heure et demie à voir une nouvelle
+version (rafraîchissement de l'index du store). **« Forcer la mise à jour »**
+vérifie immédiatement : il lit la dernière version publiée et récupère son
+image.
+
+**Installée en mode développeur** (manifest collé à la main) : **« Forcer la
+mise à jour »** ne fait que récupérer à nouveau l'image du tag installé, et la
+version affichée comme les champs de configuration proviennent du manifest
+collé — recollez le manifest à jour pour récupérer les nouveaux champs.
 
 ---
 
 ## Migration depuis le service Netatmo intégré
 
-Si vous utilisiez le service Netatmo intégré à Gladys, cette intégration externe
-le remplace. Les appareils sont **redécouverts comme neufs** (leurs
-identifiants passent de `netatmo:*` à `ext:netatmo:*`), leur historique n'est
-donc pas repris — recréez les appareils depuis l'écran Découverte.
+Cette intégration externe remplace le service Netatmo intégré à Gladys. Ses
+appareils ont de nouveaux identifiants (`netatmo:*` → `ext:netatmo:*`) et sont
+donc créés comme de nouveaux appareils — mais depuis **Gladys 4.84.1**, vous
+pouvez **migrer** chaque ancien appareil vers son remplaçant et conserver son
+**historique d'états**, ses **scènes** et ses **tableaux de bord**.
+
+### Avant de commencer
+
+- **Ne supprimez pas vos anciens appareils Netatmo** : la migration part
+  d'eux.
+- **Migrez peu après avoir créé les nouveaux appareils.** Si les deux appareils
+  ont enregistré des valeurs sur la même période, seul l'historique ancien
+  _antérieur à la première valeur du nouvel appareil_ est déplacé, pour ne rien
+  compter en double : les valeurs de l'ancien appareil sur la période commune
+  sont abandonnées.
+
+### Étapes
+
+1. Installez et connectez cette intégration, puis créez vos appareils depuis
+   l'onglet **Découverte** : la destination doit exister avant de migrer.
+2. Ouvrez **Intégrations → Netatmo** — l'intégration intégrée, signalée comme
+   dépréciée — puis son onglet **Appareils**.
+3. Sur un ancien appareil, cliquez sur **Migrer**.
+4. Choisissez l'**Appareil de destination** : le nouvel appareil, rangé sous
+   l'intégration externe Netatmo (la liste se filtre par intégration, pièce et
+   nom).
+5. Vérifiez le tableau **Correspondance des fonctionnalités**. Gladys le
+   pré-remplit (même catégorie, même type et même unité, puis même nom pour
+   départager les jumelles) ; chaque ancienne fonctionnalité peut être associée
+   à la main, ou réglée sur **Ne pas migrer** — son historique est alors
+   supprimé. Regardez bien les lignes de température des thermostats et des
+   stations, qui ont plusieurs fonctionnalités de température.
+6. Cliquez sur **Migrer et supprimer l'ancien appareil**.
+
+Gladys déplace l'historique, réécrit les scènes et les tableaux de bord qui
+utilisaient l'ancien appareil, place le nouvel appareil dans la pièce de
+l'ancien s'il n'en a pas, rebranche les liens énergie, puis supprime l'ancien
+appareil. Le résultat indique le nombre d'états déplacés et de scènes /
+tableaux de bord mis à jour. Répétez pour chaque appareil.
+
+Un long historique peut prendre plusieurs minutes : suivez-le dans
+**Paramètres → Tâches**. Si la page perd la connexion, la migration continue en
+arrière-plan — vérifiez cette page avant de réessayer. Une migration échouée
+peut être relancée : elle ne déplace que ce qui reste.
 
 ---
 

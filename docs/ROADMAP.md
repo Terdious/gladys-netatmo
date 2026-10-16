@@ -44,8 +44,11 @@
   between ~100 and 150 KB currently die in a 413 — the integration ships a
   96 KB budget meanwhile), and make the front's oauth2 Connect button save
   the form first.
-- Core-side migration helper for users moving from the core service
-  (`netatmo:<id>` → `ext:netatmo:<id>`, history not carried over).
+- ~~Core-side migration helper for users moving from the core service~~ —
+  shipped in Gladys 4.84.1 (GladysAssistant/Gladys#2737, hardened for large
+  histories in 4.85.0, #2778): the **Migrate** button of the built-in Netatmo
+  devices moves the history, scenes and dashboards onto the `ext:netatmo:<id>`
+  device. Procedure in the user docs.
 
 ## external_id conventions (FROZEN)
 
