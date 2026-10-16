@@ -237,6 +237,25 @@ pasos siguientes.
 
 ---
 
+## Widgets del panel
+
+Tres widgets se suman al selector de widgets del panel (Gladys **5.1** o
+posterior): **Editar panel**, añada un widget y busque «Netatmo».
+
+| Widget                  | Muestra                                                                                                                                                          | Ajustes                                                                                                    |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Tiempo Netatmo**      | las fichas en directo de la estación (temperaturas, humedad, CO2, ruido, presión, lluvia, viento) y una fila de estado por módulo con batería baja o inaccesible | la estación (vacío: la primera) y las mediciones mostradas: Resumen, Interior, o Exterior, lluvia y viento |
+| **Calefacción Netatmo** | el modo de calefacción de la casa, una fila por habitación (temperatura medida → consigna) y los botones Programación / Antihielo / Ausencia                     | un termostato o una válvula de la casa (vacío: su única casa)                                              |
+| **Cámaras Netatmo**     | la última imagen de cada cámara, su vigilancia y botones para activarla / desactivarla                                                                           | una cámara mostrada en grande (vacío: todas las cámaras en lista)                                          |
+
+Las fichas siguen los valores en directo; el resto se actualiza con la
+integración (2 minutos, o en cuanto cambian el modo de calefacción, la
+vigilancia o una imagen). Las imágenes de las cámaras las sirve la propia
+integración: el panel nunca carga una imagen desde los servidores de Netatmo.
+Un widget solo muestra los dispositivos creados en Gladys.
+
+---
+
 ## Accesorios de seguridad (conectados a través de la cámara)
 
 Cuando la familia Seguridad está activada, también se descubren los accesorios

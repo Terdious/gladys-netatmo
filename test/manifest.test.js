@@ -16,6 +16,7 @@ import { WEBHOOK_KEY, CONNECTION_MESSAGES } from '../src/netatmo/constants.js';
 import * as featureBuilders from '../src/netatmo/features.js';
 import { SCENE_ACTIONS } from '../src/netatmo/scenes.js';
 import { SCENE_TRIGGER_KEYS } from '../src/netatmo/events.js';
+import { WIDGETS, WIDGET_OF_UPDATE } from '../src/netatmo/widgets.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -233,6 +234,36 @@ test('scene declarations: unique keys, allowed field types, scalar variables and
       for (const output of [...(entry.variables ?? []), ...(entry.outputs ?? [])]) {
         assert.ok(['string', 'number', 'boolean'].includes(output.type));
       }
+    }
+  }
+});
+
+test('every widgets key has an onWidgetGet handler, and vice versa', () => {
+  const declared = keysOf(manifest.widgets);
+  for (const key of declared) {
+    assert.equal(typeof WIDGETS[key]?.get, 'function', `widget "${key}" has no content handler`);
+  }
+  for (const key of Object.keys(WIDGETS)) {
+    assert.ok(declared.includes(key), `widget "${key}" is not declared in widgets`);
+  }
+  // Every telemetry nudge targets a declared widget (an undeclared key throws).
+  for (const key of Object.values(WIDGET_OF_UPDATE)) {
+    assert.ok(declared.includes(key), `nudged widget "${key}" is not declared`);
+  }
+});
+
+test('widget declarations: key, label and description bounds, allowed setting types', () => {
+  assert.ok(manifest.widgets.length <= 5);
+  for (const widget of manifest.widgets) {
+    assert.match(widget.key, /^[a-z0-9_]{2,32}$/);
+    for (const label of Object.values(widget.label)) {
+      assert.ok(label.length >= 3 && label.length <= 30, `${widget.key} label "${label}"`);
+    }
+    for (const description of Object.values(widget.description ?? {})) {
+      assert.ok(description.length <= 100, `${widget.key} description "${description}"`);
+    }
+    for (const setting of widget.settings ?? []) {
+      assert.ok(['string', 'number', 'boolean', 'select', 'multi_select'].includes(setting.type));
     }
   }
 });

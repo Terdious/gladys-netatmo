@@ -236,6 +236,26 @@ markieren“ mit der Information **Person**. Jede Aktion gibt den Namen des
 
 ---
 
+## Dashboard-Widgets
+
+Drei Widgets erscheinen in der Widget-Auswahl des Dashboards (Gladys **5.1**
+oder neuer): **Dashboard bearbeiten**, ein Widget hinzufügen und nach „Netatmo“
+suchen.
+
+| Widget              | Zeigt                                                                                                                                                      | Einstellungen                                                                                             |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind |
+| **Netatmo-Heizung** | den Heizmodus des Zuhauses, eine Zeile pro Raum (gemessene Temperatur → Sollwert) und die Schaltflächen Zeitplan / Frostschutz / Abwesend                  | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause)                                     |
+| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                    | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                |
+
+Die Kacheln folgen den Werten live; der Rest wird mit der Integration
+aktualisiert (2 Minuten, oder sobald sich der Heizmodus, die Überwachung oder
+ein Bild ändert). Die Kamerabilder liefert die Integration selbst — das
+Dashboard lädt nie ein Bild von den Netatmo-Servern. Ein Widget zeigt nur die in
+Gladys angelegten Geräte.
+
+---
+
 ## Sicherheitszubehör (über die Kamera angebunden)
 
 Wenn die Familie Sicherheit aktiviert ist, wird auch das mit deinen Kameras

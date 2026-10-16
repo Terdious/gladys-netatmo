@@ -223,6 +223,25 @@ Each action returns the **Home** name to the following steps.
 
 ---
 
+## Dashboard widgets
+
+Three widgets join the dashboard widget picker (Gladys **5.1** or later): **Edit
+dashboard**, add a widget and search for "Netatmo".
+
+| Widget              | Shows                                                                                                                                               | Settings                                                                                               |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Netatmo weather** | live tiles of the station (temperatures, humidity, CO2, noise, pressure, rain, wind) and a health row per module with a low battery or out of reach | the station (empty: the first one) and the readings shown: Overview, Indoor, or Outdoor, rain and wind |
+| **Netatmo heating** | the heating mode of the home, one row per room (measured → setpoint temperature) and the Schedule / Frost protection / Away buttons                 | a thermostat or valve of the home (empty: your single home)                                            |
+| **Netatmo cameras** | the latest picture of each camera, its monitoring, and buttons to turn it on / off                                                                  | one camera shown large (empty: every camera in a list)                                                 |
+
+The tiles follow the values live; the rest refreshes with the integration (2
+minutes, or as soon as the heating mode, the monitoring or a picture changes).
+The camera pictures are served by the integration itself — the dashboard never
+loads an image from Netatmo's servers. A widget only shows the devices you
+created in Gladys.
+
+---
+
 ## Security accessories (camera-bridged)
 
 When the Security family is enabled, the accessories linked to your cameras are

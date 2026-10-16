@@ -31,6 +31,13 @@ import { createWebhooks } from './src/netatmo/webhooks.js';
 import { createEvents } from './src/netatmo/events.js';
 import { setDeviceValue } from './src/netatmo/setValue.js';
 import { SCENE_ACTIONS } from './src/netatmo/scenes.js';
+import {
+  WIDGETS,
+  WIDGET_OF_UPDATE,
+  getWidgetImage,
+  refreshWidgets,
+  requestRefresh,
+} from './src/netatmo/widgets.js';
 import { CONNECTION_MESSAGES, WEBHOOK_KEY } from './src/netatmo/constants.js';
 
 /**
@@ -136,6 +143,8 @@ export function setupIntegration(
       // (Re)register the webhook relay URL at Netatmo — the Netatmo pattern is
       // to re-register on every successful connection, best effort.
       await webhooks.register();
+      // Nudges are dropped while disconnected: re-pull every widget now.
+      refreshWidgets(gladys);
       logger.info('Netatmo account connected, token refresh and telemetry engines armed');
     } catch (err) {
       if (err instanceof NotConnectedError) {
@@ -230,6 +239,35 @@ export function setupIntegration(
       );
     });
   }
+
+  // --- Dashboard widgets -----------------------------------------------------
+  // One content handler per key of the manifest `widgets` field (pulled by
+  // the core, cached by TTL), the taps on their buttons, and the bytes of
+  // the camera images they declare (see src/netatmo/widgets.js).
+  const widgetContext = () => ({
+    gladys,
+    client,
+    telemetry,
+    refresh: () => telemetry.refreshNow(config),
+  });
+  for (const [widgetKey, widget] of Object.entries(WIDGETS)) {
+    gladys.onWidgetGet(widgetKey, (request) => widget.get(widgetContext(), request));
+    if (typeof widget.action === 'function') {
+      gladys.onWidgetAction(widgetKey, (actionKey, params, { settings } = {}) => {
+        logger.info(`onWidgetAction <- ${widgetKey}.${actionKey}`);
+        return widget.action(widgetContext(), { actionKey, params, settings });
+      });
+    }
+  }
+  gladys.onWidgetGetImage((imageKey) => getWidgetImage(imageKey));
+  // The data a widget computes changed (heating mode, room temperatures,
+  // module health, camera snapshots or monitoring): nudge the core to re-pull
+  // it now instead of waiting for the content TTL. Live tiles need no nudge.
+  telemetry.onUpdate((kind) => {
+    if (WIDGET_OF_UPDATE[kind]) {
+      requestRefresh(gladys, WIDGET_OF_UPDATE[kind]);
+    }
+  });
 
   // --- Camera: Gladys asks for a fresh snapshot ------------------------------
   gladys.onGetImage(async (device) => {

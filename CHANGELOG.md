@@ -28,6 +28,15 @@ the notes of the version's GitHub Release.
   empty) and "Mark a person as at home" (or every known person), on the home
   of the chosen device or the account's single home
   ([#39](https://github.com/Terdious/gladys-netatmo/issues/39)).
+- **Dashboard widgets**: _Netatmo weather_ (live tiles of the station, a
+  health row for a module with a low battery or out of reach, three views),
+  _Netatmo heating_ (heating mode, one row per room with the measured and set
+  temperatures, Schedule / Frost protection / Away buttons) and _Netatmo
+  cameras_ (latest picture of each camera served by the integration under a
+  content-addressed key, monitoring state and on / off buttons). The widgets
+  are nudged to refresh when the heating mode, the module health, the
+  monitoring or a picture changes
+  ([#40](https://github.com/Terdious/gladys-netatmo/issues/40)).
 
 ### Changed
 

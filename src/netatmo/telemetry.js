@@ -105,6 +105,15 @@ export function createTelemetry({
   // Homesdata homes summaries (names, known persons, modules, heating mode),
   // by home id — read by the scene triggers/actions (issue #39).
   const homesById = new Map();
+  // Last raw Netatmo payload of every device, by id — read by the dashboard
+  // widgets (issue #40) for what no feature carries (battery health,
+  // reachability, camera monitoring).
+  const rawDevicesById = new Map();
+  // Change listeners (widget freshness nudges): notified with a kind —
+  // 'heating', 'weather' or 'cameras' — when the matching data changed.
+  const updateListeners = [];
+  // Last data signature per kind: a nudge only when something moved.
+  const signatures = new Map();
 
   // --- Account load (single-flight + short TTL) ------------------------------
   let loadCache = null; // {key, at, promise}
@@ -126,6 +135,9 @@ export function createTelemetry({
     }
     const promise = loadAccount(client, config).then((result) => {
       afterLoad(result);
+      notifyOnChange('heating', heatingSignature());
+      notifyOnChange('weather', weatherSignature());
+      notifyOnChange('cameras', camerasSignature());
       return result;
     });
     loadCache = { key, at: now(), promise };
@@ -147,10 +159,18 @@ export function createTelemetry({
     // proof that a home is gone.
     if (!partial) {
       homesById.clear();
+      rawDevicesById.clear();
     }
     for (const home of homes) {
       homesById.set(home.id, home);
     }
+    for (const rawDevice of rawDevices) {
+      const id = netatmoId(rawDevice);
+      if (id && !rawDevice.not_handled) {
+        rawDevicesById.set(id, rawDevice);
+      }
+    }
+
     const notHandledCount = rawDevices.filter((rawDevice) => rawDevice.not_handled).length;
     if (!partial && notHandledCount !== lastNotHandledCount) {
       logger.info(`Netatmo devices not supported: ${notHandledCount}`);
@@ -189,6 +209,62 @@ export function createTelemetry({
         published.delete(key);
       }
     }
+  }
+
+  // --- Change notifications (widget nudges, issue #40) -----------------------
+
+  /** Heating data the widget shows: mode and room temperatures per home. */
+  function heatingSignature() {
+    return JSON.stringify(
+      [...homesById.values()].map((home) => [home.id, home.therm_mode, home.rooms]),
+    );
+  }
+
+  /** Weather health the widget shows: battery and reachability per module. */
+  function weatherSignature() {
+    return JSON.stringify(
+      [...rawDevicesById.values()]
+        .filter((rawDevice) => /^NA(Main|Module[1-4])$/.test(rawDevice.type))
+        .map((rawDevice) => [
+          netatmoId(rawDevice),
+          rawDevice.reachable,
+          rawDevice.battery_percent ?? rawDevice.battery_state,
+        ]),
+    );
+  }
+
+  /** Camera data the widget shows: the monitoring state per camera. */
+  function camerasSignature() {
+    return JSON.stringify(
+      [...rawCamerasById.values()].map((rawDevice) => [netatmoId(rawDevice), rawDevice.monitoring]),
+    );
+  }
+
+  /** Notify the listeners of a kind whose data signature changed. */
+  function notifyOnChange(kind, signature) {
+    if (signatures.get(kind) === signature) {
+      return;
+    }
+    signatures.set(kind, signature);
+    notify(kind);
+  }
+
+  function notify(kind) {
+    for (const listener of updateListeners) {
+      try {
+        listener(kind);
+      } catch (err) {
+        logger.debug(`Update listener failed for ${kind}: ${err.message}`);
+      }
+    }
+  }
+
+  /**
+   * Register a change listener (widget freshness nudges).
+   * @param {(kind: 'heating'|'weather'|'cameras') => void} listener callback
+   */
+  function onUpdate(listener) {
+    updateListeners.push(listener);
   }
 
   /** Forget the dedup memory so the next refresh re-publishes every value. */
@@ -362,6 +438,7 @@ export function createTelemetry({
    * through POST /camera/image. Failures are logged and never abort the cycle.
    */
   async function refreshCameraImages() {
+    let changed = false;
     for (const [id, rawDevice] of rawCamerasById) {
       const externalId = gladys.externalId(id);
       const hasCameraFeature = (findGladysDevice(id)?.features ?? []).some(
@@ -373,12 +450,17 @@ export function createTelemetry({
       try {
         const image = await cameras.getImage(rawDevice);
         if (image) {
+          changed = changed || lastImages.get(id) !== image;
           lastImages.set(id, image);
           await gladys.publishCameraImage(externalId, image);
         }
       } catch (err) {
         logger.warn(`Camera image refresh failed for ${id}: ${err.message}`);
       }
+    }
+    if (changed) {
+      // New snapshots: the cameras widget shows them under new image keys.
+      notify('cameras');
     }
   }
 
@@ -527,11 +609,32 @@ export function createTelemetry({
     return [...homesById.values()];
   }
 
+  /**
+   * Last raw Netatmo payload of a device (see rawDevicesById).
+   * @param {string} id Netatmo id
+   * @returns {object|undefined} the raw device
+   */
+  function getRawDevice(id) {
+    return rawDevicesById.get(id);
+  }
+
+  /**
+   * Last image published (or served on demand) for a camera.
+   * @param {string} id Netatmo camera id
+   * @returns {string|undefined} `image/jpg;base64,...` string
+   */
+  function getCameraImage(id) {
+    return lastImages.get(id);
+  }
+
   return {
     syncDiscovery,
     refreshValues,
     refreshNow,
     getHomes,
+    getRawDevice,
+    getCameraImage,
+    onUpdate,
     getCameraSnapshot,
     resetDedup,
     start,

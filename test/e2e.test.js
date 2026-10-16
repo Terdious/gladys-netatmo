@@ -217,3 +217,16 @@ test('a scene action reaches its handler through the real SDK wiring', async () 
   assert.deepEqual(result.data.outputs, { home_name: 'Maison' });
   assert.deepEqual(netatmo.state.setThermModeRequests.at(-1), { home_id: 'home-1', mode: 'hg' });
 });
+
+test('a dashboard widget content comes through the real SDK wiring', async () => {
+  const result = await sendAndWaitResult(EXTERNAL_INTEGRATION.WIDGET_GET, {
+    key: 'netatmo_heating',
+    settings: {},
+    language: 'en',
+    units: 'metric',
+  });
+  assert.equal(result.success, true);
+  const { components } = result.data.content;
+  assert.equal(components[0].text, 'Maison');
+  assert.ok(components.some((component) => component.type === 'status'));
+});
