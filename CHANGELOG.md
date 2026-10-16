@@ -12,6 +12,15 @@ the notes of the version's GitHub Release.
 
 ### Changed
 
+- GitHub Release notes, like gladys-tuya: the version's changelog section,
+  one line per bullet (no more hard line breaks), followed by the notes GitHub
+  generates — "What's Changed" with the merged pull requests and their
+  authors, and the "Full Changelog" comparison. A manual run of the GitHub
+  releases workflow with "refresh" rewrites the notes of the existing
+  Releases.
+- The Release workflow refuses to release when the Unreleased section of
+  `CHANGELOG.md` lists no change.
+
 - User documentation (en, fr, de, es): the update section describes the
   catalog update (Update button, new configuration fields applied on their
   own) instead of re-pasting the manifest, now only needed in developer mode;

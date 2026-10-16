@@ -148,9 +148,10 @@ npx github:GladysAssistant/integration-store .   # store admission rules
 
 Describe each change under `## [Unreleased]` in [`CHANGELOG.md`](CHANGELOG.md).
 A release is cut from **Actions → Release → Run workflow** (patch / minor /
-major): it bumps `package.json` and the manifest (`version` + `docker_image`,
-Prettier layout kept), rolls the changelog, tags `vX.Y.Z`, publishes the
-image and the GitHub Release. Dependabot keeps the SDK and the GitHub Actions
+major): it refuses an empty `[Unreleased]` section, bumps `package.json` and
+the manifest (`version` + `docker_image`, Prettier layout kept), rolls the
+changelog, tags `vX.Y.Z`, publishes the image and the GitHub Release (the
+changelog section, then GitHub's "What's Changed" and "Full Changelog"). Dependabot keeps the SDK and the GitHub Actions
 up to date.
 
 The e2e test runs the real SDK client against a fake Gladys core and a fake

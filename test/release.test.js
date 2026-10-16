@@ -10,7 +10,13 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import * as prettier from 'prettier';
-import { bumpManifest, releaseNotes, rollChangelog } from '../.github/scripts/release.mjs';
+import {
+  bumpManifest,
+  hasUnreleasedChanges,
+  releaseNotes,
+  rollChangelog,
+  unwrapMarkdown,
+} from '../.github/scripts/release.mjs';
 
 const REPO = 'https://github.com/me/my-integration';
 const manifestPath = fileURLToPath(
@@ -196,4 +202,89 @@ test('releaseNotes returns the section of a version', () => {
   assert.equal(releaseNotes(text, '1.0.1'), '- Thing.');
   assert.equal(releaseNotes(text, '1.0.0'), '');
   assert.equal(releaseNotes(text, '1.0'), '');
+});
+
+test('releaseNotes puts each wrapped bullet on one line, as a GitHub Release renders newlines', () => {
+  const text = `# Changelog
+
+## [1.1.0] - 2026-01-02
+
+### Added
+
+- A long entry wrapped at eighty columns for the editor, continued on the
+  next line and the one after
+  that.
+- A short one.
+
+A closing paragraph
+on two lines.
+
+## [1.0.0] - 2026-01-01
+`;
+  assert.equal(
+    releaseNotes(text, '1.1.0'),
+    `### Added
+
+- A long entry wrapped at eighty columns for the editor, continued on the next line and the one after that.
+- A short one.
+
+A closing paragraph on two lines.`,
+  );
+});
+
+test('unwrapMarkdown keeps headings, nested items, quotes, tables and code fences', () => {
+  const text = `### Fixed
+
+- Parent item
+  continued.
+  - Nested item
+    continued.
+> A quote
+| a | b |
+| - | - |
+\`\`\`
+code line one
+code line two
+\`\`\``;
+  assert.equal(
+    unwrapMarkdown(text),
+    `### Fixed
+
+- Parent item continued.
+  - Nested item continued.
+> A quote
+| a | b |
+| - | - |
+\`\`\`
+code line one
+code line two
+\`\`\``,
+  );
+});
+
+test('the real changelog renders one line per bullet in every release note', async () => {
+  const text = await readFile(changelogPath, 'utf8');
+  const versions = [...text.matchAll(/^## \[(\d+\.\d+\.\d+)\]/gm)].map((match) => match[1]);
+  assert.ok(versions.length > 0);
+  for (const version of versions) {
+    for (const line of releaseNotes(text, version).split('\n')) {
+      assert.ok(!/^\s{2,}\S/.test(line) || /^\s*[-*+]\s/.test(line), `${version}: "${line}"`);
+    }
+  }
+});
+
+test('hasUnreleasedChanges: a release always says what it ships', () => {
+  assert.equal(
+    hasUnreleasedChanges('# Changelog\n\n## [Unreleased]\n\n## [1.0.0] - 2026-01-01\n\n- Thing.\n'),
+    false,
+  );
+  assert.equal(
+    hasUnreleasedChanges('# Changelog\n\n## [Unreleased]\n\n### Added\n\n## [1.0.0]\n'),
+    false,
+  );
+  assert.equal(
+    hasUnreleasedChanges('# Changelog\n\n## [Unreleased]\n\n### Fixed\n\n- Fix.\n'),
+    true,
+  );
+  assert.equal(hasUnreleasedChanges('# Changelog\n\nNo section.\n'), false);
 });
