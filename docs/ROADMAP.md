@@ -23,7 +23,7 @@
   animal, vehicle, smoke (PR #22).
 - **v1.3.0**: Cloud catalog tag (#23, PR #24), catalog categories, SDK
   0.15.0, Gladys >= 4.86.0 (PR #25), German and Spanish (PR #26).
-- **Unreleased** (next release, Gladys >= 5.2.0):
+- **v2.0.0** (Gladys >= 5.2.0):
   - reliability: weather values kept when `getstationsdata` fails, degraded
     state for a failing API family (#33, PR #43); "smoke cleared" no longer
     raises a detection (PR #51);
@@ -34,6 +34,14 @@
     triggers and actions (#39, PR #49), dashboard widgets (#40, PR #50);
   - docs: catalog update and migration (PR #31), GitHub Release notes like
     gladys-tuya (PR #32), roadmap and forum links (PR #42).
+- **v2.0.1**: test-coverage backlog closed (#12, PR #52).
+- **Unreleased** (next release):
+  - heating: modulating / OpenTherm thermostat OTM + OTH (#53, PR #64),
+    BTicino Smarther BNS (#54, PR #65, new scopes), room setpoint with
+    duration, boost, back to schedule and schedule selection (#58, PR #63);
+  - cameras and security: Indoor Camera Advance NPC (#55, PR #66, new
+    scopes, snapshot only), outdoor camera floodlight on / off / auto (#56,
+    PR #67), presence of the known persons (#57, PR #62).
 - Upstream, shipped in Gladys: live-stream latency (GladysAssistant/Gladys#2698,
   4.84.1, see #11), device migration with history
   (GladysAssistant/Gladys#2737, 4.84.1, hardened in #2778).
@@ -62,12 +70,26 @@ forum topic.
 - [#19](https://github.com/Terdious/gladys-netatmo/issues/19) Battery level
   on the Devices tab — core PR GladysAssistant/Gladys#3207 (nothing to do
   here: the battery feature is already published).
-- Translated option labels (the Home Coach air quality level is in French
-  only): proposed core change accepting `{ en, fr, de, es }` option labels.
+- [#61](https://github.com/Terdious/gladys-netatmo/issues/61) Home Coach
+  air quality as a standard level (translated, no more French-only text) —
+  core PR GladysAssistant/Gladys#3213.
+- Live stream of the WebRTC cameras (video doorbell NDB, Indoor Camera
+  Advance NPC): Netatmo serves them over WebRTC only, which the Gladys
+  camera stream (ffmpeg → HLS) cannot read; until then, snapshot only. Two
+  paths: a core WebRTC player with the signalling relayed to the integration
+  (proposed upstream), or an experimental WebRTC → HTTP bridge inside the
+  integration that `CAMERA_URL` points to.
+- Floodlight mode as one feature: proposed core light operating-mode type
+  (off / on / auto); the two provisional features (#56) will be migrated.
 - [#41](https://github.com/Terdious/gladys-netatmo/issues/41) Siren control
   — blocked: the public API rejects `siren_status`.
-- [#12](https://github.com/Terdious/gladys-netatmo/issues/12) Test-coverage
-  backlog (good first contributions).
+
+### Next
+
+- [#59](https://github.com/Terdious/gladys-netatmo/issues/59) BTicino
+  Classe 300 / IP door entry (BNCX, door lock BNDL, staircase light BNSL).
+- [#60](https://github.com/Terdious/gladys-netatmo/issues/60) Legrand
+  Home + Control devices, behind a new toggle.
 
 ## external_id conventions (FROZEN)
 
