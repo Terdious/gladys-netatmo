@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-16
+
 ### Added
 
 - BTicino Classe 300X / Classe 300 EOS door entry, **preview** (step 1:
@@ -334,7 +336,8 @@ the notes of the version's GitHub Release.
 - First stable release: OAuth2 connection, Weather and Energy devices,
   thermostat setpoint, cameras (image, monitoring, live stream).
 
-[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/Terdious/gladys-netatmo/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/Terdious/gladys-netatmo/compare/v1.3.0...v2.0.0
