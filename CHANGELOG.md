@@ -87,7 +87,10 @@ the notes of the version's GitHub Release.
 - Gladys Assistant 5.2.0 or later is required: the thermostat preset feature
   type does not exist before, and an older core would refuse the whole
   discovery list ([#38](https://github.com/Terdious/gladys-netatmo/issues/38)).
-
+- Documentation: the troubleshooting section and the README point to the
+  forum topic
+  [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308);
+  the roadmap lists what shipped and what is planned.
 - GitHub Release notes, like gladys-tuya: the version's changelog section,
   one line per bullet (no more hard line breaks), followed by the notes GitHub
   generates — "What's Changed" with the merged pull requests and their
@@ -96,7 +99,6 @@ the notes of the version's GitHub Release.
   Releases.
 - The Release workflow refuses to release when the Unreleased section of
   `CHANGELOG.md` lists no change.
-
 - User documentation (en, fr, de, es): the update section describes the
   catalog update (Update button, new configuration fields applied on their
   own) instead of re-pasting the manifest, now only needed in developer mode;

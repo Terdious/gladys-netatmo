@@ -446,3 +446,7 @@ moves what is left.
 - **"Some Netatmo permissions are missing" status:** a newer version added
   permissions (video doorbell) — click Connect again and accept them. The
   integration **Logs** list the missing ones.
+- **Still stuck, or a device is missing?** Ask on the forum topic
+  [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),
+  or open an issue on [GitHub](https://github.com/Terdious/gladys-netatmo/issues) with the integration logs
+  (**Logs** tab).

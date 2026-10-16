@@ -481,3 +481,7 @@ peut être relancée : elle ne déplace que ce qui reste.
 - **Statut « des autorisations Netatmo manquent » :** une version plus récente
   a ajouté des autorisations (sonnette vidéo) — recliquez sur Connecter et
   acceptez-les. Les **Journaux** de l'intégration listent celles qui manquent.
+- **Toujours bloqué, ou un appareil manque ?** Posez votre question sur le
+  sujet du forum [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),
+  ou ouvrez une issue sur [GitHub](https://github.com/Terdious/gladys-netatmo/issues) avec les journaux de
+  l'intégration (onglet **Journaux**).

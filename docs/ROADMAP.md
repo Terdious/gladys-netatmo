@@ -4,51 +4,68 @@
 > [#7](https://github.com/Terdious/gladys-netatmo/issues/7). This file is the
 > technical companion: shipped scope, conventions, and pointers.
 
-## Shipped — v1.0.0 (2026-07-21, validated on a real bench)
+## Shipped
 
-- **v0.1 — Account access (OAuth2)**: `oauth2` manifest field through the
-  Gladys relay, full scope set in one consent (camera scopes included),
-  rotating refresh tokens, refresh at 80% of the TTL, transient backoff,
-  24h grace window (core PR #2618 behaviour), single-use anti-CSRF state
-  (core PR #2628 equivalent), connection status at every step.
-- **v0.2 — Weather + Energy devices** (issue #1): homesdata + per-home
-  homestatus (concurrency 2), legacy `getthermostatsdata` /
-  `getstationsdata` merges by `id`/`_id`, exact core feature sets (frozen
-  suffixes), declarative update mappings (core PR #2619), zeros kept (core
-  PR #2617), powered-off modules rebuilt (core PR #2620) with an
-  `unreachable` transport badge, one global 120 s refresh loop (dedup +
-  30-minute keep-alive), thermostat setpoint (`setroomthermpoint`).
-- **v0.3 — Cameras** (issues #2, #3, #4): NACamera/NOC discovery behind the
-  opt-in `security_api` toggle, dashboard image (local-first snapshot
-  resolution via `/command/ping`, cached, VPN fallback, pure-JS re-encode —
-  no ffmpeg in the sandbox), writable monitoring (`/api/setstate`), live
-  stream via the `CAMERA_URL`/`camera_quality` params read by the core
-  rtsp-camera service (local network first, refreshed through the
-  framework's silent param upsert on discovery re-publish).
+- **v1.0.0** (2026-07-21, validated on a real bench): OAuth2 account access
+  through the Gladys relay (full scope set in one consent, rotating refresh
+  tokens, 24h grace window), Weather + Energy devices (#1, exact core feature
+  set, unreachable modules rebuilt, one global 120 s refresh loop),
+  thermostat setpoint, cameras NACamera/NOC (#2, #3, #4: dashboard image
+  local-first, writable monitoring, live stream via `CAMERA_URL`).
+- **v1.0.1**: post-1.0 hardening (#13), stale-module detection (#10),
+  `camera_quality` select.
+- **v1.1.0**: Gladys Plus webhooks (#5, PR #16), camera-bridged security
+  accessories NACamDoorTag / NIS / NSD (#9, PR #16), user documentation
+  (#14).
+- **v1.1.2**: 150 KB camera image budget restored, downscale instead of
+  dropping a frame (PR #20).
+- **v1.2.0**: real-time detections from the webhook events — motion, person,
+  animal, vehicle, smoke (PR #22).
+- **v1.3.0**: Cloud catalog tag (#23, PR #24), catalog categories, SDK
+  0.15.0, Gladys >= 4.86.0 (PR #25), German and Spanish (PR #26).
+- **Unreleased** (next release, Gladys >= 5.2.0):
+  - reliability: weather values kept when `getstationsdata` fails, degraded
+    state for a failing API family (#33, PR #43); "smoke cleared" no longer
+    raises a detection (PR #51);
+  - new devices: Bubendorff / iDiamant roller shutters (#34, PR #45), video
+    doorbell (#35, PR #47), carbon monoxide alarm (#36, PR #46), Home Coach
+    (#37, PR #44);
+  - Gladys 5.2 wave: heating mode as a thermostat preset (#38, PR #48), scene
+    triggers and actions (#39, PR #49), dashboard widgets (#40, PR #50);
+  - docs: catalog update and migration (PR #31), GitHub Release notes like
+    gladys-tuya (PR #32), roadmap and forum links (PR #42).
+- Upstream, shipped in Gladys: live-stream latency (GladysAssistant/Gladys#2698,
+  4.84.1, see #11), device migration with history
+  (GladysAssistant/Gladys#2737, 4.84.1, hardened in #2778).
 
-## Open
+## Planned
 
-- [#5](https://github.com/Terdious/gladys-netatmo/issues/5) Webhooks via
-  Gladys Plus (core PR #2627) — ⚠️ blocked upstream (gateway → container
-  relay).
-- [#9](https://github.com/Terdious/gladys-netatmo/issues/9) Additional
-  Security modules: NIS siren, NACamDoorTag door sensors, NSD smoke
-  detector — net-new vs the core service.
-- [#10](https://github.com/Terdious/gladys-netatmo/issues/10) Stale-module
-  detection (dead battery / offline → stop republishing last-known values,
-  badge unreachable).
-- [#11](https://github.com/Terdious/gladys-netatmo/issues/11) Live stream:
-  reduce the 10-15 s latency, bring the audio back (mostly core rtsp-camera
-  work; container-side lead: the master `/live/index.m3u8` playlist).
-- Upstream (core #2665): raise the host-API JSON body limit (camera images
-  between ~100 and 150 KB currently die in a 413 — the integration ships a
-  96 KB budget meanwhile), and make the front's oauth2 Connect button save
-  the form first.
-- ~~Core-side migration helper for users moving from the core service~~ —
-  shipped in Gladys 4.84.1 (GladysAssistant/Gladys#2737, hardened for large
-  histories in 4.85.0, #2778): the **Migrate** button of the built-in Netatmo
-  devices moves the history, scenes and dashboards onto the `ext:netatmo:<id>`
-  device. Procedure in the user docs.
+Tracking: [#7](https://github.com/Terdious/gladys-netatmo/issues/7). Forum
+topic:
+[Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308).
+
+### To confirm on real hardware
+
+The new devices follow the Netatmo API as implemented by pyatmo (Home
+Assistant) and openHAB; a few payload details still need a real device:
+battery / WiFi field names of the CO alarm, the doorbell id field of
+`incoming_call` and its VPN-only snapshot, intermediate shutter positions,
+and the `person_away` / `siren_sounding` payloads. Feedback welcome on the
+forum topic.
+
+### Waiting on others
+
+- [#18](https://github.com/Terdious/gladys-netatmo/issues/18) Device photos
+  on the Devices tab — core PR GladysAssistant/Gladys#3208.
+- [#19](https://github.com/Terdious/gladys-netatmo/issues/19) Battery level
+  on the Devices tab — core PR GladysAssistant/Gladys#3207 (nothing to do
+  here: the battery feature is already published).
+- Translated option labels (the Home Coach air quality level is in French
+  only): proposed core change accepting `{ en, fr, de, es }` option labels.
+- [#41](https://github.com/Terdious/gladys-netatmo/issues/41) Siren control
+  — blocked: the public API rejects `siren_status`.
+- [#12](https://github.com/Terdious/gladys-netatmo/issues/12) Test-coverage
+  backlog (good first contributions).
 
 ## external_id conventions (FROZEN)
 

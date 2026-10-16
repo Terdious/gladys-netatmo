@@ -479,3 +479,7 @@ verschiebt nur, was noch übrig ist.
 - **Status „einige Netatmo-Berechtigungen fehlen“:** Eine neuere Version hat
   Berechtigungen hinzugefügt (Video-Türklingel) — klicke erneut auf Verbinden
   und akzeptiere sie. Die **Logs** der Integration nennen die fehlenden.
+- **Immer noch nicht gelöst oder fehlt ein Gerät?** Frag im Forumsthema
+  [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308)
+  nach oder eröffne ein Issue auf [GitHub](https://github.com/Terdious/gladys-netatmo/issues) mit den Protokollen der
+  Integration (Tab **Protokolle**).

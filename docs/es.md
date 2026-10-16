@@ -479,3 +479,7 @@ relanzarse: solo mueve lo que queda.
 - **Estado "faltan algunos permisos de Netatmo":** una versión más reciente
   añadió permisos (timbre con vídeo) — vuelva a hacer clic en Conectar y
   acéptelos. Los **Registros** de la integración indican cuáles faltan.
+- **¿Sigue bloqueado, o falta un dispositivo?** Pregunte en el tema del foro
+  [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308)
+  o abra una issue en [GitHub](https://github.com/Terdious/gladys-netatmo/issues) con los registros de la integración
+  (pestaña **Registros**).
