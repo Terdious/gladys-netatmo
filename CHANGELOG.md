@@ -10,6 +10,20 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- WebRTC live view of the video doorbell (`NDB`) and the Indoor Camera Advance
+  (`NPC`): both are published with the `GLADYS_CAMERA_STREAM_PROTOCOL` =
+  `webrtc` device param, and the browser's SDP offer relayed by Gladys goes to
+  the Netatmo `/api/webrtc/offer` (answer, session id and tag id back), the
+  stop to `/api/webrtc/terminate`. Needs a Gladys version newer than 5.2.1
+  with the WebRTC camera live view (GladysAssistant/Gladys#3215) and the SDK
+  handlers (GladysAssistant/integration-sdk-js#43): inert until then, the
+  dashboard keeps the still image — an older core refusing the param gets the
+  discovery again without it. No new Netatmo permission; a refused one fails
+  with the "reconnect" message
+  ([#70](https://github.com/Terdious/gladys-netatmo/issues/70)).
+
 ## [2.1.0] - 2026-10-16
 
 ### Added

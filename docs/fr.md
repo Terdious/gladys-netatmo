@@ -220,8 +220,8 @@ dans le widget **Caméras Netatmo**. Deux différences, toutes deux côté Netat
 
 - son instantané est récupéré via l'URL VPN Netatmo : comme la sonnette vidéo,
   cette caméra ne le sert pas sur le réseau local ;
-- il n'y a pas de bouton de flux en direct : elle ne diffuse qu'en WebRTC, que
-  la vue en direct des caméras de Gladys ne sait pas lire.
+- son direct est négocié en **WebRTC** (voir _Direct WebRTC_ plus bas) : avec
+  un Gladys plus ancien, la box caméra affiche l'image fixe.
 
 > ⚠️ **Compte Netatmo connecté avant cette version ?** Cette caméra demande
 > trois nouvelles autorisations Netatmo (`read_camerapro`, `write_camerapro`,
@@ -248,14 +248,41 @@ créée avec :
 - la qualité de son lien **Wifi**.
 
 Il n'y a pas d'interrupteur monitoring (Netatmo n'en propose pas pour la
-sonnette) ni de bouton flux en direct : la sonnette diffuse uniquement en
-WebRTC, que la vue en direct des caméras de Gladys ne sait pas lire.
+sonnette). Son direct est négocié en **WebRTC** (voir _Direct WebRTC_
+ci-dessous) : avec un Gladys plus ancien, la box caméra affiche l'image fixe.
 
 > ⚠️ **Compte Netatmo connecté avant cette version ?** La sonnette nécessite
 > deux nouvelles autorisations Netatmo (`read_doorbell`, `access_doorbell`) :
 > cliquez à nouveau sur **Connecter** sur l'écran Configuration et acceptez-les.
 > D'ici là, le statut de connexion affiche une invitation à recliquer sur
 > Connecter.
+
+### Direct WebRTC (sonnette et caméra intérieure Advance)
+
+La sonnette vidéo et la caméra intérieure Advance diffusent **uniquement en
+WebRTC**, via le cloud Netatmo : ni HLS, ni rien sur le réseau local. Avec une
+version de Gladys postérieure à 5.2.1 qui inclut le direct WebRTC des caméras
+([Gladys#3215](https://github.com/GladysAssistant/Gladys/pull/3215)), la box
+caméra du tableau de bord affiche leur vidéo en direct. Le navigateur établit
+le flux ; Gladys et l'intégration ne font que relayer cet établissement vers
+Netatmo, et la vidéo va directement du cloud Netatmo au navigateur, à la maison
+comme via Gladys Plus.
+
+- **Gladys plus ancien :** la box caméra affiche l'image fixe, rafraîchie
+  automatiquement, comme avant. Après la mise à jour de Gladys, sauvegardez une
+  fois la configuration de l'intégration (ou relancez un scan sur l'écran
+  **Découverte**) : la sonnette et la caméra existantes passent au direct, rien
+  à recréer.
+- **Arrêt :** le direct s'arrête quand vous le mettez en pause, quittez le
+  tableau de bord ou fermez l'onglet (Gladys termine une session oubliée au
+  bout de 30 secondes).
+- **Le direct ne démarre pas :** la box affiche un message et la dernière image.
+  Vérifiez que la caméra est en ligne dans l'application Netatmo et que le
+  navigateur prend en charge WebRTC. Un pare-feu strict ou un VPN peut bloquer
+  le trafic WebRTC vers le cloud Netatmo. Si le statut de connexion ou les
+  **Journaux** de l'intégration demandent de reconnecter le compte,
+  l'autorisation n'a pas `access_doorbell` / `access_camerapro` : cliquez à
+  nouveau sur **Connecter**.
 
 ---
 
@@ -607,6 +634,8 @@ peut être relancée : elle ne déplace que ce qui reste.
   sur Connecter.
 - **Pas de son sur la caméra :** voir l'astuce microphone dans la section
   Caméras ci-dessus.
+- **Sonnette ou caméra intérieure Advance sans direct :** voir _Direct WebRTC_
+  dans la section Sonnette vidéo (version de Gladys, navigateur, pare-feu).
 - **Statut « des autorisations Netatmo manquent » :** une version plus récente
   a ajouté des autorisations (sonnette vidéo, caméra intérieure Advance) — recliquez sur Connecter et
   acceptez-les. Les **Journaux** de l'intégration listent celles qui manquent.
