@@ -107,6 +107,11 @@ export async function loadDeviceDetails(client, config, homeData) {
     return null;
   }
   const { rooms: roomsHomestatus = [], modules: modulesHomestatus = [] } = home;
+  // Heating mode of the home (issue #38): live in homestatus, also carried by
+  // homesdata (topology snapshot) — kept on every device of the home so the
+  // declarative mapping can read it like any other value.
+  const thermMode = home.therm_mode ?? homeData.therm_mode;
+  const thermModeEndtime = home.therm_mode_endtime ?? homeData.therm_mode_endtime;
 
   function buildDevice(module, moduleHomeData, extra = {}) {
     const { moduleSupported, categoryAPI, apiNotConfigured } = getModuleCategory(
@@ -129,6 +134,8 @@ export async function loadDeviceDetails(client, config, homeData) {
       plug: Object.keys(plugDevice).length === 0 ? undefined : plugDevice,
       categoryAPI,
       apiNotConfigured,
+      therm_mode: thermMode,
+      therm_mode_endtime: thermModeEndtime,
       ...extra,
     };
     return moduleSupported ? device : { ...device, not_handled: true };

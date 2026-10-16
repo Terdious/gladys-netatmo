@@ -13,6 +13,7 @@ import { readFile } from 'node:fs/promises';
 
 import { DEFAULT_CONFIG } from '../src/config.js';
 import { WEBHOOK_KEY, CONNECTION_MESSAGES } from '../src/netatmo/constants.js';
+import * as featureBuilders from '../src/netatmo/features.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -38,6 +39,12 @@ const CATALOG_CATEGORIES = [
 // validator refuses a manifest whose `gladys_version` minimum is lower than
 // the first release accepting every field it declares.
 const CATEGORIES_MIN_GLADYS_VERSION = [4, 86, 0];
+// Feature types older Gladys releases do not know, with the first release
+// accepting them: an older core refuses the WHOLE discovery list (400) as
+// soon as one feature carries an unknown category/type.
+const FEATURE_TYPE_MIN_GLADYS_VERSION = {
+  'thermostat/preset': [5, 2, 0],
+};
 // The languages of the Gladys interface: every text the user reads ships in
 // all of them (Gladys falls back to English for a missing one).
 const GLADYS_LANGUAGES = ['en', 'fr', 'de', 'es'];
@@ -84,7 +91,7 @@ test('the manifest version is the package version, and the image is tagged with 
   );
 });
 
-test('catalog categories: 1 to 3 known keys, and Gladys >= 4.86.0', () => {
+test('catalog categories: 1 to 3 known keys, coupled to Gladys >= 4.86.0', () => {
   assert.ok(Array.isArray(manifest.categories), 'categories must be declared');
   assert.ok(manifest.categories.length >= 1 && manifest.categories.length <= 3);
   assert.equal(new Set(manifest.categories).size, manifest.categories.length, 'unique keys');
@@ -152,5 +159,25 @@ test('every manifest text ships in every Gladys language', () => {
 test('every connection status message ships in every Gladys language', () => {
   for (const [key, message] of Object.entries(CONNECTION_MESSAGES)) {
     assert.deepEqual(Object.keys(message).sort(), [...GLADYS_LANGUAGES].sort(), `${key} languages`);
+  }
+});
+
+test('every feature type the code publishes is known to the minimum Gladys version', () => {
+  // Every builder of src/netatmo/features.js, called with placeholder
+  // arguments: the category/type pair does not depend on them.
+  const published = new Set(
+    Object.values(featureBuilders).map((build) => {
+      const feature = build('name', 'ext:netatmo:id', 'suffix');
+      return `${feature.category}/${feature.type}`;
+    }),
+  );
+  assert.ok(published.has('thermostat/preset'), 'the heating mode is a thermostat preset');
+  for (const [featureType, minVersion] of Object.entries(FEATURE_TYPE_MIN_GLADYS_VERSION)) {
+    if (published.has(featureType)) {
+      assert.ok(
+        isAtLeast(minGladysVersion(), minVersion),
+        `${featureType} requires gladys_version >= ${minVersion.join('.')}, got "${manifest.gladys_version}"`,
+      );
+    }
   }
 });

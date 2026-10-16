@@ -26,6 +26,7 @@ import {
   buildFeatureWifiStrength,
   buildFeatureTemperature,
   buildFeatureThermSetpointTemperature,
+  buildFeatureThermPreset,
   buildFeatureBoilerStatus,
   buildFeatureHeatingPowerRequest,
   buildFeaturePlugConnectedBoiler,
@@ -81,6 +82,17 @@ function pushMinMaxTemp(features, roomName, externalId) {
       DEVICE_FEATURE_TYPES.TEMPERATURE_SENSOR.MAX,
     ),
   );
+}
+
+/**
+ * Append the heating mode feature (issue #38) — only when the device belongs
+ * to a homesdata home: setthermmode needs the home id, and a legacy-only
+ * thermostat has none.
+ */
+function pushThermPreset(features, homeId, nameDevice, externalId) {
+  if (homeId) {
+    features.push(buildFeatureThermPreset(nameDevice, externalId));
+  }
 }
 
 /**
@@ -167,6 +179,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeatureOpenWindow(nameDevice, externalId),
         buildFeatureBoilerStatus(nameDevice, externalId),
       );
+      pushThermPreset(features, homeId, nameDevice, externalId);
       break;
     case SUPPORTED_MODULE_TYPE.PLUG:
       features.push(buildFeaturePlugConnectedBoiler(nameDevice, externalId));
@@ -184,6 +197,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeatureOpenWindow(nameDevice, externalId),
         buildFeatureHeatingPowerRequest(nameDevice, externalId),
       );
+      pushThermPreset(features, homeId, nameDevice, externalId);
       break;
     case SUPPORTED_MODULE_TYPE.NAMAIN:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));

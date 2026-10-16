@@ -20,6 +20,7 @@ export const API_PATHS = {
   GET_THERMOSTATS: '/api/getthermostatsdata',
   GET_WEATHER_STATIONS: '/api/getstationsdata?get_favorites=false',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
+  SET_THERM_MODE: '/api/setthermmode',
   SET_STATE: '/api/setstate',
   ADD_WEBHOOK: '/api/addwebhook',
   DROP_WEBHOOK: '/api/dropwebhook',
@@ -148,7 +149,58 @@ export const ROOM_DERIVED_SUFFIXES = [
   'therm_setpoint_temperature',
   'open_window',
   'heating_power_request',
+  // The heating mode belongs to the HOME (homestatus `home.therm_mode`): it
+  // stays true whatever the state of the module carrying the feature.
+  'therm_preset',
 ];
+
+// Heating mode of a Netatmo home (homestatus `home.therm_mode`, written with
+// POST /api/setthermmode). Netatmo also knows other modes on some setups
+// (`off`, `manual`…): they are not offered, and read as "no value".
+export const NETATMO_THERM_MODES = {
+  SCHEDULE: 'schedule',
+  AWAY: 'away',
+  FROST_GUARD: 'hg',
+};
+
+// Gladys THERMOSTAT_PRESET values (server/utils/constants.js), the enum of the
+// `thermostat/preset` feature type (Gladys 5.2.0+). The SDK does not export
+// it: only the three values Netatmo supports are mirrored.
+export const THERMOSTAT_PRESET = {
+  SCHEDULE: 0,
+  FROST: 1,
+  AWAY: 2,
+};
+
+// Netatmo heating mode <-> Gladys preset, in display order.
+export const THERM_MODE_PRESETS = [
+  { mode: NETATMO_THERM_MODES.SCHEDULE, preset: THERMOSTAT_PRESET.SCHEDULE },
+  { mode: NETATMO_THERM_MODES.FROST_GUARD, preset: THERMOSTAT_PRESET.FROST },
+  { mode: NETATMO_THERM_MODES.AWAY, preset: THERMOSTAT_PRESET.AWAY },
+];
+
+// Names of the heating modes, with the Gladys UI wording of the presets
+// (deviceFeatureAction.category.thermostat.preset in the front i18n files).
+export const THERM_MODE_LABELS = {
+  [NETATMO_THERM_MODES.SCHEDULE]: {
+    en: 'Schedule',
+    fr: 'Planning',
+    de: 'Zeitplan',
+    es: 'Programación',
+  },
+  [NETATMO_THERM_MODES.FROST_GUARD]: {
+    en: 'Frost protection',
+    fr: 'Hors-gel',
+    de: 'Frostschutz',
+    es: 'Antihielo',
+  },
+  [NETATMO_THERM_MODES.AWAY]: {
+    en: 'Away',
+    fr: 'Absence',
+    de: 'Abwesend',
+    es: 'Ausencia',
+  },
+};
 
 // Telemetry refresh cadence: one batched load of every home/station per cycle
 // (the core polls at the same rate). The devices are created with

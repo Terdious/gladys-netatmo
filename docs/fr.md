@@ -15,7 +15,7 @@ découvre vos appareils puis maintient leurs valeurs à jour.
 - Un **compte Netatmo**, avec vos appareils déjà installés et fonctionnels dans
   l'application Netatmo (Gladys lit ce que Netatmo expose — un appareil doit
   d'abord être en ligne dans Netatmo).
-- Gladys Assistant **4.86 ou plus récent**.
+- Gladys Assistant **5.2 ou plus récent**.
 
 ---
 
@@ -79,6 +79,34 @@ pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
 défaut `high`) règle la qualité du flux vidéo en direct.
 
 Les valeurs sont rafraîchies toutes les **2 minutes** (limites d'API Netatmo).
+
+---
+
+## Mode du chauffage (planning / absence / hors-gel)
+
+Chaque thermostat (`NATherm1`) et vanne de radiateur (`NRV`) porte une
+fonctionnalité **Mode du chauffage** (un _préréglage_ de thermostat dans
+Gladys), avec trois choix :
+
+| Dans Gladys  | Dans l'application Netatmo      |
+| ------------ | ------------------------------- |
+| **Planning** | suivre le planning hebdomadaire |
+| **Absence**  | mode absent                     |
+| **Hors-gel** | hors-gel (`hg`)                 |
+
+Chez Netatmo, le mode est celui de **toute la maison** : le changer sur un
+appareil bascule tout le logement, et chaque thermostat et vanne de la maison
+affiche le nouveau mode juste après (l'intégration rafraîchit immédiatement).
+Un mode changé depuis l'application Netatmo apparaît au rafraîchissement
+suivant (2 minutes, ou 2-3 secondes avec les webhooks Gladys Plus).
+
+Utilisez-le dans une scène (« tout le monde est parti → chauffage en Absence »)
+avec l'action standard « Contrôler un appareil ».
+
+> ⚠️ **Si vos thermostats existaient déjà dans Gladys**, la fonctionnalité
+> n'apparaît pas toute seule : allez sur l'écran **Découverte** et cliquez sur
+> **Mettre à jour** sur chaque thermostat et vanne. Gladys **5.2** ou plus
+> récent est requis (le préréglage de thermostat n'existe pas avant).
 
 ---
 

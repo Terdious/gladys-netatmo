@@ -14,7 +14,7 @@ Konto, und Gladys erkennt deine Geräte und hält ihre Werte aktuell.
 - Ein **Netatmo-Konto**, bei dem deine Geräte bereits in der Netatmo-App
   installiert sind und funktionieren (Gladys liest, was Netatmo bereitstellt —
   ein Gerät muss zuerst in Netatmo online sein).
-- Gladys Assistant **4.86 oder neuer**.
+- Gladys Assistant **5.2 oder neuer**.
 
 ---
 
@@ -82,6 +82,34 @@ erscheinen im Tab **Entdecken**, wo du diejenigen erstellst, die du möchtest.
 Standard `high`) legt die Qualität des Kamera-Livestreams fest.
 
 Die Werte werden alle **2 Minuten** aktualisiert (Ratenbegrenzung von Netatmo).
+
+---
+
+## Heizmodus (Zeitplan / abwesend / Frostschutz)
+
+Jedes Thermostat (`NATherm1`) und jedes Heizkörperventil (`NRV`) hat eine
+Funktion **Heizmodus** (ein Thermostat-_Preset_ in Gladys) mit drei
+Möglichkeiten:
+
+| In Gladys       | In der Netatmo-App        |
+| --------------- | ------------------------- |
+| **Zeitplan**    | dem Wochenzeitplan folgen |
+| **Abwesend**    | Abwesenheitsmodus         |
+| **Frostschutz** | Frostschutz (`hg`)        |
+
+Bei Netatmo gehört der Modus zum **ganzen Zuhause**: Änderst du ihn an einem
+Gerät, wechselt das ganze Zuhause, und jedes Thermostat und Ventil des Zuhauses
+zeigt den neuen Modus gleich danach an (die Integration aktualisiert sofort).
+Ein in der Netatmo-App geänderter Modus erscheint bei der nächsten
+Aktualisierung (2 Minuten, oder 2-3 Sekunden mit den Gladys-Plus-Webhooks).
+
+Nutze ihn in einer Szene („alle sind weg → Heizung auf Abwesend“) mit der
+Standardaktion „Gerätewert setzen“.
+
+> ⚠️ **Wenn deine Thermostate bereits in Gladys existierten**, erscheint die
+> Funktion nicht von selbst: Öffne den Bildschirm **Erkennung** und klicke bei
+> jedem Thermostat und Ventil auf **Aktualisieren**. Gladys **5.2** oder neuer
+> ist erforderlich (das Thermostat-Preset gibt es vorher nicht).
 
 ---
 

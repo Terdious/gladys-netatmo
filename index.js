@@ -207,7 +207,10 @@ export function setupIntegration(
   // --- Command: the user acts on a controllable feature ----------------------
   gladys.onSetValue(async (device, feature, value) => {
     logger.info(`onSetValue <- ${feature.external_id} = ${value}`);
-    await setDeviceValue({ gladys, client }, { device, feature, value });
+    await setDeviceValue(
+      { gladys, client, refresh: () => telemetry.refreshNow(config) },
+      { device, feature, value },
+    );
   });
 
   // --- Camera: Gladys asks for a fresh snapshot ------------------------------

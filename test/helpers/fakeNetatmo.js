@@ -3,7 +3,8 @@
 //   - POST /oauth2/token: authorization_code and refresh_token grants,
 //     with rotating refresh tokens (like the real Netatmo);
 //   - Bearer-protected API: homesdata, homestatus, getthermostatsdata,
-//     getstationsdata, setroomthermpoint (form), setstate (JSON);
+//     getstationsdata, setroomthermpoint and setthermmode (form), setstate
+//     (JSON);
 //   - two fake cameras (/vpn/<id> and /local/<id>: command/ping + snapshot).
 // Behaviour toggles (`failTokenWith`, `rejectAccessToken`, `failSetpointWith`,
 // `failLocalSnapshot`) let the tests exercise the failure paths.
@@ -65,6 +66,8 @@ function buildDefaultHomeStatuses() {
     'home-1': {
       home: {
         id: 'home-1',
+        // Heating mode of the home (issue #38), as homestatus reports it.
+        therm_mode: 'schedule',
         rooms: [
           {
             id: 'room-1',
@@ -186,6 +189,8 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     failSetpointWith: null, // set to {status, body} to make setroomthermpoint fail
     setpointRequests: [], // every parsed form POSTed to /api/setroomthermpoint
     setStateRequests: [], // every parsed JSON body POSTed to /api/setstate
+    setThermModeRequests: [], // every parsed form POSTed to /api/setthermmode
+    failSetThermModeWith: null, // set to {status, body} to make setthermmode fail
     failSetStateWith: null, // set to {status, body} to make setstate fail
     addWebhookRequests: [], // every parsed form POSTed to /api/addwebhook
     dropWebhookRequests: [], // every parsed form POSTed to /api/dropwebhook
@@ -324,6 +329,21 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           if (state.failSetpointWith) {
             respond(state.failSetpointWith.body, state.failSetpointWith.status);
             return;
+          }
+          respond({ status: 'ok' });
+          return;
+        }
+        if (req.method === 'POST' && req.url.startsWith('/api/setthermmode')) {
+          const form = Object.fromEntries(new URLSearchParams(body));
+          state.setThermModeRequests.push(form);
+          if (state.failSetThermModeWith) {
+            respond(state.failSetThermModeWith.body, state.failSetThermModeWith.status);
+            return;
+          }
+          // Like the real cloud: the next homestatus reports the new mode.
+          const homeStatus = state.homeStatuses[form.home_id];
+          if (homeStatus) {
+            homeStatus.home.therm_mode = form.mode;
           }
           respond({ status: 'ok' });
           return;
