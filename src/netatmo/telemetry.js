@@ -308,10 +308,13 @@ export function createTelemetry({
 
   // --- Change notifications (widget nudges, issue #40) -----------------------
 
-  /** Heating data the widget shows: mode and room temperatures per home. */
+  /**
+   * Heating data the widget shows: mode, rooms (temperatures, setpoint mode)
+   * and heating schedules (the active one) per home.
+   */
   function heatingSignature() {
     return JSON.stringify(
-      [...homesById.values()].map((home) => [home.id, home.therm_mode, home.rooms]),
+      [...homesById.values()].map((home) => [home.id, home.therm_mode, home.rooms, home.schedules]),
     );
   }
 
@@ -395,7 +398,10 @@ export function createTelemetry({
    * @returns {Array<{device_feature_external_id: string, state: number}>} states
    */
   function buildDeviceStates(gladysDevice, rawDevice) {
-    const mapping = UPDATE_MAPPINGS[rawDevice.type];
+    const entry = UPDATE_MAPPINGS[rawDevice.type];
+    // A function builds the table from the device itself (per-person
+    // features of the known-persons device, issue #57).
+    const mapping = typeof entry === 'function' ? entry(rawDevice) : entry;
     if (!mapping) {
       return [];
     }

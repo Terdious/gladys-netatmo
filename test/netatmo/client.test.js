@@ -67,6 +67,52 @@ test('setThermMode posts the home mode, with the endtime only for away / frost g
   ]);
 });
 
+test('setRoomThermpoint: manual by default, boost and back to the schedule (issue #58)', async () => {
+  await client.setRoomThermpoint({ homeId: 'home-1', roomId: 'room-1', temp: 21 });
+  await client.setRoomThermpoint({
+    homeId: 'home-1',
+    roomId: 'room-1',
+    temp: 19.5,
+    mode: 'manual',
+    endtime: 1_800_000_000.4,
+  });
+  await client.setRoomThermpoint({
+    homeId: 'home-1',
+    roomId: 'room-2',
+    mode: 'max',
+    temp: 25, // ignored: a boost has no temperature
+    endtime: 1_800_001_800,
+  });
+  await client.setRoomThermpoint({
+    homeId: 'home-1',
+    roomId: 'room-2',
+    mode: 'home',
+    endtime: 1_800_000_000, // ignored: the schedule has no end
+  });
+  assert.deepEqual(netatmo.state.setpointRequests, [
+    { home_id: 'home-1', room_id: 'room-1', mode: 'manual', temp: '21' },
+    {
+      home_id: 'home-1',
+      room_id: 'room-1',
+      mode: 'manual',
+      temp: '19.5',
+      endtime: '1800000000',
+    },
+    { home_id: 'home-1', room_id: 'room-2', mode: 'max', endtime: '1800001800' },
+    { home_id: 'home-1', room_id: 'room-2', mode: 'home' },
+  ]);
+});
+
+test('switchHomeSchedule posts the home and schedule ids (issue #58)', async () => {
+  await client.switchHomeSchedule('home-1', 'schedule-holidays');
+  assert.deepEqual(netatmo.state.switchScheduleRequests, [
+    { home_id: 'home-1', schedule_id: 'schedule-holidays' },
+  ]);
+  assert.equal(netatmo.state.homes[0].schedules[1].selected, true);
+  assert.equal(netatmo.state.homes[0].schedules[0].selected, false);
+  await assert.rejects(client.switchHomeSchedule('home-1', 'nope'), (err) => err.status === 400);
+});
+
 test('getHomeStatus reads the errors at home.errors, or at body.errors as a fallback', async () => {
   const home = netatmo.state.homeStatuses['home-1'].home;
   let status = await client.getHomeStatus('home-1');

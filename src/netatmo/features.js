@@ -13,7 +13,11 @@ import {
   DEVICE_FEATURE_UNITS,
 } from '@gladysassistant/integration-sdk';
 
-import { THERM_MODE_PRESETS, THERM_MODE_LABELS } from './constants.js';
+import {
+  THERM_MODE_PRESETS,
+  THERM_MODE_LABELS,
+  PERSON_PRESENCE_SUFFIX_PREFIX,
+} from './constants.js';
 
 function feature(overrides) {
   return {
@@ -266,6 +270,23 @@ export function buildFeatureHuman(name, externalId) {
     name: `Person detected - ${name}`,
     external_id: `${externalId}:human`,
     selector: `${externalId}:human`,
+    category: DEVICE_FEATURE_CATEGORIES.PRESENCE_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// Presence of a person known to the cameras (issue #57): a LASTING state
+// (1 = at home, 0 = away), unlike the momentary "Person detected" above. The
+// binary flavour is the Gladys type for it: the UI renders it as a
+// presence / no presence badge (the push flavour renders a last-seen date).
+export function buildFeaturePersonPresence(name, externalId, personId) {
+  const suffix = `${PERSON_PRESENCE_SUFFIX_PREFIX}${personId}`;
+  return feature({
+    name: `Presence - ${name}`,
+    external_id: `${externalId}:${suffix}`,
+    selector: `${externalId}:${suffix}`,
     category: DEVICE_FEATURE_CATEGORIES.PRESENCE_SENSOR,
     type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
     min: 0,
