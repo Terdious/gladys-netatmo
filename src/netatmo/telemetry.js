@@ -20,7 +20,11 @@
 //     `unreachable` for the modules rebuilt from the homestatus errors array
 //     (core PR #2620 surfaced as a badge instead of a raw param);
 //   - a PARTIAL load (an API family failed) never replaces the published
-//     discovery list: devices must not vanish during a Netatmo hiccup.
+//     discovery list: devices must not vanish during a Netatmo hiccup;
+//   - an API family failing for DEGRADED_AFTER_FAILED_LOADS loads in a row
+//     marks the devices it leaves without fresh values as degraded (badge
+//     tooltip) and reports it through `onDegradedChange` (connection status
+//     message) — until the first complete load (issue #33).
 // -----------------------------------------------------------------------------
 
 import { createLogger, DEVICE_TRANSPORTS } from '@gladysassistant/integration-sdk';
@@ -34,6 +38,9 @@ import {
   DEFAULT_CAMERA_LIVE_QUALITY,
   ROOM_DERIVED_SUFFIXES,
   PARAMS,
+  SUPPORTED_CATEGORY_TYPE,
+  DEGRADED_AFTER_FAILED_LOADS,
+  DEGRADED_MESSAGES,
 } from './constants.js';
 import { loadAccount, netatmoId } from './discovery.js';
 import { convertDevice } from './convert.js';
@@ -76,6 +83,9 @@ function withTimeout(promise, ms, message) {
  * @param {number} [deps.refreshIntervalMs] loop cadence override (tests)
  * @param {number} [deps.loadTtlMs] account-load cache TTL override (tests)
  * @param {typeof fetch} [deps.fetchImpl] fetch used for the camera endpoints
+ * @param {(message: object|null) => any} [deps.onDegradedChange] called with
+ *   the multi-language message when the account becomes degraded, with null
+ *   when it recovers
  */
 export function createTelemetry({
   gladys,
@@ -84,6 +94,7 @@ export function createTelemetry({
   refreshIntervalMs = REFRESH_VALUES_INTERVAL_MS,
   loadTtlMs = DEFAULT_LOAD_TTL_MS,
   fetchImpl = fetch,
+  onDegradedChange = () => {},
 }) {
   // Last published value per feature external_id: {state, at}.
   const published = new Map();
@@ -102,9 +113,17 @@ export function createTelemetry({
   // Last successfully published image per camera id: served as a fallback
   // when an on-demand snapshot cannot complete within the ack budget.
   const lastImages = new Map();
+  // Every device of the account seen by a load, by Netatmo id: during an
+  // outage, the devices a partial load misses still get a degraded badge.
+  const knownDevices = new Map();
+  // Consecutive loads in which each API family failed (`homes`, `energy`,
+  // `weather`), and the degraded message currently reported (null when ok).
+  const failedLoads = new Map();
+  let degradedMessage = null;
 
   // --- Account load (single-flight + short TTL) ------------------------------
   let loadCache = null; // {key, at, promise}
+  let lastLoadKey = null;
 
   function loadCacheKey(config) {
     return `${config.energy_api}|${config.weather_api}|${config.security_api}`;
@@ -118,6 +137,13 @@ export function createTelemetry({
    */
   function loadAccountCached(config) {
     const key = loadCacheKey(config);
+    if (lastLoadKey !== null && lastLoadKey !== key) {
+      // Another set of families: the outage memory of the previous one no
+      // longer applies (a disabled family must not keep degraded badges).
+      knownDevices.clear();
+      failedLoads.clear();
+    }
+    lastLoadKey = key;
     if (loadCache && loadCache.key === key && now() - loadCache.at < loadTtlMs) {
       return loadCache.promise;
     }
@@ -138,8 +164,58 @@ export function createTelemetry({
   // Last "devices not supported" count: logged at info only when it changes.
   let lastNotHandledCount = null;
 
+  /**
+   * The API families failing for DEGRADED_AFTER_FAILED_LOADS loads in a row:
+   * one failed cycle is a hiccup, not worth a badge.
+   */
+  function degradedFamilies() {
+    return [...failedLoads]
+      .filter(([, count]) => count >= DEGRADED_AFTER_FAILED_LOADS)
+      .map(([family]) => family);
+  }
+
+  /** Count the failed families of a load and report the degraded transitions. */
+  function trackFailures(failed = []) {
+    for (const family of failedLoads.keys()) {
+      if (!failed.includes(family)) {
+        failedLoads.delete(family);
+      }
+    }
+    for (const family of failed) {
+      failedLoads.set(family, (failedLoads.get(family) ?? 0) + 1);
+    }
+    const families = degradedFamilies();
+    let message = null;
+    if (families.length > 0) {
+      message =
+        families.length === 1 && families[0] === 'weather'
+          ? DEGRADED_MESSAGES.WEATHER
+          : DEGRADED_MESSAGES.PARTIAL;
+    }
+    if (message !== degradedMessage) {
+      degradedMessage = message;
+      if (message) {
+        logger.warn(
+          `Netatmo API failing for ${DEGRADED_AFTER_FAILED_LOADS}+ cycles: ${families.join(', ')} — devices marked degraded`,
+        );
+      } else {
+        logger.info('Netatmo API recovered — degraded state cleared');
+      }
+      Promise.resolve()
+        .then(() => onDegradedChange(message))
+        .catch((err) => logger.debug(`onDegradedChange failed: ${err.message}`));
+    }
+  }
+
   /** Post-load bookkeeping: camera cache upkeep + stale-entry pruning. */
-  function afterLoad({ devices: rawDevices, partial }) {
+  function afterLoad({ devices: rawDevices, partial, failed }) {
+    trackFailures(failed);
+    for (const rawDevice of rawDevices) {
+      const id = netatmoId(rawDevice);
+      if (id) {
+        knownDevices.set(id, rawDevice);
+      }
+    }
     const notHandledCount = rawDevices.filter((rawDevice) => rawDevice.not_handled).length;
     if (!partial && notHandledCount !== lastNotHandledCount) {
       logger.info(`Netatmo devices not supported: ${notHandledCount}`);
@@ -165,6 +241,12 @@ export function createTelemetry({
       }
     }
     cameras.prune(cameraIds);
+    const loadedIds = new Set(rawDevices.map((rawDevice) => netatmoId(rawDevice)));
+    for (const id of knownDevices.keys()) {
+      if (!loadedIds.has(id)) {
+        knownDevices.delete(id);
+      }
+    }
     // Devices removed from the account must not pin dedup entries forever.
     const devicePrefixes = new Set(
       rawDevices
@@ -178,6 +260,11 @@ export function createTelemetry({
         published.delete(key);
       }
     }
+  }
+
+  /** The degraded message currently reported (null when every API answers). */
+  function getDegradedMessage() {
+    return degradedMessage;
   }
 
   /** Forget the dedup memory so the next refresh re-publishes every value. */
@@ -255,19 +342,56 @@ export function createTelemetry({
   }
 
   /**
-   * Publish the per-device transport badges. Defensive: an older Gladys core
-   * without the endpoint must never crash the loop.
+   * Whether the load left this device without fresh values while an API
+   * family is degraded: the device is missing from the load, or it is a
+   * Weather device getstationsdata should have fed and homestatus did not
+   * carry (issue #33).
+   */
+  function isStale(rawDevice, loaded, families) {
+    if (families.length === 0) {
+      return false;
+    }
+    if (!loaded) {
+      return true;
+    }
+    return (
+      families.includes('weather') &&
+      rawDevice.categoryAPI === SUPPORTED_CATEGORY_TYPE.WEATHER &&
+      !rawDevice.homestatus
+    );
+  }
+
+  /**
+   * Publish the per-device transport badges: the devices of the load, plus
+   * the known devices it missed during an outage (degraded). An entry without
+   * `degraded` clears a previous degraded state. Defensive: an older Gladys
+   * core without the endpoint must never crash the loop.
    */
   async function publishTransports(rawDevices) {
-    const entries = rawDevices
+    const families = degradedFamilies();
+    const loadedIds = new Set(rawDevices.map((rawDevice) => netatmoId(rawDevice)));
+    const missed = [...knownDevices]
+      .filter(([id]) => !loadedIds.has(id))
+      .map(([, rawDevice]) => rawDevice);
+    const entries = [
+      ...rawDevices.map((rawDevice) => ({ rawDevice, loaded: true })),
+      ...missed.map((rawDevice) => ({ rawDevice, loaded: false })),
+    ]
       .filter(
-        (rawDevice) =>
+        ({ rawDevice }) =>
           !rawDevice.not_handled && !rawDevice.apiNotConfigured && netatmoId(rawDevice),
       )
-      .map((rawDevice) => ({
-        external_id: gladys.externalId(netatmoId(rawDevice)),
-        transport: transportOf(rawDevice),
-      }));
+      .map(({ rawDevice, loaded }) => {
+        const entry = {
+          external_id: gladys.externalId(netatmoId(rawDevice)),
+          transport: transportOf(rawDevice),
+        };
+        if (degradedMessage && isStale(rawDevice, loaded, families)) {
+          entry.degraded = true;
+          entry.message = degradedMessage;
+        }
+        return entry;
+      });
     try {
       await publishChunked((chunk) => gladys.publishTransports(chunk), entries);
     } catch (err) {
@@ -492,5 +616,13 @@ export function createTelemetry({
     }
   }
 
-  return { syncDiscovery, refreshValues, getCameraSnapshot, resetDedup, start, stop };
+  return {
+    syncDiscovery,
+    refreshValues,
+    getCameraSnapshot,
+    getDegradedMessage,
+    resetDedup,
+    start,
+    stop,
+  };
 }
