@@ -24,7 +24,9 @@ capabilities land (Home + Security cameras, webhooks, …).
   outdoor, `NAModule2` wind, `NAModule3` rain, `NAModule4` indoor) and the
   Energy family (`NATherm1` thermostat, `NAPlug` relay, `NRV` valves) — same
   feature set as the core service, powered-off modules included (rebuilt from
-  the homestatus `errors` array and badged **unreachable**).
+  the homestatus `errors` array and badged **unreachable**) — plus the
+  modulating OpenTherm thermostat (`OTM`) and its relay (`OTH`), and the
+  BTicino Smarther with Netatmo thermostat (`BNS`).
 - **Telemetry**: one global refresh loop every 120 s (3-4 API calls per cycle
   for the whole account), declarative per-module mappings, legitimate zeros
   kept, unchanged values deduped with a 30-minute keep-alive.
@@ -78,6 +80,10 @@ capabilities land (Home + Security cameras, webhooks, …).
   smoke alarm (`NSD`) and the carbon monoxide alarm (`NCO`) are discovered
   with battery + signal — their smoke / CO state is webhook-driven. Net-new vs
   the core service.
+- **Known persons** (opt-in with the cameras): one virtual device per home
+  (`ext:netatmo:persons-<home id>`) with a `presence-sensor`/`binary` feature
+  per person named in the Netatmo app (1 = at home, from the homestatus
+  `out_of_sight`), refreshed every cycle and at once on the webhook events.
 - **Roller shutters** (opt-in via the `shutter_api` toggle): Bubendorff
   shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`) with open / close /
   stop, a writable position and RF quality (`/api/setstate` through the

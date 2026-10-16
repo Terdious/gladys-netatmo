@@ -70,13 +70,13 @@ Konfiguration auf, dich erneut zu verbinden.
 
 Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
-| Schalter         | Erkennt                                                                                                                       |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)                                                         |
-| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                                        |
-| **Sicherheit**   | Innenkameras (`NACamera`), Innenkamera Advance (`NPC`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör |
-| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                            |
-| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                                |
+| Schalter         | Erkennt                                                                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`), modulierendes Thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)                |
+| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                                                                   |
+| **Sicherheit**   | Innenkameras (`NACamera`), Innenkamera Advance (`NPC`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör und die bekannten Personen |
+| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                                                       |
+| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                                                           |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -91,9 +91,9 @@ Die Werte werden alle **2 Minuten** aktualisiert (Ratenbegrenzung von Netatmo).
 
 ## Heizmodus (Zeitplan / abwesend / Frostschutz)
 
-Jedes Thermostat (`NATherm1`) und jedes Heizkörperventil (`NRV`) hat eine
-Funktion **Heizmodus** (ein Thermostat-_Preset_ in Gladys) mit drei
-Möglichkeiten:
+Jedes Thermostat (`NATherm1`, modulierendes `OTM`, BTicino Smarther `BNS`) und
+jedes Heizkörperventil (`NRV`) hat eine Funktion **Heizmodus** (ein
+Thermostat-_Preset_ in Gladys) mit drei Möglichkeiten:
 
 | In Gladys       | In der Netatmo-App        |
 | --------------- | ------------------------- |
@@ -114,6 +114,51 @@ Standardaktion „Gerätewert setzen“.
 > Funktion nicht von selbst: Öffne den Bildschirm **Erkennung** und klicke bei
 > jedem Thermostat und Ventil auf **Aktualisieren**. Gladys **5.2** oder neuer
 > ist erforderlich (das Thermostat-Preset gibt es vorher nicht).
+
+---
+
+## Modulierendes Thermostat (OpenTherm)
+
+Das aktuelle Netatmo-Thermostat, das **modulierende** Modell (OpenTherm),
+gehört zur Familie Energie. Seine beiden Module werden jeweils als Gerät
+angelegt:
+
+- das **Thermostat** (`OTM`): Raumtemperatur, ein steuerbarer **Sollwert**, der
+  **Heizmodus** (siehe oben), der **Kesselstatus** (an, während der Kessel
+  heizt), Akku und Funksignal, wie beim älteren `NATherm1`;
+- das **OpenTherm-Relais** (`OTH`), das mit dem Kessel verbunden ist: seine
+  WLAN-Qualität, die **Außentemperatur**, nach der Netatmo die Heizung
+  moduliert, und eine Funktion **Kesselstörung**: 1, solange der Kessel
+  Netatmo eine Störung meldet (Wasserdruck, Flamme, Wartung…), sonst 0. Die
+  Netatmo-App zeigt, um welche Störung es sich handelt.
+
+Der Raum des Thermostats erscheint im Widget **Netatmo-Heizung**, und das
+Thermostat kann in der Szenenaktion **Heizmodus ändern** gewählt werden. Ein
+nicht erreichbares Thermostat erhält das Badge **nicht erreichbar**, und
+Akku und Signal werden nicht mehr veröffentlicht. Du musst dich nicht erneut
+verbinden: Die Thermostat-Berechtigungen sind seit der ersten Version Teil der
+Verbindung.
+
+---
+
+## Thermostat BTicino Smarther
+
+Das Thermostat **BTicino Smarther with Netatmo** (`BNS`) gehört zur Familie
+Energie. Es wird mit seiner Raumtemperatur, einem steuerbaren **Sollwert**, dem
+**Heizmodus** (siehe oben), dem **Kesselstatus** (an, während es heizt), dem
+**Klimastatus** (an, während die Klimaanlage läuft), einem schreibgeschützten
+Zustand **Komfort-Boost** (das Netatmo-Feld `boiler_valve_comfort_boost`, wie
+gemeldet) und seiner WLAN-Qualität angelegt. Sein Raum erscheint im Widget
+**Netatmo-Heizung**, und das Thermostat kann in der Szenenaktion **Heizmodus
+ändern** gewählt werden.
+
+> ⚠️ **Netatmo-Konto vor dieser Version verbunden?** Das Smarther braucht zwei
+> neue Netatmo-Berechtigungen (`read_smarther`, `write_smarther`): Klicke auf
+> dem Konfigurationsbildschirm erneut auf **Verbinden** und erteile sie — deine
+> Geräte und Einstellungen bleiben erhalten. Bis dahin zeigt der
+> Verbindungsstatus den Hinweis „erneut auf Verbinden klicken“, und ein
+> Sollwert- oder Heizmodus-Befehl am Smarther schlägt mit der Meldung
+> „Netatmo-Konto erneut verbinden“ fehl.
 
 ---
 
@@ -305,11 +350,15 @@ nie aus — die Funktion **Person erkannt** der Kamera deckt alle Personen ab.
 
 ### Aktionen
 
-| Aktion                            | Was sie tut                                                                                                                                  |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Heizmodus ändern**              | Zeitplan, Abwesend oder Frostschutz für das ganze Zuhause; optionale Dauer in Minuten (Abwesend und Frostschutz: danach zurück zum Zeitplan) |
-| **Person als abwesend markieren** | eine bekannte Person oder — Person leer gelassen — das ganze Zuhause leer (aktiviert die anwesenheitsabhängige Kameraüberwachung wieder)     |
-| **Person als anwesend markieren** | eine bekannte Person oder — Person leer gelassen — alle bekannten Personen                                                                   |
+| Aktion                              | Was sie tut                                                                                                                                                                                                      |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Heizmodus ändern**                | Zeitplan, Abwesend oder Frostschutz für das ganze Zuhause; optionale Dauer in Minuten (Abwesend und Frostschutz: danach zurück zum Zeitplan)                                                                     |
+| **Person als abwesend markieren**   | eine bekannte Person oder — Person leer gelassen — das ganze Zuhause leer (aktiviert die anwesenheitsabhängige Kameraüberwachung wieder)                                                                         |
+| **Person als anwesend markieren**   | eine bekannte Person oder — Person leer gelassen — alle bekannten Personen                                                                                                                                       |
+| **Sollwert eines Raums einstellen** | manueller Sollwert (7 bis 30 °C) des Raums des gewählten Thermostats oder Ventils; optionale Dauer in Minuten, danach zurück zum Zeitplan (leer: die Standarddauer eines manuellen Sollwerts in der Netatmo-App) |
+| **Raum boosten**                    | heizt den Raum des gewählten Thermostats oder Ventils mit voller Leistung (Boost); optionale Dauer in Minuten (leer: die Standarddauer des Boosts in der Netatmo-App)                                            |
+| **Zurück zum Zeitplan**             | beendet den manuellen Sollwert oder den Boost des Raums: Er folgt wieder dem Zeitplan                                                                                                                            |
+| **Heizzeitplan auswählen**          | aktiviert einen der Heizzeitpläne des Zuhauses                                                                                                                                                                   |
 
 Das **Zuhause** ist das des Geräts, das du in der Aktion wählst (ein Thermostat
 oder Ventil für die Heizung, eine Kamera für die Personen). Lass es leer, wenn
@@ -317,6 +366,14 @@ dein Konto nur ein Zuhause hat. Das Personenfeld akzeptiert eine
 Szenen-Variable: „Eine bekannte Person kommt an → Person als anwesend
 markieren“ mit der Information **Person**. Jede Aktion gibt den Namen des
 **Zuhauses** an die folgenden Schritte weiter.
+
+Die drei **Raum**-Aktionen gelten für den Raum des gewählten Thermostats oder
+Ventils (Pflichtfeld) und geben auch den Namen des **Raums** weiter.
+**Heizzeitplan auswählen** erwartet den **Namen des Zeitplans genau wie in der
+Netatmo-App** (Groß-/Kleinschreibung egal): Der Szenen-Editor kann die
+Netatmo-Zeitpläne nicht auflisten. Ein unbekannter Name lässt die Aktion
+fehlschlagen, und die Szenen-Logs nennen die Zeitpläne des Zuhauses. Sie gibt
+auch den Namen des **Zeitplans** weiter.
 
 ---
 
@@ -326,11 +383,11 @@ Drei Widgets erscheinen in der Widget-Auswahl des Dashboards (Gladys **5.1**
 oder neuer): **Dashboard bearbeiten**, ein Widget hinzufügen und nach „Netatmo“
 suchen.
 
-| Widget              | Zeigt                                                                                                                                                      | Einstellungen                                                                                             |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind |
-| **Netatmo-Heizung** | den Heizmodus des Zuhauses, eine Zeile pro Raum (gemessene Temperatur → Sollwert) und die Schaltflächen Zeitplan / Frostschutz / Abwesend                  | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause)                                     |
-| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                    | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                |
+| Widget              | Zeigt                                                                                                                                                                                                                                                                                                                                 | Einstellungen                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung                                                                                                                                                                            | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind |
+| **Netatmo-Heizung** | den Heizmodus und den aktiven Zeitplan des Zuhauses, eine Zeile pro Raum (gemessene Temperatur → Sollwert, mit Manuell oder Boost markiert, wenn der Sollwert nicht vom Zeitplan kommt), die Schaltflächen Zeitplan / Frostschutz / Abwesend und, bei mehreren Zeitplänen, eine Schaltfläche **Zeitplan wechseln**, die sie auflistet | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause)                                     |
+| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                                                                                                                                                                                               | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                |
 
 Die Kacheln folgen den Werten live; der Rest wird mit der Integration
 aktualisiert (2 Minuten, oder sobald sich der Heizmodus, die Überwachung oder
@@ -355,6 +412,29 @@ verknüpfte Zubehör erkannt:
 - **Kohlenmonoxidmelder** (`NCO`) — wie der Rauchmelder: Batterie und Signal
   (sofern Netatmo sie meldet), dazu eine Funktion **Kohlenmonoxid**, die von
   den Webhooks gespeist wird.
+
+---
+
+## Bekannte Personen
+
+Wenn die Familie Sicherheit aktiviert ist, erhält jedes Zuhause, dessen Kameras
+Gesichter erkennen, ein Gerät **„<Zuhause> - Known persons“** mit einer Funktion
+**Presence** pro Person, die in der Netatmo-App einen Namen hat: **Anwesenheit
+erkannt**, wenn Netatmo die Person zu Hause sieht, **Keine Anwesenheit**, wenn
+sie abwesend ist — der Zustand, den die Netatmo-App anzeigt. Nutze sie in deinen
+Szenen wie jeden Anwesenheitssensor.
+
+- Nur Personen **mit Namen** erhalten eine Funktion: Ein unbekanntes Gesicht
+  (ohne Namen in der Netatmo-App) wird ignoriert.
+- Die Anwesenheit wird alle 2 Minuten aktualisiert, und **sofort** mit den
+  Gladys-Plus-Webhooks (eine bekannte Person kommt / geht) oder nach den
+  Szenenaktionen **Person als abwesend / anwesend markieren**.
+- Meldet Netatmo die Anwesenheit einer Person nicht, wird nichts
+  veröffentlicht: Der letzte bekannte Wert bleibt.
+- Eine Person wurde in der Netatmo-App hinzugefügt, umbenannt oder gelöscht:
+  Klicke im Tab **Entdecken** beim Gerät auf **Aktualisieren**, um die Funktion
+  hinzuzufügen, umzubenennen oder zu entfernen. Die Funktion folgt der
+  Netatmo-ID der Person: Eine Umbenennung behält ihren Verlauf.
 
 ---
 

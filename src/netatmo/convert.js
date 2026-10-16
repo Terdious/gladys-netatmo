@@ -23,6 +23,7 @@ import {
   CAMERA_MODULE_TYPES,
   HLS_CAMERA_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
+  VIRTUAL_DEVICE_TYPE,
   PARAMS,
 } from './constants.js';
 import { netatmoId } from './discovery.js';
@@ -34,6 +35,9 @@ import {
   buildFeatureThermSetpointTemperature,
   buildFeatureThermPreset,
   buildFeatureBoilerStatus,
+  buildFeatureBoilerFault,
+  buildFeatureCoolerStatus,
+  buildFeatureComfortBoost,
   buildFeatureHeatingPowerRequest,
   buildFeaturePlugConnectedBoiler,
   buildFeatureOpenWindow,
@@ -61,6 +65,7 @@ import {
   buildFeatureShutterPosition,
   buildFeatureHealthIndex,
   buildFeatureHealthLevel,
+  buildFeaturePersonPresence,
 } from './features.js';
 
 const logger = createLogger({ name: 'netatmo-convert' });
@@ -76,9 +81,16 @@ const BATTERY_MODULE_TYPES = [
   // above; their "plug" is the bridging camera (issue #9).
   SUPPORTED_MODULE_TYPE.NACAMDOORTAG,
   SUPPORTED_MODULE_TYPE.NIS,
+  // Modulating thermostat (issue #53): radio module bridged by its OTH relay.
+  SUPPORTED_MODULE_TYPE.OTM,
 ];
 
-const BRIDGE_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.PLUG, SUPPORTED_MODULE_TYPE.NAMAIN];
+const BRIDGE_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.PLUG,
+  SUPPORTED_MODULE_TYPE.NAMAIN,
+  // OpenTherm relay (issue #53): wifi bridge of the OTM thermostat.
+  SUPPORTED_MODULE_TYPE.OTH,
+];
 
 /** plug_id / plug_name params of a bridged module (its bridge = "plug"). */
 function bridgeParams(plug) {
@@ -220,6 +232,51 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       break;
     case SUPPORTED_MODULE_TYPE.PLUG:
       features.push(buildFeaturePlugConnectedBoiler(nameDevice, externalId));
+      break;
+    case SUPPORTED_MODULE_TYPE.OTM:
+      // Modulating / OpenTherm thermostat (issue #53): battery + RF built
+      // above; the room carries the measured temperature and the setpoint
+      // (setroomthermpoint), the home the heating mode, like the NATherm1.
+      if (room.id) {
+        features.push(
+          buildFeatureTemperature(`room ${roomName}`, externalId, 'therm_measured_temperature'),
+        );
+      }
+      features.push(
+        buildFeatureThermSetpointTemperature(nameDevice, externalId, {
+          writable: setpointWritable,
+        }),
+        buildFeatureBoilerStatus(nameDevice, externalId),
+      );
+      pushThermPreset(features, homeId, nameDevice, externalId);
+      break;
+    case SUPPORTED_MODULE_TYPE.BNS:
+      // BTicino Smarther with Netatmo (issue #54): a wifi thermostat of its
+      // own (no relay, no battery); room temperature, setpoint and heating
+      // mode like the NATherm1, plus its heating / cooling states.
+      features.push(buildFeatureWifiStrength(nameDevice, externalId));
+      if (room.id) {
+        features.push(
+          buildFeatureTemperature(`room ${roomName}`, externalId, 'therm_measured_temperature'),
+        );
+      }
+      features.push(
+        buildFeatureThermSetpointTemperature(nameDevice, externalId, {
+          writable: setpointWritable,
+        }),
+        buildFeatureBoilerStatus(nameDevice, externalId),
+        buildFeatureCoolerStatus(nameDevice, externalId),
+        buildFeatureComfortBoost(nameDevice, externalId),
+      );
+      pushThermPreset(features, homeId, nameDevice, externalId);
+      break;
+    case SUPPORTED_MODULE_TYPE.OTH:
+      // OpenTherm relay (issue #53): WiFi quality built above, plus the
+      // outdoor temperature it modulates on and the boiler fault.
+      features.push(
+        buildFeatureTemperature(`outdoor ${nameDevice}`, externalId, 'outdoor_temperature'),
+        buildFeatureBoilerFault(nameDevice, externalId),
+      );
       break;
     case SUPPORTED_MODULE_TYPE.NRV:
       if (room.id) {
@@ -402,6 +459,16 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeaturePressure(`Absolute pressure - ${nameDevice}`, externalId, 'absolute_pressure'),
         buildFeatureHealthIndex(nameDevice, externalId),
         buildFeatureHealthLevel(nameDevice, externalId),
+      );
+      break;
+    case VIRTUAL_DEVICE_TYPE.KNOWN_PERSONS:
+      // Known persons of a home (issue #57): one presence feature per named
+      // person, keyed by the Netatmo person id (a rename only changes the
+      // feature name).
+      features.push(
+        ...(netatmoDevice.persons ?? []).map((person) =>
+          buildFeaturePersonPresence(person.pseudo, externalId, person.id),
+        ),
       );
       break;
     default:

@@ -153,6 +153,10 @@ export const readValues = {
   [DEVICE_FEATURE_CATEGORIES.OPENING_SENSOR]: {
     [DEVICE_FEATURE_TYPES.SENSOR.BINARY]: toBinary,
   },
+  // Known person at home (1) / away (0), issue #57.
+  [DEVICE_FEATURE_CATEGORIES.PRESENCE_SENSOR]: {
+    [DEVICE_FEATURE_TYPES.SENSOR.BINARY]: toBinary,
+  },
   [DEVICE_FEATURE_CATEGORIES.SIREN]: {
     [DEVICE_FEATURE_TYPES.SIREN.BINARY]: toBinary,
   },

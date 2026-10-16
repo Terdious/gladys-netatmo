@@ -22,6 +22,7 @@ export const API_PATHS = {
   GET_HOME_COACHS: '/api/gethomecoachsdata',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
   SET_THERM_MODE: '/api/setthermmode',
+  SWITCH_HOME_SCHEDULE: '/api/switchhomeschedule',
   SET_PERSONS_AWAY: '/api/setpersonsaway',
   SET_PERSONS_HOME: '/api/setpersonshome',
   SET_STATE: '/api/setstate',
@@ -87,6 +88,11 @@ export const SCENE_ACTION_KEYS = {
   SET_HEATING_MODE: 'set_heating_mode',
   SET_PERSONS_AWAY: 'set_persons_away',
   SET_PERSONS_HOME: 'set_persons_home',
+  // Advanced heating (issue #58).
+  SET_ROOM_SETPOINT: 'set_room_setpoint',
+  BOOST_ROOM: 'boost_room',
+  ROOM_BACK_TO_SCHEDULE: 'room_back_to_schedule',
+  SET_HEATING_SCHEDULE: 'set_heating_schedule',
 };
 
 // Webhooks may be re-delivered: the last scene events fired are remembered
@@ -135,7 +141,36 @@ export const SUPPORTED_MODULE_TYPE = {
   // Smart Indoor Air Quality Monitor (formerly "Healthy Home Coach"), served
   // by the legacy /api/gethomecoachsdata endpoint (issue #37).
   NHC: 'NHC',
+  // Modulating / OpenTherm thermostat (issue #53): a wifi relay wired to the
+  // boiler (OTH, the bridge) and its radio room thermostat (OTM).
+  OTH: 'OTH',
+  OTM: 'OTM',
+  // BTicino Smarther with Netatmo (issue #54): wifi thermostat of its own
+  // (no relay), served by the same homesdata/homestatus and commands.
+  BNS: 'BNS',
 };
+
+// Virtual devices (issue #57): built by the integration from home-level data
+// rather than from a Netatmo module. Their type is lowercase snake_case, which
+// no Netatmo module type is (NATherm1, NOC, NBR…), so the convert switch and
+// the UPDATE_MAPPINGS table can key on it without any collision.
+export const VIRTUAL_DEVICE_TYPE = {
+  // The persons known to the cameras of one home (face recognition): one
+  // presence feature per named person.
+  KNOWN_PERSONS: 'known_persons',
+};
+
+// Netatmo id of the known-persons device of a home: `persons-<home id>`, so
+// its external_id reads `ext:netatmo:persons-<home id>`. Netatmo module ids
+// are MAC addresses (`70:ee:50:…`) or digit strings (shutters): neither ever
+// starts with a word followed by a hyphen, and a home id is unique to the
+// account — the id can neither collide with a module nor between two homes.
+export const KNOWN_PERSONS_ID_PREFIX = 'persons-';
+
+// Feature suffix of a known person's presence: `person_<Netatmo person id>`.
+// The person id is the one Netatmo keeps for the face (a UUID, also used by
+// setpersonsaway/setpersonshome): stable across renames, never reused.
+export const PERSON_PRESENCE_SUFFIX_PREFIX = 'person_';
 
 export const SUPPORTED_CATEGORY_TYPE = {
   ENERGY: 'Energy',
@@ -150,6 +185,19 @@ export const ENERGY_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.THERMOSTAT,
   SUPPORTED_MODULE_TYPE.PLUG,
   SUPPORTED_MODULE_TYPE.NRV,
+  SUPPORTED_MODULE_TYPE.OTH,
+  SUPPORTED_MODULE_TYPE.OTM,
+  SUPPORTED_MODULE_TYPE.BNS,
+];
+
+// Modules that heat a room: their room (homestatus `rooms`) carries the
+// measured and setpoint temperatures — the rooms of the heating widget and
+// the heating scene actions (issue #40, #39).
+export const HEATED_ROOM_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.THERMOSTAT,
+  SUPPORTED_MODULE_TYPE.NRV,
+  SUPPORTED_MODULE_TYPE.OTM,
+  SUPPORTED_MODULE_TYPE.BNS,
 ];
 
 export const WEATHER_MODULE_TYPES = [
@@ -291,6 +339,27 @@ export const NETATMO_THERM_MODES = {
   FROST_GUARD: 'hg',
 };
 
+// Setpoint mode of a ROOM (issue #58), the `mode` of POST
+// /api/setroomthermpoint: a manual setpoint (optional `temp` + `endtime`), a
+// boost at the maximum temperature (`max`, optional `endtime`) or back to the
+// home's schedule (`home`). homestatus reports it as `rooms[].therm_setpoint_mode`
+// (`schedule` once back on the schedule; `away` / `hg` / `off` follow the home
+// mode) with `therm_setpoint_end_time`.
+export const NETATMO_SETPOINT_MODES = {
+  MANUAL: 'manual',
+  MAX: 'max',
+  HOME: 'home',
+};
+
+// Netatmo accepts a room setpoint between these temperatures (°C), by steps
+// of 0.5 °C (the Netatmo app's range).
+export const ROOM_SETPOINT_MIN_CELSIUS = 7;
+export const ROOM_SETPOINT_MAX_CELSIUS = 30;
+
+// homesdata `homes[].schedules[].type` of a heating schedule (the same home
+// may also carry cooling, electricity or event schedules).
+export const HEATING_SCHEDULE_TYPE = 'therm';
+
 // Gladys THERMOSTAT_PRESET values (server/utils/constants.js), the enum of the
 // `thermostat/preset` feature type (Gladys 5.2.0+). The SDK does not export
 // it: only the three values Netatmo supports are mirrored.
@@ -401,6 +470,10 @@ export const OAUTH_SCOPES = [
   // Bubendorff / iDiamant roller shutters (issue #34)
   'read_bubendorff',
   'write_bubendorff',
+  // BTicino Smarther with Netatmo thermostat (issue #54) — added after 2.0.1:
+  // an account connected before must click Connect again to grant them.
+  'read_smarther',
+  'write_smarther',
 ];
 
 // Refresh the access token at 80% of its lifetime (core PR #2618 hardening),
@@ -448,13 +521,13 @@ export const CONNECTION_MESSAGES = {
     es: 'La sesión de Netatmo ha caducado, vuelva a conectar su cuenta Netatmo.',
   },
   // Connected, but the token lacks requested scopes (typically scopes added by
-  // a newer release, like the Indoor Camera Advance ones): the exact list is
-  // logged.
+  // a newer release, like the Smarther or the Indoor Camera Advance ones): the
+  // exact list is logged.
   MISSING_SCOPES: {
-    en: 'Connected, but some Netatmo permissions are missing (for example the Indoor Camera Advance, added in a recent version): click Connect again to grant them.',
-    fr: 'Connecté, mais des autorisations Netatmo manquent (par exemple la caméra intérieure Advance, ajoutée dans une version récente) : cliquez à nouveau sur Connecter pour les accorder.',
-    de: 'Verbunden, aber einige Netatmo-Berechtigungen fehlen (zum Beispiel für die Innenkamera Advance, in einer neueren Version hinzugefügt): Klicke erneut auf Verbinden, um sie zu erteilen.',
-    es: 'Conectado, pero faltan algunos permisos de Netatmo (por ejemplo, la cámara de interior Advance, añadida en una versión reciente): vuelva a hacer clic en Conectar para concederlos.',
+    en: 'Connected, but some Netatmo permissions added in a recent version are missing (e.g. Smarther thermostat, Indoor Camera Advance): click Connect again to grant them.',
+    fr: 'Connecté, mais des autorisations Netatmo ajoutées récemment manquent (ex. thermostat Smarther, caméra intérieure Advance) : cliquez à nouveau sur Connecter pour les accorder.',
+    de: 'Verbunden, aber neu hinzugekommene Netatmo-Berechtigungen fehlen (z. B. Thermostat Smarther, Innenkamera Advance): Klicke erneut auf Verbinden, um sie zu erteilen.',
+    es: 'Conectado, pero faltan permisos de Netatmo añadidos recientemente (p. ej. termostato Smarther, cámara de interior Advance): vuelva a hacer clic en Conectar para concederlos.',
   },
   NETATMO_UNREACHABLE: {
     en: 'Netatmo cloud is unreachable, retrying automatically.',

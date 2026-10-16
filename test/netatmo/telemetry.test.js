@@ -13,6 +13,7 @@ import { normalizeConfig } from '../../src/config.js';
 import { createNetatmoClient } from '../../src/netatmo/client.js';
 import { createTelemetry } from '../../src/netatmo/telemetry.js';
 import { setDeviceValue, floodlightModeFor } from '../../src/netatmo/setValue.js';
+import { createWebhooks } from '../../src/netatmo/webhooks.js';
 import { startFakeNetatmo, addIndoorCameraAdvance, NPC_ID } from '../helpers/fakeNetatmo.js';
 import { waitFor } from '../helpers/fakeGladysCore.js';
 import { DEGRADED_AFTER_FAILED_LOADS, DEGRADED_MESSAGES } from '../../src/netatmo/constants.js';
@@ -152,8 +153,9 @@ test('unchanged values are deduped, then re-published after the 30-minute keep-a
 test('cameras are discovered and updated when security_api is enabled (core #2621)', async () => {
   const configSecurity = normalizeConfig({ security_api: 'true' });
   gladys.devices = await telemetry.syncDiscovery(configSecurity);
-  // 7 Energy/Weather devices + 2 cameras + siren + door tag + smoke + CO alarms.
-  assert.equal(gladys.devices.length, 13);
+  // 7 Energy/Weather devices + 2 cameras + siren + door tag + smoke + CO alarms
+  // + the known persons of the home (issue #57).
+  assert.equal(gladys.devices.length, 14);
 
   await telemetry.refreshValues(configSecurity);
   // monitoring 'off'/'on' → binary, wifi_status fallback (core mapping).
@@ -1027,4 +1029,134 @@ test('the Home Coach publishes its dashboard_data, never stale values (issue #37
   await telemetry.refreshValues(configAircare);
   assert.deepEqual(stateOf(`${coach}:health_idx`), [75, 250]);
   assert.deepEqual(stateOf(`${coach}:health_level`), ['fine', 'unhealthy']);
+});
+
+// --- Known persons (issue #57) ----------------------------------------------
+
+const PERSONS = 'ext:netatmo:persons-home-1';
+const securityConfig = normalizeConfig({ security_api: 'true' });
+
+function homeStatusPerson(id) {
+  return netatmo.state.homeStatuses['home-1'].home.persons.find((p) => p.id === id);
+}
+
+test('the known persons publish their presence on every cycle, badged cloud (issue #57)', async () => {
+  gladys.devices = await telemetry.syncDiscovery(securityConfig);
+  const persons = gladys.devices.find((device) => device.external_id === PERSONS);
+  assert.deepEqual(
+    persons.features.map((f) => [f.external_id, f.name]),
+    [
+      [`${PERSONS}:person_person-1`, 'Presence - Alice'],
+      [`${PERSONS}:person_person-2`, 'Presence - Bob'],
+    ],
+  );
+
+  await telemetry.refreshValues(securityConfig);
+  // out_of_sight false = at home = 1 (Gladys presence), true = away = 0.
+  assert.deepEqual(stateOf(`${PERSONS}:person_person-1`), [1]);
+  assert.deepEqual(stateOf(`${PERSONS}:person_person-2`), [0]);
+  assert.deepEqual(lastTransport(PERSONS), { external_id: PERSONS, transport: 'cloud' });
+
+  // Next cycle: Bob is back, Alice left.
+  homeStatusPerson('person-1').out_of_sight = true;
+  homeStatusPerson('person-2').out_of_sight = false;
+  clock += 120 * 1000;
+  assert.equal(await telemetry.refreshValues(securityConfig), 2);
+  assert.deepEqual(stateOf(`${PERSONS}:person_person-1`), [1, 0]);
+  assert.deepEqual(stateOf(`${PERSONS}:person_person-2`), [0, 1]);
+
+  // A person homestatus no longer reports: nothing published, even past the
+  // keep-alive (the last known state stays in Gladys).
+  const status = netatmo.state.homeStatuses['home-1'].home;
+  status.persons = status.persons.filter((p) => p.id !== 'person-1');
+  clock += 31 * 60 * 1000;
+  await telemetry.refreshValues(securityConfig);
+  assert.deepEqual(stateOf(`${PERSONS}:person_person-1`), [1, 0]);
+  assert.deepEqual(stateOf(`${PERSONS}:person_person-2`), [0, 1, 1]);
+});
+
+test('a removed person leaves the discovery, an unnamed face never enters it (issue #57)', async () => {
+  gladys.devices = await telemetry.syncDiscovery(securityConfig);
+  await telemetry.refreshValues(securityConfig);
+
+  // Bob is deleted in the Netatmo app; an unrecognized face shows up (no pseudo).
+  const home = netatmo.state.homes[0];
+  home.persons = [
+    home.persons.find((p) => p.id === 'person-1'),
+    { id: 'face-1', url: 'https://example.invalid/face.jpg' },
+  ];
+  const status = netatmo.state.homeStatuses['home-1'].home;
+  status.persons.push({ id: 'face-1', last_seen: 1559282761, out_of_sight: false });
+  homeStatusPerson('person-2').out_of_sight = false; // would be a change for Bob
+
+  const devices = await telemetry.syncDiscovery(securityConfig);
+  const persons = devices.find((device) => device.external_id === PERSONS);
+  assert.deepEqual(
+    persons.features.map((f) => f.external_id),
+    [`${PERSONS}:person_person-1`],
+  );
+  // The device created earlier still has Bob's feature: no state for it.
+  clock += 120 * 1000;
+  await telemetry.refreshValues(securityConfig);
+  assert.deepEqual(stateOf(`${PERSONS}:person_person-2`), [0]);
+  assert.deepEqual(stateOf(`${PERSONS}:person_face-1`), []);
+
+  // Nobody named left: the device is no longer discovered at all.
+  home.persons = [{ id: 'face-1' }];
+  const without = await telemetry.syncDiscovery(securityConfig);
+  assert.ok(!without.some((device) => device.external_id === PERSONS));
+});
+
+test('the known persons stay out of the discovery with the Security toggle off (issue #57)', async () => {
+  const devices = await telemetry.syncDiscovery(config);
+  assert.ok(!devices.some((device) => device.external_id === PERSONS));
+  assert.equal(lastTransport(PERSONS), undefined);
+});
+
+test('a homestatus outage marks the known persons degraded like the modules (issue #57)', async () => {
+  const engine = createTelemetry({ gladys, client, now: () => clock, loadTtlMs: 0 });
+  gladys.devices = await engine.syncDiscovery(securityConfig);
+  await engine.refreshValues(securityConfig);
+
+  netatmo.state.homeStatuses['home-1'] = {}; // homestatus without home
+  for (let cycle = 0; cycle < DEGRADED_AFTER_FAILED_LOADS; cycle += 1) {
+    clock += 120 * 1000;
+    await engine.refreshValues(securityConfig);
+  }
+  assert.deepEqual(lastTransport(PERSONS), {
+    external_id: PERSONS,
+    transport: 'cloud',
+    degraded: true,
+    message: DEGRADED_MESSAGES.PARTIAL,
+  });
+  // The previously published discovery list was kept (partial load).
+  assert.equal(gladys.discovered.length, 1);
+  engine.stop();
+});
+
+test('a person webhook lands the new presence at once, even right after a cycle (issue #57)', async () => {
+  // Production cadence: the 10 s burst cache is on.
+  const engine = createTelemetry({ gladys, client, now: () => clock });
+  gladys.devices = await engine.syncDiscovery(securityConfig);
+  await engine.refreshValues(securityConfig);
+  assert.deepEqual(stateOf(`${PERSONS}:person_person-2`), [0]);
+
+  // Bob walks in a few seconds after the cycle: Netatmo sends `person`.
+  homeStatusPerson('person-2').out_of_sight = false;
+  clock += 3 * 1000;
+  // A plain refresh would reuse the cached load and miss it...
+  assert.equal(await engine.refreshValues(securityConfig), 0);
+
+  // ...the webhook-triggered refresh (index.js wiring) starts from a fresh load.
+  const scheduled = [];
+  const webhooks = createWebhooks({
+    gladys: {},
+    client,
+    refresh: () => engine.refreshNow(securityConfig),
+    timers: { setTimeout: (fn) => scheduled.push(fn), clearTimeout: () => {} },
+  });
+  webhooks.handleEvent();
+  await scheduled[0]();
+  assert.deepEqual(stateOf(`${PERSONS}:person_person-2`), [0, 1]);
+  engine.stop();
 });

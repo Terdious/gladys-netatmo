@@ -13,7 +13,11 @@ import {
   DEVICE_FEATURE_UNITS,
 } from '@gladysassistant/integration-sdk';
 
-import { THERM_MODE_PRESETS, THERM_MODE_LABELS } from './constants.js';
+import {
+  THERM_MODE_PRESETS,
+  THERM_MODE_LABELS,
+  PERSON_PRESENCE_SUFFIX_PREFIX,
+} from './constants.js';
 
 function feature(overrides) {
   return {
@@ -124,6 +128,52 @@ export function buildFeatureBoilerStatus(name, externalId) {
     name: `Boiler status - ${name}`,
     external_id: `${externalId}:boiler_status`,
     selector: `${externalId}:boiler_status`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// BTicino Smarther (BNS, issue #54): the air conditioning is running
+// (homestatus `cooler_status`), the cooling twin of the boiler status.
+export function buildFeatureCoolerStatus(name, externalId) {
+  return feature({
+    name: `Cooler status - ${name}`,
+    external_id: `${externalId}:cooler_status`,
+    selector: `${externalId}:cooler_status`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// BTicino Smarther (BNS, issue #54): homestatus `boiler_valve_comfort_boost`
+// as reported (pyatmo BoilerMixin), read-only. The suffix keeps the Netatmo
+// field name: its exact meaning is still to be confirmed on a real device.
+export function buildFeatureComfortBoost(name, externalId) {
+  return feature({
+    name: `Comfort boost - ${name}`,
+    external_id: `${externalId}:boiler_valve_comfort_boost`,
+    selector: `${externalId}:boiler_valve_comfort_boost`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// OpenTherm relay (OTH, issue #53): 1 while the boiler reports a fault
+// (homestatus `boiler_error`, e.g. "water_pressure"), 0 otherwise. A binary
+// rather than the fault text: Gladys has no "fault" category, and a 0/1 keeps
+// the history and drives a "boiler fault → notify me" scene; the reason stays
+// visible in the Netatmo app. Same read-only switch as the boiler status.
+export function buildFeatureBoilerFault(name, externalId) {
+  return feature({
+    name: `Boiler fault - ${name}`,
+    external_id: `${externalId}:boiler_fault`,
+    selector: `${externalId}:boiler_fault`,
     category: DEVICE_FEATURE_CATEGORIES.SWITCH,
     type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
     min: 0,
@@ -253,6 +303,23 @@ export function buildFeatureHuman(name, externalId) {
     name: `Person detected - ${name}`,
     external_id: `${externalId}:human`,
     selector: `${externalId}:human`,
+    category: DEVICE_FEATURE_CATEGORIES.PRESENCE_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// Presence of a person known to the cameras (issue #57): a LASTING state
+// (1 = at home, 0 = away), unlike the momentary "Person detected" above. The
+// binary flavour is the Gladys type for it: the UI renders it as a
+// presence / no presence badge (the push flavour renders a last-seen date).
+export function buildFeaturePersonPresence(name, externalId, personId) {
+  const suffix = `${PERSON_PRESENCE_SUFFIX_PREFIX}${personId}`;
+  return feature({
+    name: `Presence - ${name}`,
+    external_id: `${externalId}:${suffix}`,
+    selector: `${externalId}:${suffix}`,
     category: DEVICE_FEATURE_CATEGORIES.PRESENCE_SENSOR,
     type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
     min: 0,

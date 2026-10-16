@@ -428,6 +428,51 @@ test('the Home Coach health index maps to the middle of its AQI band', () => {
   }
 });
 
+test('converts the known persons of a home into one presence feature each (issue #57)', () => {
+  const device = convertDevice(gladys, {
+    id: 'persons-home-1',
+    type: 'known_persons',
+    name: 'Maison - Known persons',
+    home: 'home-1',
+    persons: [
+      { id: '91827374-7e04-5298-83ad-a0cb8372dff1', pseudo: 'John Doe', out_of_sight: true },
+      { id: 'person-2', pseudo: 'Bob' },
+    ],
+    categoryAPI: 'Security',
+    apiNotConfigured: false,
+  });
+  assert.equal(device.external_id, 'ext:netatmo:persons-home-1');
+  assert.equal(device.name, 'Maison - Known persons');
+  assert.equal(device.model, 'known_persons');
+  assert.equal(device.should_poll, false);
+  assert.deepEqual(suffixesOf(device), [
+    'person_91827374-7e04-5298-83ad-a0cb8372dff1',
+    'person_person-2',
+  ]);
+  const john = device.features[0];
+  assert.equal(john.name, 'Presence - John Doe');
+  assert.equal(john.category, 'presence-sensor');
+  assert.equal(john.type, 'binary');
+  assert.equal(john.min, 0);
+  assert.equal(john.max, 1);
+  assert.equal(john.read_only, true);
+  assert.equal(paramValue(device, 'home_id'), 'home-1');
+});
+
+test('skips the known persons while the security_api toggle is off (issue #57)', () => {
+  assert.equal(
+    convertDevice(gladys, {
+      id: 'persons-home-1',
+      type: 'known_persons',
+      name: 'Maison - Known persons',
+      home: 'home-1',
+      persons: [{ id: 'person-1', pseudo: 'Alice' }],
+      apiNotConfigured: true,
+    }),
+    null,
+  );
+});
+
 test('converts an Indoor Camera Advance (NPC) like NACamera, without a live URL (issue #55)', () => {
   // homesdata + homestatus shape of pyatmo's fixtures (NPC 12:34:56:00:f1:63).
   const device = convertDevice(
