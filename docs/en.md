@@ -150,8 +150,9 @@ triggers**:
 | Smoke alarm                | **Smoke**            | a smoke detection              |
 
 Each detection goes to **Yes** and returns to **No** by itself after one minute
-(Netatmo sends no "detection over" event). In a scene, use the "value becomes
-Yes" trigger.
+(Netatmo sends no "detection over" event, except for smoke: the "smoke cleared"
+event returns it to **No** at once). In a scene, use the "value becomes Yes"
+trigger.
 
 > ⚠️ **If your cameras already existed in Gladys**, these new features do not
 > appear on their own: go to the **Discovery** screen and click **Update** on

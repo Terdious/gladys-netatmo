@@ -39,6 +39,9 @@ the notes of the version's GitHub Release.
   reason, the Configuration screen shows it under the Connected status, and
   both clear on the first complete refresh
   ([#33](https://github.com/Terdious/gladys-netatmo/issues/33)).
+- The "smoke cleared" webhook event (`sub_type` 0) no longer raises a smoke
+  detection: it returns the Smoke feature to No at once, so a scene triggered
+  by smoke does not fire a second time when the smoke clears.
 
 ## [1.3.0] - 2026-10-16
 
