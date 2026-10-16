@@ -213,6 +213,65 @@ test('the camera-bridged security accessories publish their states (issue #9)', 
   assert.deepEqual(stateOf('ext:netatmo:doortag-1:opening'), [1, 0]);
 });
 
+/** Add a video doorbell (pyatmo fixture shape, issue #35) to the fake account. */
+function addDoorbell() {
+  netatmo.state.homes[0].modules.push({
+    id: 'doorbell-1',
+    type: 'NDB',
+    name: 'Netatmo-Doorbell',
+    room_id: 'room-1',
+    reachable: true,
+  });
+  netatmo.state.homeStatuses['home-1'].home.modules.push({
+    type: 'NDB',
+    id: 'doorbell-1',
+    vpn_url: `${netatmo.url}/vpn/doorbell-1`,
+    // Claims a LAN path: the WebRTC doorbell must still go through the VPN.
+    is_local: true,
+    alim_status: 2,
+    connection: 'wifi',
+    sd_status: 4,
+    wifi_strength: 66,
+    wifi_state: 'medium',
+  });
+}
+
+test('the video doorbell is discovered behind security_api, with image and ring (issue #35)', async () => {
+  addDoorbell();
+  // Security off (default): the doorbell stays out of the discovery.
+  const withoutSecurity = await telemetry.syncDiscovery(config);
+  assert.ok(!withoutSecurity.some((d) => d.external_id === 'ext:netatmo:doorbell-1'));
+
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  const doorbell = gladys.devices.find((d) => d.external_id === 'ext:netatmo:doorbell-1');
+  assert.ok(doorbell);
+  assert.deepEqual(
+    doorbell.features.map((f) => f.external_id.replace('ext:netatmo:doorbell-1:', '')),
+    ['wifi_strength', 'camera', 'ring'],
+  );
+  // WebRTC only: no HLS live URL for the core rtsp-camera service.
+  assert.equal(
+    doorbell.params.find((p) => p.name === 'CAMERA_URL'),
+    undefined,
+  );
+
+  await telemetry.refreshValues(configSecurity);
+  assert.deepEqual(stateOf('ext:netatmo:doorbell-1:wifi_strength'), [66]);
+  assert.deepEqual(stateOf('ext:netatmo:doorbell-1:ring'), []); // webhook-only
+  // Dashboard image fetched on the VPN URL, without any LAN resolution.
+  const image = gladys.cameraImages.find((c) => c.deviceExternalId === 'ext:netatmo:doorbell-1');
+  assert.match(image.image, /^image\/jpg;base64,/);
+  const doorbellRequests = netatmo.state.cameraRequests.filter((r) => r.camId === 'doorbell-1');
+  assert.ok(doorbellRequests.every((r) => r.side === 'vpn'));
+  assert.ok(!doorbellRequests.some((r) => r.path === '/command/ping'));
+
+  // A second cycle must not re-publish the discovery for a "changed" live URL.
+  const discoveredCount = gladys.discovered.length;
+  await telemetry.refreshValues(configSecurity);
+  assert.equal(gladys.discovered.length, discoveredCount);
+});
+
 test('cameras carry a local-first CAMERA_URL and the camera_quality param (core #2625)', async () => {
   const configSecurity = normalizeConfig({ security_api: 'true' });
   const devices = await telemetry.syncDiscovery(configSecurity);

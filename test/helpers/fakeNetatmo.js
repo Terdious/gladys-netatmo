@@ -195,6 +195,10 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
     failLocalSnapshot: false, // make the LOCAL snapshot fail (stale-cache fallback test)
     failAllSnapshots: false, // make EVERY snapshot fail (last-image fallback test)
+    // Scopes echoed in the token responses, like the real Netatmo: those
+    // requested by the authorization exchange, kept across refreshes. Tests
+    // overwrite it to simulate a token granted before new scopes existed.
+    grantedScopes: ['read_station'],
     baseUrl: '', // filled after listen()
     homes: buildDefaultHomes(),
     homeStatuses: buildDefaultHomeStatuses(),
@@ -212,7 +216,7 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
       access_token: accessToken,
       refresh_token: state.validRefreshToken,
       expires_in: expiresIn,
-      scope: ['read_station'],
+      scope: state.grantedScopes,
     };
   }
 
@@ -268,6 +272,9 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           if (form.code !== FAKE_AUTH_CODE) {
             respond({ error: 'invalid_grant' }, 400);
             return;
+          }
+          if (form.scope) {
+            state.grantedScopes = form.scope.split(' ');
           }
           respond(issueTokens());
           return;

@@ -106,6 +106,11 @@ export const UPDATE_MAPPINGS = {
         : deviceNetatmo.monitoring === 'on',
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
+  // Video doorbell (issue #35): only the wifi quality is pollable — the ring
+  // is webhook-driven (`incoming_call`).
+  [SUPPORTED_MODULE_TYPE.NDB]: {
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+  },
   // Camera-bridged door/window tag (issue #9). Homestatus `status` is a string:
   // "open"/"closed" (other values — "no_news"/"calibrating"/"undefined" — mean
   // "no reliable state", skipped). Battery is a percent or the string state.

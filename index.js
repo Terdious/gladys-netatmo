@@ -86,9 +86,23 @@ export function setupIntegration(
     client,
     refresh: () => telemetry.refreshValues(config),
   });
-  // Momentary detections (motion, person, smoke…): published as push features
-  // straight from the event payload — no API state ever reports them.
+  // Momentary detections (motion, person, smoke, doorbell ring…): published as
+  // push features straight from the event payload — no API state reports them.
   const events = createEvents({ gladys });
+
+  /**
+   * Report "connected" — with a "click Connect again" hint while the token
+   * lacks scopes added by a newer release (video doorbell, issue #35): the
+   * rest of the account keeps working, only the new devices need it.
+   */
+  async function reportConnected() {
+    const missing = oauth.missingScopes();
+    await reportConnectionStatus(
+      gladys,
+      true,
+      missing.length > 0 ? CONNECTION_MESSAGES.MISSING_SCOPES : undefined,
+    );
+  }
 
   // Tokens wiped after the 24h grace window: ask the user to reconnect.
   oauth.onAuthLost(async (message) => {
@@ -99,8 +113,16 @@ export function setupIntegration(
   // A scheduled refresh recovered after failures (Netatmo/DNS outage over):
   // reflect it on the Configuration screen and make sure telemetry runs.
   oauth.onRefreshRecovered(async () => {
-    await reportConnectionStatus(gladys, true);
+    await reportConnected();
     telemetry.start(config);
+  });
+
+  // A token response revealed missing scopes (or a reconnect granted them):
+  // refresh the status shown on the Configuration screen.
+  oauth.onMissingScopes(async () => {
+    if (oauth.hasTokens()) {
+      await reportConnected();
+    }
   });
 
   /**
@@ -126,7 +148,7 @@ export function setupIntegration(
     try {
       await oauth.ensureFreshAccessToken();
       oauth.scheduleTokenRefresh();
-      await reportConnectionStatus(gladys, true);
+      await reportConnected();
       // Start (or restart) the global value refresh loop for the devices the
       // user created in Gladys.
       telemetry.start(config);
@@ -194,7 +216,7 @@ export function setupIntegration(
     } catch (err) {
       logger.warn(`Post-connect validation call failed (${err.message}) — the loop will retry`);
     }
-    await reportConnectionStatus(gladys, true);
+    await reportConnected();
     telemetry.start(config);
   });
 

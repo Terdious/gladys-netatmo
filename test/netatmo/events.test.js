@@ -29,7 +29,7 @@ function fakeTimers() {
   };
 }
 
-function fakeGladys({ features = ['motion', 'human', 'animal', 'vehicle', 'smoke'] } = {}) {
+function fakeGladys({ features = ['motion', 'human', 'animal', 'vehicle', 'smoke', 'ring'] } = {}) {
   const published = [];
   return {
     published,
@@ -99,6 +99,34 @@ test('person, animal, vehicle and smoke events each drive their own feature', as
   assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:animal'), [1]);
   assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:vehicle'), [1]);
   assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:smoke'), [1]);
+});
+
+test('a doorbell ring (NDB-incoming_call) publishes 1, then resets (issue #35)', async () => {
+  const gladys = fakeGladys();
+  const timers = fakeTimers();
+  const events = createEvents({ gladys, timers });
+
+  const published = await events.handleWebhook({
+    event_type: 'incoming_call',
+    device_id: 'camera-1',
+    home_id: 'home-1',
+    push_type: 'NDB-incoming_call',
+  });
+  assert.equal(published, 'ext:netatmo:camera-1:ring');
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:ring'), [1]);
+
+  // The answered / missed follow-ups describe the SAME ring: not mapped, so a
+  // scene fires once per ring.
+  for (const followUp of ['accepted_call', 'missed_call']) {
+    assert.equal(
+      await events.handleWebhook({ push_type: `NDB-${followUp}`, device_id: 'camera-1' }),
+      undefined,
+    );
+  }
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:ring'), [1]);
+
+  await timers.flush();
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:ring'), [1, 0]);
 });
 
 test('a new detection re-arms the reset instead of stacking timers', async () => {

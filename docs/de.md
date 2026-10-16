@@ -36,8 +36,9 @@ Gladys und deinem Netatmo-Konto bleiben.
 
 Du musst im Portal **keine** Berechtigungen (Scopes) und keine Redirect-URI
 konfigurieren: Gladys fordert die benötigten Berechtigungen (Lesen + Schreiben,
-für Energie, Wetter und Sicherheit einschließlich Kameras) beim Verbinden
-automatisch an und kümmert sich selbst um die OAuth2-Weiterleitung.
+für Energie, Wetter und Sicherheit einschließlich Kameras und Video-Türklingel)
+beim Verbinden automatisch an und kümmert sich selbst um die
+OAuth2-Weiterleitung.
 
 ---
 
@@ -68,11 +69,11 @@ Konfiguration auf, dich erneut zu verbinden.
 
 Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
-| Schalter       | Erkennt                                                                |
-| -------------- | ---------------------------------------------------------------------- |
-| **Energie**    | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)  |
-| **Wetter**     | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule |
-| **Sicherheit** | Innen- (`NACamera`) und Außenkameras (`NOC`) sowie deren Zubehör       |
+| Schalter       | Erkennt                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| **Energie**    | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)                      |
+| **Wetter**     | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                     |
+| **Sicherheit** | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -107,6 +108,32 @@ Wenn die Familie Sicherheit aktiviert ist, wird jede Kamera erstellt mit:
   Client (Gladys, Netatmo-Web, Netatmo-App) Ton. Gladys überträgt den Ton,
   sobald der Stream ihn enthält — auf der Seite von Gladys ist nichts zu
   konfigurieren.
+
+---
+
+## Video-Türklingel
+
+Wenn die Familie Sicherheit aktiviert ist, wird die Netatmo-Video-Türklingel
+(`NDB`) erstellt mit:
+
+- einem **Dashboard-Bild** (ein Schnappschuss, automatisch aktualisiert) —
+  abgerufen über die Netatmo-VPN-URL: Die Türklingel stellt es nicht im lokalen
+  Netzwerk bereit;
+- einer Funktion **Türklingel**, die **Klingelt** anzeigt, wenn jemand den
+  Knopf drückt, nutzbar als Szenen-Auslöser (**Wenn die Türklingel klingelt**)
+  — sie benötigt die Gladys-Plus-Webhooks (siehe unten): Die Abfrage allein kann
+  kein Klingeln melden;
+- der Qualität ihrer **WLAN**-Verbindung.
+
+Es gibt keinen Überwachungsschalter (Netatmo bietet keinen für die Türklingel)
+und keine Livestream-Schaltfläche: Die Türklingel streamt nur über WebRTC, das
+die Kamera-Liveansicht von Gladys nicht abspielen kann.
+
+> ⚠️ **Netatmo-Konto vor dieser Version verbunden?** Die Türklingel benötigt
+> zwei neue Netatmo-Berechtigungen (`read_doorbell`, `access_doorbell`): Klicke
+> auf dem Konfigurationsbildschirm erneut auf **Verbinden** und akzeptiere sie.
+> Bis dahin zeigt der Verbindungsstatus einen Hinweis, erneut auf Verbinden zu
+> klicken.
 
 ---
 
@@ -158,10 +185,14 @@ die als **Szenen-Auslöser** nutzbar sind:
 | Außenkamera (Presence)  | **Tier erkannt**     | ein erkanntes Tier                    |
 | Außenkamera (Presence)  | **Fahrzeug erkannt** | ein erkanntes Fahrzeug                |
 | Rauchmelder             | **Rauch**            | eine Raucherkennung                   |
+| Video-Türklingel        | **Türklingel**       | jemand klingelt                       |
 
 Jede Erkennung wechselt auf **Ja** und kehrt nach einer Minute von selbst auf
 **Nein** zurück (Netatmo sendet kein Ereignis „Erkennung beendet“). Verwende in
-einer Szene den Auslöser „Wert wird Ja“.
+einer Szene den Auslöser „Wert wird Ja“ — für die Türklingel den Auslöser
+**Wenn die Türklingel klingelt**. Ein Klingeln löst einmal aus: Die
+Folgeereignisse „Anruf angenommen“ / „Anruf verpasst“ der Netatmo-App sind
+keine eigenen Auslöser.
 
 > ⚠️ **Wenn deine Kameras bereits in Gladys existierten**, erscheinen diese
 > neuen Funktionen nicht von selbst: Gehe in den Tab **Entdecken** und klicke
@@ -272,3 +303,6 @@ verschiebt nur, was noch übrig ist.
   „erneut verbinden“ fehl:** Deiner Netatmo-Autorisierung fehlt die
   Kamera-Berechtigung — verbinde dein Konto erneut.
 - **Kein Kameraton:** Siehe den Mikrofon-Tipp im Abschnitt Kameras oben.
+- **Status „einige Netatmo-Berechtigungen fehlen“:** Eine neuere Version hat
+  Berechtigungen hinzugefügt (Video-Türklingel) — klicke erneut auf Verbinden
+  und akzeptiere sie. Die **Logs** der Integration nennen die fehlenden.

@@ -124,10 +124,10 @@
         "es": "Dispositivos a descubrir"
       },
       "description": {
-        "en": "Choose which Netatmo device families Gladys should discover. Enabling a family and saving re-runs the discovery automatically — no manual re-scan needed. Security covers the cameras and their accessories (door/window tag, siren, smoke alarm).",
-        "fr": "Choisissez les familles d'appareils Netatmo que Gladys doit découvrir. Activer une famille et sauvegarder relance la découverte automatiquement — pas besoin de re-scanner. La Sécurité couvre les caméras et leurs accessoires (capteur porte/fenêtre, sirène, détecteur de fumée).",
-        "de": "Wähle aus, welche Netatmo-Gerätefamilien Gladys erkennen soll. Wenn du eine Familie aktivierst und speicherst, wird die Erkennung automatisch neu gestartet — kein manueller Scan nötig. Sicherheit umfasst die Kameras und ihr Zubehör (Tür-/Fenstersensor, Sirene, Rauchmelder).",
-        "es": "Elija qué familias de dispositivos Netatmo debe descubrir Gladys. Al activar una familia y guardar, el descubrimiento se vuelve a ejecutar automáticamente — no hace falta volver a escanear. Seguridad incluye las cámaras y sus accesorios (sensor de puerta/ventana, sirena, detector de humo)."
+        "en": "Choose which Netatmo device families Gladys should discover. Enabling a family and saving re-runs the discovery automatically — no manual re-scan needed. Security covers the cameras, the video doorbell and their accessories (door/window tag, siren, smoke alarm).",
+        "fr": "Choisissez les familles d'appareils Netatmo que Gladys doit découvrir. Activer une famille et sauvegarder relance la découverte automatiquement — pas besoin de re-scanner. La Sécurité couvre les caméras, la sonnette vidéo et leurs accessoires (capteur porte/fenêtre, sirène, détecteur de fumée).",
+        "de": "Wähle aus, welche Netatmo-Gerätefamilien Gladys erkennen soll. Wenn du eine Familie aktivierst und speicherst, wird die Erkennung automatisch neu gestartet — kein manueller Scan nötig. Sicherheit umfasst die Kameras, die Video-Türklingel und ihr Zubehör (Tür-/Fenstersensor, Sirene, Rauchmelder).",
+        "es": "Elija qué familias de dispositivos Netatmo debe descubrir Gladys. Al activar una familia y guardar, el descubrimiento se vuelve a ejecutar automáticamente — no hace falta volver a escanear. Seguridad incluye las cámaras, el timbre con vídeo y sus accesorios (sensor de puerta/ventana, sirena, detector de humo)."
       }
     },
     {

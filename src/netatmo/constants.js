@@ -49,6 +49,11 @@ export const EVENT_FEATURE_SUFFIXES = {
   animal: 'animal',
   vehicle: 'vehicle',
   smoke: 'smoke',
+  // Video doorbell (NDB, issue #35): someone pressed the button. The follow-up
+  // `accepted_call` / `missed_call` events describe the SAME ring (answered or
+  // not in the Netatmo app): they are deliberately not mapped, so one ring
+  // fires a scene once instead of twice.
+  incoming_call: 'ring',
 };
 
 // A momentary event has no "cleared" counterpart in the Netatmo stream: the
@@ -76,6 +81,9 @@ export const SUPPORTED_MODULE_TYPE = {
   // homestatus payload carries them); its SMOKE state is webhook-driven and
   // lands with the webhooks milestone (issue #5).
   NSD: 'NSD',
+  // Smart video doorbell (issue #35): a camera of its own (snapshot + wifi),
+  // plus the ring, which only exists in the webhook event stream.
+  NDB: 'NDB',
 };
 
 export const SUPPORTED_CATEGORY_TYPE = {
@@ -99,8 +107,23 @@ export const WEATHER_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.NAMODULE4,
 ];
 
-// Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621.
-export const CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
+// Cameras: indoor (NACamera) and outdoor Presence (NOC), core PR #2621, and
+// the video doorbell (NDB, issue #35).
+export const CAMERA_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.NACAMERA,
+  SUPPORTED_MODULE_TYPE.NOC,
+  SUPPORTED_MODULE_TYPE.NDB,
+];
+
+// Cameras streaming over HLS: the only ones whose live stream the core
+// rtsp-camera service can play through the CAMERA_URL param. The doorbell
+// streams over WebRTC only (pyatmo `WebRTCCameraMixin`): it gets no CAMERA_URL
+// rather than a live button that cannot work.
+export const HLS_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
+
+// WebRTC cameras do not serve their snapshot on the local URL (pyatmo forces
+// the VPN URL for them): no `/command/ping` resolution, VPN URL only.
+export const VPN_ONLY_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NDB];
 
 // Camera-bridged security accessories (radio-linked to a camera): door/window
 // tag (NACamDoorTag) and indoor siren (NIS). Net-new vs the core service — the
@@ -186,6 +209,10 @@ export const OAUTH_SCOPES = [
   'access_presence',
   'read_carbonmonoxidedetector',
   'read_smokedetector',
+  // Video doorbell (issue #35) — added after 1.3.0: an account connected
+  // before must click Connect again to grant them (see OAuth missingScopes).
+  'read_doorbell',
+  'access_doorbell',
   // Aircare
   'read_homecoach',
 ];
@@ -233,6 +260,14 @@ export const CONNECTION_MESSAGES = {
     fr: 'La session Netatmo a expiré, veuillez reconnecter votre compte Netatmo.',
     de: 'Die Netatmo-Sitzung ist abgelaufen, bitte verbinde dein Netatmo-Konto erneut.',
     es: 'La sesión de Netatmo ha caducado, vuelva a conectar su cuenta Netatmo.',
+  },
+  // Connected, but the token lacks requested scopes (typically scopes added by
+  // a newer release, like the video doorbell ones): the exact list is logged.
+  MISSING_SCOPES: {
+    en: 'Connected, but some Netatmo permissions are missing (for example the video doorbell, added in a recent version): click Connect again to grant them.',
+    fr: 'Connecté, mais des autorisations Netatmo manquent (par exemple la sonnette vidéo, ajoutée dans une version récente) : cliquez à nouveau sur Connecter pour les accorder.',
+    de: 'Verbunden, aber einige Netatmo-Berechtigungen fehlen (zum Beispiel für die Video-Türklingel, in einer neueren Version hinzugefügt): Klicke erneut auf Verbinden, um sie zu erteilen.',
+    es: 'Conectado, pero faltan algunos permisos de Netatmo (por ejemplo, el timbre con vídeo, añadido en una versión reciente): vuelva a hacer clic en Conectar para concederlos.',
   },
   NETATMO_UNREACHABLE: {
     en: 'Netatmo cloud is unreachable, retrying automatically.',

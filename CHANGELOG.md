@@ -10,6 +10,21 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Netatmo video doorbell (`NDB`), behind the Security toggle: dashboard image
+  (snapshot fetched on the Netatmo VPN URL — the doorbell serves nothing on the
+  local network), Wifi quality and a **Doorbell** ring fed by the webhooks
+  (`incoming_call` event), usable as an "If the doorbell rings" scene trigger
+  and reset after 60 s. No monitoring switch (none in the Netatmo API for the
+  doorbell) and no live stream button (WebRTC only)
+  ([#35](https://github.com/Terdious/gladys-netatmo/issues/35)).
+- New `read_doorbell` and `access_doorbell` OAuth scopes: an account connected
+  before must click **Connect** again. The integration reads the scopes
+  Netatmo granted to the token and, while some are missing, the Configuration
+  screen shows "click Connect again" next to the connected status
+  ([#35](https://github.com/Terdious/gladys-netatmo/issues/35)).
+
 ### Changed
 
 - GitHub Release notes, like gladys-tuya: the version's changelog section,
