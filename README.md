@@ -52,7 +52,11 @@ capabilities land (Home + Security cameras, webhooks, …).
   with battery + signal — their smoke / CO state is webhook-driven. Net-new vs
   the core service.
 - **Connection status** on the Configuration screen at every step (missing
-  credentials, not connected, connected, reconnect required).
+  credentials, not connected, connected, reconnect required), plus the
+  **degraded state**: an API family failing 3 cycles in a row is named under
+  the Connected status and the devices it leaves without fresh values get a
+  degraded badge — the weather measures fall back on homestatus, loaded
+  whenever any family is enabled (#33).
 
 - **Gladys Plus webhooks**: Netatmo events are relayed to the integration and
   trigger an immediate refresh (a setpoint change lands in ~2-3 s instead of

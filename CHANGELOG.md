@@ -40,6 +40,15 @@ the notes of the version's GitHub Release.
 
 ### Fixed
 
+- Weather values no longer freeze when the Netatmo weather service
+  (getstationsdata) fails: the station and module measures also come from the
+  home status, now loaded whenever a device family is enabled
+  ([#33](https://github.com/Terdious/gladys-netatmo/issues/33)).
+- A Netatmo API failing for 3 refresh cycles in a row no longer goes unnoticed:
+  the devices it leaves without fresh values get a degraded badge with the
+  reason, the Configuration screen shows it under the Connected status, and
+  both clear on the first complete refresh
+  ([#33](https://github.com/Terdious/gladys-netatmo/issues/33)).
 - The "smoke cleared" webhook event (`sub_type` 0) no longer raises a smoke
   detection: it returns the Smoke feature to No at once, so a scene triggered
   by smoke does not fire a second time when the smoke clears.

@@ -273,6 +273,14 @@ peut être relancée : elle ne déplace que ce qui reste.
   ligne (batterie morte, éteint, hors de portée). Gladys cesse de publier ses
   dernières valeurs connues pour ne pas vous induire en erreur ; le badge
   disparaît au retour de l'appareil.
+- **Un appareil affiche un badge « Dégradé », ou le statut affiche un message
+  alors qu'il est Connecté :** une partie du cloud Netatmo est en panne depuis
+  plusieurs minutes (par exemple le service météo). Gladys continue de publier
+  ce que le reste du cloud fournit — les mesures de la station et de ses modules
+  viennent aussi de l'état de la maison — et signale les appareils restés sans
+  valeur fraîche. Rien à faire : les deux disparaissent d'eux-mêmes à la
+  première actualisation complète. Si cela dure, les **Logs** de l'intégration
+  nomment l'API en échec.
 - **Une valeur de caméra ou une commande monitoring échoue une fois avec un
   message « reconnecter » :** votre autorisation Netatmo n'a pas le scope
   caméra — reconnectez votre compte.

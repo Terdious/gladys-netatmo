@@ -15,7 +15,7 @@
 // Each detection is published as 1, then automatically back to 0 after
 // EVENT_RESET_MS: most events have no "cleared" counterpart, and a feature
 // stuck at 1 would make a scene trigger fire once and never again. The few
-// that do (smoke: `sub_type` 0 = cleared, see EVENT_CLEARED_SUB_TYPES) return
+// that do (smoke and carbon monoxide, see EVENT_CLEARED_SUB_TYPES) return
 // the feature to 0 at once instead of raising a new detection.
 // -----------------------------------------------------------------------------
 

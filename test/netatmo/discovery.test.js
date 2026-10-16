@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 
 import { normalizeConfig } from '../../src/config.js';
 import { createNetatmoClient } from '../../src/netatmo/client.js';
-import { loadDevices, netatmoId } from '../../src/netatmo/discovery.js';
+import { loadAccount, loadDevices, netatmoId } from '../../src/netatmo/discovery.js';
 import { startFakeNetatmo } from '../helpers/fakeNetatmo.js';
 
 let netatmo;
@@ -123,13 +123,79 @@ test('a module missing from homestatus is rebuilt as unreachable (core #2620)', 
   assert.equal(poweredOff.room.therm_measured_temperature, 17);
 });
 
-test('the energy_api toggle skips the Energy loads entirely', async () => {
+test('the energy_api toggle skips the legacy Energy load, Energy modules ride along disabled', async () => {
   const devices = await loadDevices(client, normalizeConfig({ energy_api: 'false' }));
-  const ids = devices.map((device) => netatmoId(device)).sort();
+  const ids = devices
+    .filter((device) => !device.apiNotConfigured)
+    .map((device) => netatmoId(device))
+    .sort();
   assert.deepEqual(ids, ['outdoor-1', 'station-1', 'wind-1']);
+  assert.equal(byId(devices, 'therm-1').apiNotConfigured, true);
   const paths = netatmo.state.apiRequests.map((r) => r.path);
-  assert.ok(!paths.some((p) => p.startsWith('/api/homesdata')));
   assert.ok(!paths.some((p) => p.startsWith('/api/getthermostatsdata')));
+});
+
+/** The weather station in homesdata/homestatus, as Netatmo returns it. */
+function addStationToHome(state) {
+  state.homes[0].modules.push(
+    { id: 'station-1', type: 'NAMain', name: 'Station', modules_bridged: ['outdoor-1'] },
+    { id: 'outdoor-1', type: 'NAModule1', name: 'Extérieur', bridge: 'station-1' },
+  );
+  state.homeStatuses['home-1'].home.modules.push(
+    { id: 'station-1', type: 'NAMain', wifi_strength: 45, temperature: 22.5, co2: 610 },
+    {
+      id: 'outdoor-1',
+      type: 'NAModule1',
+      battery_state: 'full',
+      rf_strength: 42,
+      reachable: true,
+      bridge: 'station-1',
+      temperature: 5.8,
+      humidity: 65,
+    },
+  );
+}
+
+test('weather-only config loads the home status too: it carries the weather measures (issue #33)', async () => {
+  addStationToHome(netatmo.state);
+  const weatherOnly = normalizeConfig({ energy_api: 'false', weather_api: 'true' });
+  const { devices, partial, failed } = await loadAccount(client, weatherOnly);
+
+  assert.equal(partial, false);
+  assert.deepEqual(failed, []);
+  const station = byId(devices, 'station-1');
+  assert.equal(station.temperature, 22.5); // homestatus
+  assert.equal(station.dashboard_data.Temperature, 21.2); // getstationsdata merge
+  assert.equal(station.homestatus, true);
+  assert.equal(station.categoryAPI, 'Weather');
+  assert.equal(station.apiNotConfigured, false);
+  const paths = netatmo.state.apiRequests.map((r) => r.path);
+  assert.ok(paths.some((p) => p.startsWith('/api/homesdata')));
+  assert.ok(paths.some((p) => p.startsWith('/api/homestatus')));
+  assert.ok(paths.some((p) => p.startsWith('/api/getstationsdata')));
+  assert.ok(!paths.some((p) => p.startsWith('/api/getthermostatsdata')));
+});
+
+test('a getstationsdata outage keeps the homestatus weather measures and names the failed family', async () => {
+  addStationToHome(netatmo.state);
+  netatmo.state.failStationsWith = 503;
+  const weatherOnly = normalizeConfig({ energy_api: 'false', weather_api: 'true' });
+  const { devices, partial, failed } = await loadAccount(client, weatherOnly);
+
+  assert.equal(partial, true);
+  assert.deepEqual(failed, ['weather']);
+  assert.equal(byId(devices, 'station-1').temperature, 22.5);
+  assert.equal(byId(devices, 'outdoor-1').temperature, 5.8);
+  // Only getstationsdata knows the anemometer: it is missing from this load.
+  assert.equal(byId(devices, 'wind-1'), undefined);
+});
+
+test('every failed API family is named', async () => {
+  netatmo.state.rejectAccessToken = 'seeded-token';
+  const { devices, partial, failed } = await loadAccount(client, normalizeConfig());
+  assert.deepEqual(devices, []);
+  assert.equal(partial, true);
+  assert.deepEqual(failed, ['homes', 'energy', 'weather']);
 });
 
 test('the weather_api toggle skips the station load entirely', async () => {

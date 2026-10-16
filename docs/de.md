@@ -274,6 +274,14 @@ verschiebt nur, was noch übrig ist.
   veröffentlicht seine zuletzt bekannten Werte nicht mehr, damit du nicht durch
   veraltete Daten getäuscht wirst; das Badge verschwindet, sobald das Gerät
   wieder erreichbar ist.
+- **Ein Gerät zeigt ein Badge „Beeinträchtigt“, oder der Status zeigt trotz
+  Verbunden eine Meldung:** Ein Teil der Netatmo-Cloud fällt seit einigen
+  Minuten aus (zum Beispiel der Wetterdienst). Gladys veröffentlicht weiter,
+  was der Rest der Cloud liefert — die Messwerte der Station und ihrer Module
+  kommen auch aus dem Hausstatus — und markiert die Geräte, die keine frischen
+  Werte mehr erhalten. Nichts zu tun: Beides verschwindet von selbst bei der
+  ersten vollständigen Aktualisierung. Hält es an, nennen die **Logs** der
+  Integration die ausfallende API.
 - **Ein Kamerawert oder ein Überwachungsbefehl schlägt einmal mit einer Meldung
   „erneut verbinden“ fehl:** Deiner Netatmo-Autorisierung fehlt die
   Kamera-Berechtigung — verbinde dein Konto erneut.
