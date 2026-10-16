@@ -7,7 +7,10 @@
 //     setpersonshome (form), gethomecoachsdata, setstate (JSON);
 //   - two fake cameras (/vpn/<id> and /local/<id>: command/ping + snapshot).
 // Behaviour toggles (`failTokenWith`, `rejectAccessToken`, `failSetpointWith`,
-// `failLocalSnapshot`) let the tests exercise the failure paths.
+// `failHomesWith`, `failLocalSnapshot`) let the tests exercise the failure
+// paths. `overrides` (path prefix → {status, body}) short-circuits the normal
+// routes of /oauth2/token and /api/* with a canned answer (default HTTP 200),
+// for the degraded payload shapes (`status: 'error'`, missing fields...).
 // -----------------------------------------------------------------------------
 
 import http from 'node:http';
@@ -327,12 +330,16 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     addWebhookRequests: [], // every parsed form POSTed to /api/addwebhook
     dropWebhookRequests: [], // every parsed form POSTed to /api/dropwebhook
     failAddWebhookWith: null, // set to an HTTP status to make addwebhook fail
+    failHomesWith: null, // set to an HTTP status to make homesdata fail
     failStationsWith: null, // set to an HTTP status to make getstationsdata fail
     failHomeCoachsWith: null, // set to {status, body} to make gethomecoachsdata fail
     cameraRequests: [], // every hit on the fake camera endpoints ({side, camId, path})
     snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
     failLocalSnapshot: false, // make the LOCAL snapshot fail (stale-cache fallback test)
     failAllSnapshots: false, // make EVERY snapshot fail (last-image fallback test)
+    // Canned answers by path prefix (e.g. '/api/homestatus'), checked before
+    // the normal /oauth2/token and /api/* routes: {status = 200, body}.
+    overrides: {},
     // Scopes echoed in the token responses, like the real Netatmo: those
     // requested by the authorization exchange, kept across refreshes. Tests
     // overwrite it to simulate a token granted before new scopes existed.
@@ -370,6 +377,16 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
         res.setHeader('content-type', 'application/json');
         res.end(JSON.stringify(payload));
       };
+      /** Answer with the canned override matching the URL, if any. */
+      const respondOverride = () => {
+        const prefix = Object.keys(state.overrides).find((p) => req.url.startsWith(p));
+        if (!prefix) {
+          return false;
+        }
+        const { status = 200, body: payload } = state.overrides[prefix];
+        respond(payload, status);
+        return true;
+      };
 
       // --- Fake camera endpoints (unauthenticated, like the real cameras) ---
       // URLs: /vpn/<camId>/... (VPN side) and /local/<camId>/... (LAN side).
@@ -399,6 +416,9 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
       if (req.method === 'POST' && req.url === '/oauth2/token') {
         const form = Object.fromEntries(new URLSearchParams(body));
         state.tokenRequests.push(form);
+        if (respondOverride()) {
+          return;
+        }
         if (state.failTokenWith) {
           respond({ error: 'server_error' }, state.failTokenWith);
           return;
@@ -439,7 +459,14 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           respond({ error: { code: 2, message: 'Invalid access token' } }, 401);
           return;
         }
+        if (respondOverride()) {
+          return;
+        }
         if (req.url.startsWith('/api/homesdata')) {
+          if (state.failHomesWith) {
+            respond({ error: { code: 500, message: 'server error' } }, state.failHomesWith);
+            return;
+          }
           respond({ status: 'ok', body: { homes: state.homes } });
           return;
         }

@@ -1,7 +1,8 @@
 // -----------------------------------------------------------------------------
 // Unit tests of the authenticated API client: the 401 refresh-and-retry path,
 // and the 403 scope-refusal (Netatmo error code 13) that must NOT trigger a
-// refresh nor replay the (non-idempotent) request.
+// refresh nor replay the (non-idempotent) request; plus the degraded payload
+// shapes (non-ok status, missing home, errors at body.errors).
 // -----------------------------------------------------------------------------
 
 import { test, beforeEach, afterEach } from 'node:test';
@@ -64,4 +65,60 @@ test('setThermMode posts the home mode, with the endtime only for away / frost g
     { home_id: 'home-1', mode: 'hg' },
     { home_id: 'home-1', mode: 'schedule' },
   ]);
+});
+
+test('getHomeStatus reads the errors at home.errors, or at body.errors as a fallback', async () => {
+  const home = netatmo.state.homeStatuses['home-1'].home;
+  let status = await client.getHomeStatus('home-1');
+  assert.equal(status.home.id, 'home-1');
+  assert.deepEqual(status.errors, [{ code: 6, id: 'valve-2' }]);
+
+  // Same unreachable module, reported next to `home` instead of inside it.
+  delete home.errors;
+  netatmo.state.homeStatuses['home-1'].errors = [{ code: 6, id: 'valve-2' }];
+  status = await client.getHomeStatus('home-1');
+  assert.equal(status.home.id, 'home-1');
+  assert.deepEqual(status.errors, [{ code: 6, id: 'valve-2' }]);
+
+  // No errors anywhere: an empty array, never undefined.
+  delete netatmo.state.homeStatuses['home-1'].errors;
+  status = await client.getHomeStatus('home-1');
+  assert.deepEqual(status.errors, []);
+});
+
+test('getHomeStatus degrades to "no home" on a non-ok status or a missing body.home', async () => {
+  netatmo.state.overrides['/api/homestatus'] = {
+    body: { status: 'error', body: netatmo.state.homeStatuses['home-1'] },
+  };
+  assert.deepEqual(await client.getHomeStatus('home-1'), { home: undefined, errors: [] });
+
+  netatmo.state.overrides['/api/homestatus'] = {
+    body: { status: 'ok', body: { errors: [{ code: 6, id: 'valve-2' }] } },
+  };
+  assert.deepEqual(await client.getHomeStatus('home-1'), { home: undefined, errors: [] });
+
+  netatmo.state.overrides['/api/homestatus'] = { body: { status: 'ok' } };
+  assert.deepEqual(await client.getHomeStatus('home-1'), { home: undefined, errors: [] });
+});
+
+test('the legacy device lists degrade to [] on a non-ok status', async () => {
+  // Sanity: the regular answers do carry devices.
+  assert.equal((await client.getThermostatsData()).length, 1);
+  assert.equal((await client.getStationsData()).length, 1);
+  assert.equal((await client.getHomeCoachsData()).length, 2);
+
+  for (const path of [
+    '/api/getthermostatsdata',
+    '/api/getstationsdata',
+    '/api/gethomecoachsdata',
+  ]) {
+    // HTTP 200 but a non-ok status, devices included: they must not be trusted.
+    netatmo.state.overrides[path] = {
+      body: { status: 'error', body: { devices: [{ _id: 'ghost', type: 'NAMain' }] } },
+    };
+  }
+  assert.deepEqual(await client.getThermostatsData(), []);
+  assert.deepEqual(await client.getStationsData(), []);
+  assert.deepEqual(await client.getHomeCoachsData(), []);
+  assert.equal(refreshCalls, 0);
 });

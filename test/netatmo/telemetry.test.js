@@ -2,7 +2,8 @@
 // Unit tests of the telemetry engine against the fake Netatmo cloud:
 // discovery sync, state emission through the declarative mapping (zeros kept,
 // absences skipped, battery string → percent), the dedup + 30-minute
-// keep-alive, the transport badges, and the setpoint command.
+// keep-alive (and its pruning), the transport badges, the refresh loop
+// lifecycle, and the setpoint command.
 // -----------------------------------------------------------------------------
 
 import { test, beforeEach, afterEach } from 'node:test';
@@ -13,6 +14,7 @@ import { createNetatmoClient } from '../../src/netatmo/client.js';
 import { createTelemetry } from '../../src/netatmo/telemetry.js';
 import { setDeviceValue } from '../../src/netatmo/setValue.js';
 import { startFakeNetatmo } from '../helpers/fakeNetatmo.js';
+import { waitFor } from '../helpers/fakeGladysCore.js';
 import { DEGRADED_AFTER_FAILED_LOADS, DEGRADED_MESSAGES } from '../../src/netatmo/constants.js';
 
 let netatmo;
@@ -448,6 +450,97 @@ test('bursty callers share one account load (single-flight + TTL cache)', async 
   );
   assert.equal(homesdataCalls.length, 1);
   cached.stop();
+});
+
+test('start() runs timer-driven cycles at refreshIntervalMs, stop() halts them', async () => {
+  const looped = createTelemetry({
+    gladys,
+    client,
+    now: () => clock,
+    loadTtlMs: 0,
+    refreshIntervalMs: 25,
+  });
+  const loads = () =>
+    netatmo.state.apiRequests.filter((r) => r.path.startsWith('/api/homesdata')).length;
+  try {
+    looped.start(config);
+    // The immediate cycle + at least two driven by the interval.
+    await waitFor(() => loads() >= 3, { timeout: 2000 });
+    looped.stop();
+    // Drain a cycle the timer may have started just before stop().
+    await looped.refreshValues(config);
+    const settled = loads();
+    // Several intervals later: no cycle went out on its own.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.equal(loads(), settled);
+  } finally {
+    looped.stop();
+  }
+});
+
+test('an older Gladys core rejecting publishTransports never breaks discovery nor refresh', async () => {
+  let attempts = 0;
+  gladys.publishTransports = () => {
+    attempts += 1;
+    throw new Error('404 no route for POST /api/integration/v1/device/transport');
+  };
+  const devices = await telemetry.syncDiscovery(config);
+  assert.equal(devices.length, 7);
+  assert.deepEqual(gladys.discovered[0], devices);
+  assert.equal(attempts, 1);
+
+  gladys.devices = devices;
+  const count = await telemetry.refreshValues(config);
+  assert.ok(count > 0);
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:temperature'), [19.4]);
+  assert.equal(attempts, 2);
+});
+
+test('refreshCameraImages skips a created camera without the camera feature', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  // camera-1 was created before the camera feature shipped: no `:camera`.
+  const camera = gladys.devices.find((d) => d.external_id === 'ext:netatmo:camera-1');
+  camera.features = camera.features.filter((f) => !f.external_id.endsWith(':camera'));
+
+  await telemetry.refreshValues(configSecurity);
+  const imaged = gladys.cameraImages.map((c) => c.deviceExternalId);
+  assert.ok(!imaged.includes('ext:netatmo:camera-1'));
+  assert.ok(
+    !netatmo.state.cameraRequests.some(
+      (r) => r.camId === 'camera-1' && r.path === '/live/snapshot_720.jpg',
+    ),
+  );
+  // The other camera is still refreshed, and camera-1's own states still flow.
+  assert.ok(imaged.includes('ext:netatmo:noc-1'));
+  assert.deepEqual(stateOf('ext:netatmo:camera-1:monitoring'), [0]);
+});
+
+test('a device leaving the account loses its dedup entries: back, its values go out at once', async () => {
+  gladys.devices = await telemetry.syncDiscovery(config);
+  await telemetry.refreshValues(config);
+  assert.deepEqual(stateOf('ext:netatmo:station-1:co2'), [600]);
+
+  // Deduped while it stays.
+  clock += 2 * 60 * 1000;
+  await telemetry.refreshValues(config);
+  assert.deepEqual(stateOf('ext:netatmo:station-1:co2'), [600]);
+
+  // The station leaves the account (complete load, not partial)...
+  const stations = netatmo.state.stationDevices;
+  netatmo.state.stationDevices = [];
+  clock += 2 * 60 * 1000;
+  await telemetry.refreshValues(config);
+  // ...and comes back with the very same values, well within the keep-alive.
+  netatmo.state.stationDevices = stations;
+  clock += 2 * 60 * 1000;
+  await telemetry.refreshValues(config);
+
+  // Its entries were pruned: re-published instead of deduped.
+  assert.deepEqual(stateOf('ext:netatmo:station-1:co2'), [600, 600]);
+  assert.deepEqual(stateOf('ext:netatmo:outdoor-1:temperature'), [0, 0]);
+  // A device that never left stays deduped.
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:temperature'), [19.4]);
 });
 
 test('a partial load never replaces the published discovery list', async () => {

@@ -155,7 +155,10 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
   const externalId = gladys.externalId(id);
   const features = [];
   let params = [];
-  let roomName = 'undefined';
+  // Display name of the room in the room-scoped feature names ("Minimum in
+  // …", "Temperature - room …"): the device name when the module has no
+  // (named) room, never the string "undefined". External ids are untouched.
+  let roomName = nameDevice;
 
   if (BATTERY_MODULE_TYPES.includes(model)) {
     features.push(
@@ -188,10 +191,10 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
   }
   params.push({ name: PARAMS.HOME_ID, value: homeId });
   if (room.id) {
-    roomName = room.name;
+    roomName = room.name || nameDevice;
     params.push(
       { name: PARAMS.ROOM_ID, value: room.id },
-      { name: PARAMS.ROOM_NAME, value: roomName },
+      { name: PARAMS.ROOM_NAME, value: room.name },
     );
   }
 

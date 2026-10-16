@@ -138,6 +138,66 @@ test('converts a NAMain with the full weather feature set', () => {
     'absolute_pressure',
   ]);
   assert.equal(paramValue(device, 'home_id'), 'home-1');
+  // No room: the min/max are named after the station.
+  const minTemp = device.features.find((f) => f.external_id.endsWith(':min_temp'));
+  assert.equal(minTemp.name, 'Temperature - Minimum in Station');
+});
+
+test('a weather module without room names its min/max after the device, never "undefined"', () => {
+  const device = convertDevice(gladys, {
+    _id: 'outdoor-1',
+    type: 'NAModule1',
+    module_name: 'Extérieur',
+    home_id: 'home-1',
+    plug: { _id: 'station-1', station_name: 'Station' },
+  });
+  assert.deepEqual(suffixesOf(device), [
+    'battery_percent',
+    'rf_strength',
+    'temperature',
+    'min_temp',
+    'max_temp',
+    'humidity',
+  ]);
+  const nameOf = (suffix) => device.features.find((f) => f.external_id.endsWith(`:${suffix}`)).name;
+  assert.equal(nameOf('min_temp'), 'Temperature - Minimum in Extérieur');
+  assert.equal(nameOf('max_temp'), 'Temperature - Maximum in Extérieur');
+  // External ids are frozen: only the display names changed.
+  assert.equal(
+    device.features.find((f) => f.name === 'Temperature - Minimum in Extérieur').external_id,
+    'ext:netatmo:outdoor-1:min_temp',
+  );
+  assert.ok(device.features.every((f) => !f.name.includes('undefined')));
+  assert.equal(paramValue(device, 'room_name'), undefined);
+});
+
+test('the room-scoped feature names use the room name, or the device name for a nameless room', () => {
+  const named = convertDevice(gladys, {
+    id: 'indoor-1',
+    type: 'NAModule4',
+    name: 'Module chambre',
+    home: 'home-1',
+    room: { id: 'room-2', name: 'Chambre' },
+  });
+  const nameOf = (device, suffix) =>
+    device.features.find((f) => f.external_id.endsWith(`:${suffix}`)).name;
+  assert.equal(nameOf(named, 'therm_measured_temperature'), 'Temperature - room Chambre');
+  assert.equal(nameOf(named, 'min_temp'), 'Temperature - Minimum in Chambre');
+  assert.equal(paramValue(named, 'room_name'), 'Chambre');
+
+  // A room known by id only (homestatus room missing from homesdata).
+  const nameless = convertDevice(gladys, {
+    id: 'indoor-1',
+    type: 'NAModule4',
+    name: 'Module chambre',
+    home: 'home-1',
+    room: { id: 'room-9' },
+  });
+  assert.equal(nameOf(nameless, 'therm_measured_temperature'), 'Temperature - room Module chambre');
+  assert.equal(nameOf(nameless, 'max_temp'), 'Temperature - Maximum in Module chambre');
+  assert.ok(nameless.features.every((f) => !f.name.includes('undefined')));
+  assert.equal(paramValue(nameless, 'room_id'), 'room-9');
+  assert.equal(paramValue(nameless, 'room_name'), undefined);
 });
 
 test('converts a NAModule3 with the three rain features and their units', () => {
