@@ -1,8 +1,8 @@
 // -----------------------------------------------------------------------------
 // Unit tests of the raw device loading (homesdata + homestatus + legacy
 // thermostat + weather stations merge), against the fake Netatmo cloud:
-// unreachable rebuild (core PR #2620), id/_id merges, modules_bridged, and
-// the energy/weather API toggles.
+// unreachable rebuild (core PR #2620), id/_id merges, modules_bridged, the
+// energy/weather API toggles, and the homesdata / homestatus failure fallbacks.
 // -----------------------------------------------------------------------------
 
 import { test, beforeEach, afterEach } from 'node:test';
@@ -188,6 +188,95 @@ test('a getstationsdata outage keeps the homestatus weather measures and names t
   assert.equal(byId(devices, 'outdoor-1').temperature, 5.8);
   // Only getstationsdata knows the anemometer: it is missing from this load.
   assert.equal(byId(devices, 'wind-1'), undefined);
+});
+
+test('a station and its module listed in homesdata are merged with getstationsdata, not appended', async () => {
+  addStationToHome(netatmo.state);
+  const devices = await loadDevices(client, normalizeConfig());
+
+  // Merged in place: one entry each, still carrying the homesdata home.
+  assert.equal(devices.filter((device) => netatmoId(device) === 'station-1').length, 1);
+  assert.equal(devices.filter((device) => netatmoId(device) === 'outdoor-1').length, 1);
+  const station = byId(devices, 'station-1');
+  assert.equal(station.home, 'home-1');
+  assert.equal(station.homestatus, true);
+  assert.equal(station.co2, 610); // homestatus
+  assert.deepEqual(station.dashboard_data, netatmo.state.stationDevices[0].dashboard_data);
+  // homesdata modules_bridged wins over the getstationsdata module list.
+  assert.deepEqual(station.modules_bridged, ['outdoor-1']);
+
+  // The module: homestatus values + getstationsdata dashboard_data, and its
+  // plug = the homestatus station merged with the getstationsdata station.
+  const outdoor = byId(devices, 'outdoor-1');
+  assert.equal(outdoor.home, 'home-1');
+  assert.equal(outdoor.temperature, 5.8); // homestatus
+  assert.equal(outdoor.dashboard_data.min_temp, -2.5); // getstationsdata
+  assert.equal(outdoor.module_name, 'Extérieur');
+  assert.equal(outdoor.plug.id, 'station-1');
+  assert.equal(outdoor.plug.wifi_strength, 45); // homestatus side of the plug
+  assert.equal(outdoor.plug._id, 'station-1'); // getstationsdata side of the plug
+  assert.equal(outdoor.plug.station_name, 'Station');
+  assert.equal(outdoor.plug.dashboard_data.Temperature, 21.2);
+  assert.equal(outdoor.plug.modules, undefined); // stripped from the merged plug
+  // The anemometer, unknown to homesdata, is still appended.
+  assert.equal(byId(devices, 'wind-1').plug._id, 'station-1');
+});
+
+test('a homesdata failure falls back to the legacy Energy and Weather devices', async () => {
+  netatmo.state.failHomesWith = 503;
+  const { devices, partial, failed, homes } = await loadAccount(client, normalizeConfig());
+
+  assert.equal(partial, true);
+  assert.deepEqual(failed, ['homes']);
+  assert.deepEqual(homes, []);
+  // listDevices = [...plugs, ...thermostats], then the weather devices.
+  assert.deepEqual(
+    devices.map((device) => netatmoId(device)),
+    ['plug-1', 'therm-1', 'station-1', 'outdoor-1', 'wind-1'],
+  );
+  const plug = byId(devices, 'plug-1');
+  assert.equal(plug.categoryAPI, 'Energy');
+  assert.equal(plug.apiNotConfigured, false);
+  assert.deepEqual(plug.modules_bridged, ['therm-1']);
+  const therm = byId(devices, 'therm-1');
+  assert.equal(therm.plug._id, 'plug-1');
+  assert.equal(therm.plug.modules, undefined);
+  assert.equal(therm.measured.temperature, 19.4);
+  // No homesdata, no home: the thermostat carries none.
+  assert.equal(therm.home, undefined);
+});
+
+test('an empty homesdata (energy only) takes the legacy Energy fallback without flagging the load', async () => {
+  netatmo.state.homes = [];
+  const energyOnly = normalizeConfig({ energy_api: 'true', weather_api: 'false' });
+  const { devices, partial, failed } = await loadAccount(client, energyOnly);
+
+  assert.equal(partial, false);
+  assert.deepEqual(failed, []);
+  assert.deepEqual(
+    devices.map((device) => netatmoId(device)),
+    ['plug-1', 'therm-1'],
+  );
+  assert.deepEqual(byId(devices, 'plug-1').modules_bridged, ['therm-1']);
+});
+
+test('a homestatus without home flags the load partial, the legacy families still load', async () => {
+  // HTTP 200, status ok, but no `home` in the body: loadDeviceDetails → null.
+  netatmo.state.homeStatuses['home-1'] = {};
+  const { devices, partial, failed, homes } = await loadAccount(client, normalizeConfig());
+
+  assert.equal(partial, true);
+  assert.deepEqual(failed, ['homes']);
+  // The home summary survives (homesdata answered), without any device.
+  assert.equal(homes.length, 1);
+  assert.equal(homes[0].id, 'home-1');
+  assert.deepEqual(homes[0].rooms, []);
+  // None of the homesdata-only modules made it, the legacy ones did.
+  assert.equal(byId(devices, 'valve-1'), undefined);
+  assert.equal(byId(devices, 'camera-1'), undefined);
+  assert.ok(byId(devices, 'plug-1'));
+  assert.ok(byId(devices, 'therm-1'));
+  assert.ok(byId(devices, 'station-1'));
 });
 
 test('every failed API family is named', async () => {

@@ -10,6 +10,17 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Feature names of a weather module without a room no longer read "Minimum in
+  undefined" / "Temperature - room undefined": the device name is used instead
+  (display names only, feature external ids are unchanged)
+  ([#12](https://github.com/Terdious/gladys-netatmo/issues/12)).
+
+### Changed
+
+- Test coverage of the post-1.0 review backlog ([#12](https://github.com/Terdious/gladys-netatmo/issues/12)).
+
 ## [2.0.0] - 2026-10-16
 
 ### Added

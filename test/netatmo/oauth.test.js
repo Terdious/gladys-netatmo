@@ -219,3 +219,39 @@ test('an invalid_grant from the token endpoint is fatal-looking (not transient)'
   // 24h grace window before clearing them.
   assert.equal(oauth.hasTokens(), true);
 });
+
+test('the legacy expire_in field (no expires_in) still sets the token expiry', async () => {
+  netatmo.state.overrides['/oauth2/token'] = {
+    body: { access_token: 'legacy-access', refresh_token: 'legacy-refresh', expire_in: 3600 },
+  };
+  await connectAccount();
+  assert.equal(configStore.access_token, 'legacy-access');
+  assert.equal(configStore.expires_at, clock + 3600 * 1000);
+
+  // The expiry is honoured: cached before it, refreshed past it.
+  assert.equal(await oauth.ensureFreshAccessToken(), 'legacy-access');
+  assert.equal(netatmo.state.tokenRequests.length, 1);
+  clock += 3600 * 1000;
+  await oauth.ensureFreshAccessToken();
+  assert.equal(netatmo.state.tokenRequests.length, 2);
+  assert.equal(netatmo.state.tokenRequests[1].grant_type, 'refresh_token');
+});
+
+test('an object-shaped token error ({error: {message}}) surfaces its message', async () => {
+  netatmo.state.overrides['/oauth2/token'] = {
+    status: 400,
+    body: { error: { code: 21, message: 'Invalid authorization code' } },
+  };
+  await assert.rejects(
+    connectAccount(),
+    (err) =>
+      err.status === 400 &&
+      err.transient === false &&
+      err.message === 'Netatmo token endpoint answered 400: Invalid authorization code',
+  );
+
+  // Without a message, the error object itself is described (never "[object Object]").
+  netatmo.state.overrides['/oauth2/token'] = { status: 400, body: { error: { code: 21 } } };
+  await assert.rejects(connectAccount(), /answered 400: \{"code":21\}$/);
+  assert.equal(oauth.hasTokens(), false);
+});
