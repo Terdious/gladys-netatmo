@@ -35,13 +35,18 @@
   - docs: catalog update and migration (PR #31), GitHub Release notes like
     gladys-tuya (PR #32), roadmap and forum links (PR #42).
 - **v2.0.1**: test-coverage backlog closed (#12, PR #52).
-- **Unreleased** (next release):
+- **v2.1.0**:
   - heating: modulating / OpenTherm thermostat OTM + OTH (#53, PR #64),
     BTicino Smarther BNS (#54, PR #65, new scopes), room setpoint with
     duration, boost, back to schedule and schedule selection (#58, PR #63);
   - cameras and security: Indoor Camera Advance NPC (#55, PR #66, new
     scopes, snapshot only), outdoor camera floodlight on / off / auto (#56,
     PR #67), presence of the known persons (#57, PR #62).
+- **Unreleased** (next release):
+  - BTicino Classe 300 door entry preview: discovery and diagnostic log,
+    scopes requested only with its toggle (#59 step 1, PR #72);
+  - WebRTC live view of the doorbell and the Indoor Camera Advance, inert
+    until Gladys#3215 and SDK#43 ship (#70, PR #71).
 - Upstream, shipped in Gladys: live-stream latency (GladysAssistant/Gladys#2698,
   4.84.1, see #11), device migration with history
   (GladysAssistant/Gladys#2737, 4.84.1, hardened in #2778).
