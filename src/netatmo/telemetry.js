@@ -308,10 +308,13 @@ export function createTelemetry({
 
   // --- Change notifications (widget nudges, issue #40) -----------------------
 
-  /** Heating data the widget shows: mode and room temperatures per home. */
+  /**
+   * Heating data the widget shows: mode, rooms (temperatures, setpoint mode)
+   * and heating schedules (the active one) per home.
+   */
   function heatingSignature() {
     return JSON.stringify(
-      [...homesById.values()].map((home) => [home.id, home.therm_mode, home.rooms]),
+      [...homesById.values()].map((home) => [home.id, home.therm_mode, home.rooms, home.schedules]),
     );
   }
 

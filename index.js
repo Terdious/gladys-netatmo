@@ -292,9 +292,9 @@ export function setupIntegration(
   for (const [widgetKey, widget] of Object.entries(WIDGETS)) {
     gladys.onWidgetGet(widgetKey, (request) => widget.get(widgetContext(), request));
     if (typeof widget.action === 'function') {
-      gladys.onWidgetAction(widgetKey, (actionKey, params, { settings } = {}) => {
+      gladys.onWidgetAction(widgetKey, (actionKey, params, { settings, values } = {}) => {
         logger.info(`onWidgetAction <- ${widgetKey}.${actionKey}`);
-        return widget.action(widgetContext(), { actionKey, params, settings });
+        return widget.action(widgetContext(), { actionKey, params, settings, values });
       });
     }
   }

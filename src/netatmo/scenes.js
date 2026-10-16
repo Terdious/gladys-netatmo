@@ -19,23 +19,30 @@
 // The Netatmo HOME an action applies to: the home of the chosen device (its
 // `home_id` param) — the scene editor can only list Gladys devices, not
 // Netatmo homes — or, when no device is chosen, the only home of the account
-// that fits the action (an account with several homes must choose).
+// that fits the action (an account with several homes must choose). The ROOM
+// of a room action (issue #58: setpoint, boost, back to the schedule) is the
+// room of the chosen thermostat or valve (its `room_id` param).
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
 
 import {
+  NETATMO_SETPOINT_MODES,
   NETATMO_THERM_MODES,
   PARAMS,
+  ROOM_SETPOINT_MAX_CELSIUS,
+  ROOM_SETPOINT_MIN_CELSIUS,
   SCENE_ACTION_KEYS,
   ENERGY_MODULE_TYPES,
   CAMERA_MODULE_TYPES,
+  SUPPORTED_MODULE_TYPE,
 } from './constants.js';
 import { getDeviceParam, rethrowScopeError, setHomeThermMode } from './setValue.js';
 
 const logger = createLogger({ name: 'netatmo-scenes' });
 
-// Longest away / frost guard period a scene may ask for (30 days).
+// Longest period a scene may ask for (30 days): away / frost guard, room
+// setpoint or boost.
 export const MAX_DURATION_MINUTES = 30 * 24 * 60;
 
 const HEATING_MODES = Object.values(NETATMO_THERM_MODES);
@@ -117,6 +124,105 @@ export function endtimeOf(durationMinutes, now) {
   return Math.round(now() / 1000 + minutes * 60);
 }
 
+// Devices whose room a room action can drive (setroomthermpoint).
+const ROOM_HEATING_MODELS = [SUPPORTED_MODULE_TYPE.THERMOSTAT, SUPPORTED_MODULE_TYPE.NRV];
+
+/**
+ * Resolve the Netatmo room a room action applies to: the room of the chosen
+ * thermostat or valve.
+ * @param {object} ctx `{gladys, telemetry}`
+ * @param {string|undefined} deviceExternalId the chosen device
+ * @returns {{home: object, roomId: string, roomName: string}} home summary + room
+ */
+export function resolveRoom(ctx, deviceExternalId) {
+  if (!deviceExternalId) {
+    throw new Error('Choose the thermostat or valve of the room in the action');
+  }
+  const device = (ctx.gladys.devices ?? []).find((d) => d.external_id === deviceExternalId);
+  if (!device) {
+    throw new Error(`Device ${deviceExternalId} is not a Netatmo device of this Gladys`);
+  }
+  const roomId = getDeviceParam(device, PARAMS.ROOM_ID);
+  if (!ROOM_HEATING_MODELS.includes(device.model) || !roomId) {
+    throw new Error(`${device.name ?? deviceExternalId} is not a Netatmo thermostat or valve`);
+  }
+  const home = resolveHome(ctx, deviceExternalId, () => true, 'a heating');
+  const room = (home.rooms ?? []).find((entry) => entry.id === roomId);
+  const roomName = room?.name ?? getDeviceParam(device, PARAMS.ROOM_NAME) ?? roomId;
+  return { home, roomId, roomName };
+}
+
+/**
+ * A room setpoint typed in a scene (°C), rounded to the Netatmo step (0.5 °C).
+ * @param {unknown} temperature the temperature field
+ * @returns {number} the setpoint
+ */
+export function setpointOf(temperature) {
+  const value = typeof temperature === 'string' ? Number(temperature.trim()) : temperature;
+  if (
+    typeof value !== 'number' ||
+    !Number.isFinite(value) ||
+    value < ROOM_SETPOINT_MIN_CELSIUS ||
+    value > ROOM_SETPOINT_MAX_CELSIUS
+  ) {
+    throw new Error(
+      `Invalid setpoint ${temperature}: ${ROOM_SETPOINT_MIN_CELSIUS} to ${ROOM_SETPOINT_MAX_CELSIUS} °C`,
+    );
+  }
+  return Math.round(value * 2) / 2;
+}
+
+/**
+ * Find a heating schedule of a home by name (case and surrounding spaces
+ * ignored) or by id. The scene editor cannot list the Netatmo schedules: the
+ * error names the ones that exist, so the scene author can fix the field.
+ * @param {object} home home summary
+ * @param {string} schedule name or id typed in the scene (or a scene variable)
+ * @returns {{id: string, name: string, selected: boolean}} the schedule
+ */
+export function findSchedule(home, schedule) {
+  const wanted = String(schedule ?? '')
+    .trim()
+    .toLowerCase();
+  const schedules = home.schedules ?? [];
+  if (schedules.length === 0) {
+    throw new Error(`The Netatmo home ${home.name} has no heating schedule known yet`);
+  }
+  const found =
+    wanted &&
+    schedules.find(
+      (entry) => entry.id.toLowerCase() === wanted || entry.name?.trim().toLowerCase() === wanted,
+    );
+  if (!found) {
+    const names = schedules.map((entry) => `"${entry.name}"`).join(', ');
+    throw new Error(
+      `"${schedule ?? ''}" is not a heating schedule of the Netatmo home ${home.name} (available: ${names})`,
+    );
+  }
+  return found;
+}
+
+/** Room setpoint command, with the actionable scope message and a refresh. */
+async function setRoomSetpoint({ client, refresh }, setpoint) {
+  try {
+    await client.setRoomThermpoint(setpoint);
+  } catch (err) {
+    rethrowScopeError(err);
+  }
+  refreshSoon(refresh, 'the room setpoint change');
+}
+
+/** The refresh after a command: not awaited (it costs a full account load). */
+function refreshSoon(refresh, what) {
+  if (refresh) {
+    Promise.resolve()
+      .then(refresh)
+      .catch((err) => logger.warn(`Refresh after ${what} failed: ${err.message}`));
+  }
+}
+
+const hasSchedules = (home) => (home.schedules ?? []).length > 0;
+
 export const SCENE_ACTIONS = {
   /**
    * Change the heating mode of a home: schedule, away or frost guard, the two
@@ -134,14 +240,69 @@ export const SCENE_ACTIONS = {
         : endtimeOf(fields.duration_minutes, now);
     logger.info(`Scene action: heating mode of ${home.id} -> ${fields.mode}`);
     await setHomeThermMode(client, home.id, fields.mode, endtime);
-    if (refresh) {
-      Promise.resolve()
-        .then(refresh)
-        .catch((err) =>
-          logger.warn(`Refresh after the heating mode change failed: ${err.message}`),
-        );
-    }
+    refreshSoon(refresh, 'the heating mode change');
     return { home_name: home.name };
+  },
+
+  /**
+   * Set the setpoint of one room (issue #58), for an optional duration —
+   * without one, Netatmo applies its own default duration of a manual setpoint.
+   */
+  async [SCENE_ACTION_KEYS.SET_ROOM_SETPOINT](ctx, fields) {
+    const { home, roomId, roomName } = resolveRoom(ctx, fields.device);
+    const temp = setpointOf(fields.temperature);
+    const endtime = endtimeOf(fields.duration_minutes, ctx.now ?? Date.now);
+    logger.info(`Scene action: setpoint of room ${roomId} in ${home.id} -> ${temp} °C`);
+    await setRoomSetpoint(ctx, {
+      homeId: home.id,
+      roomId,
+      mode: NETATMO_SETPOINT_MODES.MANUAL,
+      temp,
+      endtime,
+    });
+    return { home_name: home.name, room_name: roomName };
+  },
+
+  /**
+   * Boost one room (issue #58): the maximum temperature (setroomthermpoint
+   * `max`) for a duration — without one, Netatmo's default boost duration.
+   */
+  async [SCENE_ACTION_KEYS.BOOST_ROOM](ctx, fields) {
+    const { home, roomId, roomName } = resolveRoom(ctx, fields.device);
+    const endtime = endtimeOf(fields.duration_minutes, ctx.now ?? Date.now);
+    logger.info(`Scene action: boost of room ${roomId} in ${home.id}`);
+    await setRoomSetpoint(ctx, {
+      homeId: home.id,
+      roomId,
+      mode: NETATMO_SETPOINT_MODES.MAX,
+      endtime,
+    });
+    return { home_name: home.name, room_name: roomName };
+  },
+
+  /** End a manual setpoint or a boost: the room follows the schedule again. */
+  async [SCENE_ACTION_KEYS.ROOM_BACK_TO_SCHEDULE](ctx, fields) {
+    const { home, roomId, roomName } = resolveRoom(ctx, fields.device);
+    logger.info(`Scene action: room ${roomId} in ${home.id} back to the schedule`);
+    await setRoomSetpoint(ctx, { homeId: home.id, roomId, mode: NETATMO_SETPOINT_MODES.HOME });
+    return { home_name: home.name, room_name: roomName };
+  },
+
+  /**
+   * Choose the active heating schedule of a home (issue #58), by its name as
+   * shown in the Netatmo app (switchhomeschedule).
+   */
+  async [SCENE_ACTION_KEYS.SET_HEATING_SCHEDULE](ctx, fields) {
+    const home = resolveHome(ctx, fields.device, hasSchedules, 'heating schedules');
+    const schedule = findSchedule(home, fields.schedule);
+    logger.info(`Scene action: heating schedule of ${home.id} -> ${schedule.id}`);
+    try {
+      await ctx.client.switchHomeSchedule(home.id, schedule.id);
+    } catch (err) {
+      rethrowScopeError(err);
+    }
+    refreshSoon(ctx.refresh, 'the schedule change');
+    return { home_name: home.name, schedule_name: schedule.name };
   },
 
   /**
