@@ -67,13 +67,13 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor               | Descubre                                                                                             |
-| ------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)                               |
-| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                      |
-| **Seguridad**             | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios |
-| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                  |
-| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                   |
+| Interruptor               | Descubre                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`), termostato modulante (`OTM` + `OTH`) |
+| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                              |
+| **Seguridad**             | Cámaras de interior (`NACamera`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios         |
+| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                          |
+| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                           |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -90,9 +90,9 @@ Netatmo).
 
 ## Modo de calefacción (programación / ausencia / antihielo)
 
-Cada termostato (`NATherm1`) y válvula de radiador (`NRV`) incluye una
-funcionalidad **Modo de calefacción** (un _preajuste_ de termostato en Gladys)
-con tres opciones:
+Cada termostato (`NATherm1`, modulante `OTM`) y válvula de radiador (`NRV`)
+incluye una funcionalidad **Modo de calefacción** (un _preajuste_ de termostato
+en Gladys) con tres opciones:
 
 | En Gladys        | En la aplicación Netatmo       |
 | ---------------- | ------------------------------ |
@@ -113,6 +113,30 @@ acción estándar «Establecer valor del dispositivo».
 > sola: vaya a la pantalla **Descubrimiento** y haga clic en **Actualizar** en
 > cada termostato y válvula. Se requiere Gladys **5.2** o posterior (el
 > preajuste de termostato no existe antes).
+
+---
+
+## Termostato modulante (OpenTherm)
+
+El termostato Netatmo actual, el modelo **modulante** (OpenTherm), forma parte
+de la familia Energía. Sus dos módulos se crean cada uno como un dispositivo:
+
+- el **termostato** (`OTM`): temperatura de la habitación, una **consigna**
+  ajustable, el **Modo de calefacción** (ver arriba), el **estado de la
+  caldera** (encendido mientras la caldera calienta), batería y señal de
+  radio, como el antiguo `NATherm1`;
+- el **relé OpenTherm** (`OTH`) conectado a la caldera: su calidad WiFi, la
+  **temperatura exterior** con la que Netatmo modula la calefacción, y una
+  funcionalidad **Fallo de la caldera**: 1 mientras la caldera indica un fallo
+  a Netatmo (presión del agua, llama, mantenimiento…), 0 en caso contrario. La
+  aplicación Netatmo indica de qué fallo se trata.
+
+La habitación del termostato aparece en el widget **Calefacción Netatmo**, y el
+termostato puede elegirse en la acción de escena **Cambiar el modo de
+calefacción**. Un termostato inaccesible recibe la insignia **inaccesible** y
+su batería y su señal dejan de publicarse. No es necesario volver a conectar:
+los permisos de los termostatos forman parte de la conexión desde la primera
+versión.
 
 ---
 

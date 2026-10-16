@@ -132,6 +132,10 @@ export const SUPPORTED_MODULE_TYPE = {
   // Smart Indoor Air Quality Monitor (formerly "Healthy Home Coach"), served
   // by the legacy /api/gethomecoachsdata endpoint (issue #37).
   NHC: 'NHC',
+  // Modulating / OpenTherm thermostat (issue #53): a wifi relay wired to the
+  // boiler (OTH, the bridge) and its radio room thermostat (OTM).
+  OTH: 'OTH',
+  OTM: 'OTM',
 };
 
 export const SUPPORTED_CATEGORY_TYPE = {
@@ -147,6 +151,17 @@ export const ENERGY_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.THERMOSTAT,
   SUPPORTED_MODULE_TYPE.PLUG,
   SUPPORTED_MODULE_TYPE.NRV,
+  SUPPORTED_MODULE_TYPE.OTH,
+  SUPPORTED_MODULE_TYPE.OTM,
+];
+
+// Modules that heat a room: their room (homestatus `rooms`) carries the
+// measured and setpoint temperatures — the rooms of the heating widget and
+// the heating scene actions (issue #40, #39).
+export const HEATED_ROOM_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.THERMOSTAT,
+  SUPPORTED_MODULE_TYPE.NRV,
+  SUPPORTED_MODULE_TYPE.OTM,
 ];
 
 export const WEATHER_MODULE_TYPES = [

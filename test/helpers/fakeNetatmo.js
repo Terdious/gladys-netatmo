@@ -264,6 +264,102 @@ export function addShutterFixtures(state, homeId = 'home-1') {
   status.errors.push({ code: 6, id: '0009999994' });
 }
 
+// -----------------------------------------------------------------------------
+// Modulating / OpenTherm thermostat (issue #53), modelled on the pyatmo
+// fixtures homesdata.json + homestatus_91763b24c43d3e344f424e8b.json: a
+// second home with the OTH relay (wifi, outdoor temperature, boiler error
+// "water_pressure") and its OTM thermostat (battery_state "full", RF, boiler
+// status) in the "Bureau" room. The pyatmo homestatus has no entry for that
+// room: the measured / setpoint values below are made up. Opt-in, like the
+// shutters, so the default fixtures (and their counts) stay intact.
+// -----------------------------------------------------------------------------
+
+export const OPENTHERM_HOME_ID = '91763b24c43d3e344f424e8b';
+export const OTH_ID = '12:34:56:20:f5:44';
+export const OTM_ID = '12:34:56:20:f5:8c';
+
+export function addOpenThermFixtures(state) {
+  state.homes.push({
+    id: OPENTHERM_HOME_ID,
+    name: 'MYHOME',
+    therm_mode: 'schedule',
+    rooms: [
+      {
+        id: '222452125',
+        name: 'Bureau',
+        type: 'electrical_cabinet',
+        module_ids: [OTH_ID, OTM_ID],
+        therm_relay: OTH_ID,
+      },
+    ],
+    modules: [
+      {
+        id: OTH_ID,
+        type: 'OTH',
+        name: 'Modulating Relay',
+        setup_date: 1607443936,
+        room_id: '222452125',
+        reachable: true,
+        modules_bridged: [OTM_ID],
+      },
+      {
+        id: OTM_ID,
+        type: 'OTM',
+        name: 'Bureau Modulate',
+        setup_date: 1607443939,
+        room_id: '222452125',
+        bridge: OTH_ID,
+      },
+    ],
+  });
+  state.homeStatuses[OPENTHERM_HOME_ID] = {
+    home: {
+      id: OPENTHERM_HOME_ID,
+      therm_mode: 'schedule',
+      rooms: [
+        {
+          id: '222452125',
+          reachable: true,
+          therm_measured_temperature: 19.6,
+          therm_setpoint_temperature: 20,
+          therm_setpoint_mode: 'schedule',
+          heating_power_request: 30,
+          open_window: false,
+        },
+      ],
+      modules: [
+        {
+          boiler_control: 'onoff',
+          boiler_error: 'water_pressure',
+          dhw_control: 'none',
+          firmware_revision: 22,
+          hardware_version: 222,
+          id: OTH_ID,
+          outdoor_temperature: 8.2,
+          sequence_id: 19764,
+          type: 'OTH',
+          wifi_strength: 57,
+        },
+        {
+          battery_level: 4176,
+          boiler_status: false,
+          boiler_valve_comfort_boost: false,
+          firmware_revision: 6,
+          id: OTM_ID,
+          last_message: 1637684297,
+          last_seen: 1637684297,
+          radio_id: 2,
+          reachable: true,
+          rf_strength: 64,
+          type: 'OTM',
+          bridge: OTH_ID,
+          battery_state: 'full',
+        },
+      ],
+    },
+  };
+}
+
 // Home Coach / Smart Indoor Air Quality Monitors (issue #37), shaped like the
 // pyatmo fixture gethomecoachsdata.json: one UNREACHABLE device without
 // dashboard_data, one reachable device whose generic `module_name` ("Indoor")

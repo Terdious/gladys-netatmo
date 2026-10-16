@@ -131,6 +131,23 @@ export function buildFeatureBoilerStatus(name, externalId) {
   });
 }
 
+// OpenTherm relay (OTH, issue #53): 1 while the boiler reports a fault
+// (homestatus `boiler_error`, e.g. "water_pressure"), 0 otherwise. A binary
+// rather than the fault text: Gladys has no "fault" category, and a 0/1 keeps
+// the history and drives a "boiler fault → notify me" scene; the reason stays
+// visible in the Netatmo app. Same read-only switch as the boiler status.
+export function buildFeatureBoilerFault(name, externalId) {
+  return feature({
+    name: `Boiler fault - ${name}`,
+    external_id: `${externalId}:boiler_fault`,
+    selector: `${externalId}:boiler_fault`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
 export function buildFeatureHeatingPowerRequest(name, externalId) {
   return feature({
     name: `Heating power request - ${name}`,

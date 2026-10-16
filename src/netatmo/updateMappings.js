@@ -41,6 +41,21 @@ const SHUTTER_MAPPING = {
   rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
 };
 
+/**
+ * Boiler fault of an OpenTherm relay (issue #53): homestatus carries
+ * `boiler_error` (e.g. "water_pressure") only while the boiler reports one.
+ * A module present in this homestatus without it has no fault (false); a
+ * module homestatus did not carry says nothing (undefined, not published).
+ * "none" is read as no fault, should Netatmo ever send it.
+ */
+function boilerFault(deviceNetatmo) {
+  const error = deviceNetatmo.boiler_error;
+  if (typeof error === 'string' && error !== '' && error !== 'none') {
+    return true;
+  }
+  return deviceNetatmo.homestatus ? false : undefined;
+}
+
 export const UPDATE_MAPPINGS = {
   [SUPPORTED_MODULE_TYPE.PLUG]: {
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
@@ -77,6 +92,24 @@ export const UPDATE_MAPPINGS = {
         : heatingPowerRequest > 0;
     },
     therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
+  },
+  // Modulating / OpenTherm thermostat (issue #53), modelled on the NATherm1:
+  // battery as a percent or the `battery_state` string (`battery_level` is in
+  // millivolts, not used), room values, RF, boiler status, heating mode.
+  [SUPPORTED_MODULE_TYPE.OTM]: {
+    battery_percent: (deviceNetatmo) =>
+      deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
+    therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
+    therm_setpoint_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_setpoint_temperature,
+    rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
+    boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
+    therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
+  },
+  // OpenTherm relay (issue #53): WiFi, outdoor temperature, boiler fault.
+  [SUPPORTED_MODULE_TYPE.OTH]: {
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength,
+    outdoor_temperature: (deviceNetatmo) => deviceNetatmo.outdoor_temperature,
+    boiler_fault: boilerFault,
   },
   [SUPPORTED_MODULE_TYPE.NAMAIN]: {
     temperature: (deviceNetatmo) =>

@@ -26,6 +26,7 @@ import {
   SUPPORTED_MODULE_TYPE,
   SUPPORTED_CATEGORY_TYPE,
   ENERGY_MODULE_TYPES,
+  HEATED_ROOM_MODULE_TYPES,
   WEATHER_MODULE_TYPES,
   SECURITY_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
@@ -273,14 +274,13 @@ function isScopeRefusal(err) {
  */
 export function summarizeHome(homeData, devices = []) {
   const withMode = devices.find((device) => device.therm_mode !== undefined);
-  // Heated rooms (issue #40 heating widget): the rooms of the thermostats and
-  // valves, with their live homestatus values, once per room.
+  // Heated rooms (issue #40 heating widget): the rooms of the thermostats
+  // (NATherm1, modulating OTM) and valves, with their live homestatus values,
+  // once per room.
   const rooms = new Map();
   for (const device of devices) {
     const room = device.room ?? {};
-    const heated = [SUPPORTED_MODULE_TYPE.THERMOSTAT, SUPPORTED_MODULE_TYPE.NRV].includes(
-      device.type,
-    );
+    const heated = HEATED_ROOM_MODULE_TYPES.includes(device.type);
     if (heated && room.id && !rooms.has(room.id)) {
       rooms.set(room.id, {
         id: room.id,

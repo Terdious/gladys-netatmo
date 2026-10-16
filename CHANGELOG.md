@@ -10,6 +10,19 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Netatmo modulating / OpenTherm thermostat, in the Energy family: the `OTM`
+  thermostat gets the room temperature, the writable setpoint
+  (`setroomthermpoint`), the heating mode preset (`therm_preset`), the boiler
+  status, battery and RF quality, like the `NATherm1`, with the
+  **unreachable** badge when out of reach; the `OTH` OpenTherm relay gets its
+  WiFi quality, the outdoor temperature (`outdoor_temperature`) and a
+  **Boiler fault** binary (`boiler_fault`: 1 while homestatus reports a
+  `boiler_error`, 0 when it reports the relay without one). The thermostat's
+  room joins the heating widget and the heating mode scene action. No
+  reconnection needed ([#53](https://github.com/Terdious/gladys-netatmo/issues/53)).
+
 ## [2.0.1] - 2026-10-16
 
 ### Fixed

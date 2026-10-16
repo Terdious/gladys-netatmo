@@ -66,13 +66,13 @@ vous invite à vous reconnecter.
 
 Sous **Appareils à découvrir**, activez les familles que vous possédez :
 
-| Interrupteur         | Découvre                                                                                              |
-| -------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`)                               |
-| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                     |
-| **Sécurité**         | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires |
-| **Volets roulants**  | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                     |
-| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                      |
+| Interrupteur         | Découvre                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`), thermostat modulant (`OTM` + `OTH`) |
+| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                            |
+| **Sécurité**         | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires        |
+| **Volets roulants**  | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                            |
+| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                             |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -87,9 +87,9 @@ Les valeurs sont rafraîchies toutes les **2 minutes** (limites d'API Netatmo).
 
 ## Mode du chauffage (planning / absence / hors-gel)
 
-Chaque thermostat (`NATherm1`) et vanne de radiateur (`NRV`) porte une
-fonctionnalité **Mode du chauffage** (un _préréglage_ de thermostat dans
-Gladys), avec trois choix :
+Chaque thermostat (`NATherm1`, modulant `OTM`) et vanne de radiateur (`NRV`)
+porte une fonctionnalité **Mode du chauffage** (un _préréglage_ de thermostat
+dans Gladys), avec trois choix :
 
 | Dans Gladys  | Dans l'application Netatmo      |
 | ------------ | ------------------------------- |
@@ -110,6 +110,31 @@ avec l'action standard « Contrôler un appareil ».
 > n'apparaît pas toute seule : allez sur l'écran **Découverte** et cliquez sur
 > **Mettre à jour** sur chaque thermostat et vanne. Gladys **5.2** ou plus
 > récent est requis (le préréglage de thermostat n'existe pas avant).
+
+---
+
+## Thermostat modulant (OpenTherm)
+
+Le thermostat Netatmo vendu aujourd'hui, le modèle **modulant** (OpenTherm),
+fait partie de la famille Énergie. Ses deux modules sont chacun créés comme un
+appareil :
+
+- le **thermostat** (`OTM`) : température de la pièce, **consigne** pilotable,
+  **Mode du chauffage** (voir ci-dessus), **état de la chaudière** (allumé
+  quand la chaudière chauffe), batterie et signal radio, comme l'ancien
+  `NATherm1` ;
+- le **relais OpenTherm** (`OTH`) branché à la chaudière : sa qualité WiFi, la
+  **température extérieure** sur laquelle Netatmo module le chauffage, et une
+  fonctionnalité **Défaut chaudière** : 1 tant que la chaudière signale un
+  défaut à Netatmo (pression d'eau, flamme, entretien…), 0 sinon.
+  L'application Netatmo indique de quel défaut il s'agit.
+
+La pièce du thermostat apparaît dans le widget **Chauffage Netatmo**, et le
+thermostat peut être choisi dans l'action de scène **Changer le mode du
+chauffage**. Un thermostat injoignable reçoit le badge **injoignable** et sa
+batterie et son signal ne sont plus publiés. Aucune reconnexion n'est
+nécessaire : les autorisations des thermostats font partie de la connexion
+depuis la première version.
 
 ---
 
