@@ -141,6 +141,33 @@ Cuando la familia Seguridad está activada, cada cámara se crea con:
   Gladys transmite el audio siempre que la transmisión lo incluya — no hay nada
   que configurar del lado de Gladys.
 
+### Foco de la cámara de exterior
+
+La cámara de exterior (`NOC`) recibe también dos funciones para su foco, que
+Netatmo ajusta en **Encendido**, **Apagado** o **Auto** (se enciende con una
+detección):
+
+| Modo Netatmo | **Floodlight** (luz) | **Floodlight automatic mode** (interruptor) |
+| ------------ | -------------------- | ------------------------------------------- |
+| Encendido    | Encendido            | Apagado                                     |
+| Apagado      | Apagado              | Apagado                                     |
+| Auto         | Apagado              | Encendido                                   |
+
+- Encender **Floodlight** fuerza la luz; encender el **modo automático** vuelve
+  a Auto.
+- Apagar una de las dos solo actúa si es el modo actual, y entonces pone el foco
+  en Apagado: una escena que apaga las luces no toca un foco en Auto, y apagar
+  el modo automático nunca apaga una luz forzada.
+- El foco es una luz de Gladys: las acciones de escena de las luces (encender /
+  apagar) funcionan con él.
+
+Un modo cambiado desde la aplicación Netatmo aparece en la siguiente
+actualización (2 minutos, o al instante con los webhooks de Gladys Plus).
+
+> ⚠️ **Si su cámara de exterior ya existía en Gladys**, el foco no aparece por
+> sí solo: vaya a la pantalla **Descubrimiento** y haga clic en **Actualizar**
+> en la cámara.
+
 ### Cámara de interior Advance (`NPC`)
 
 La cámara de interior Advance se crea como la cámara de interior: una **imagen

@@ -61,6 +61,11 @@ capabilities land (Home + Security cameras, webhooks, …).
   NACamera feature set (monitoring switch, dashboard image, motion / person
   detections, cameras widget). It is a WebRTC camera like the doorbell: the
   snapshot is fetched on the VPN URL only, and it gets no `CAMERA_URL`.
+- **Outdoor camera floodlight** (`NOC`): the homestatus `floodlight` mode
+  (on / off / auto) split over a `light` / `binary` **Floodlight** and a
+  `switch` / `binary` **Floodlight automatic mode**, both writable through
+  `/api/setstate`; the webhook `light_mode` event publishes the new mode at
+  once.
 - **Video doorbell** (`NDB`, opt-in with the cameras): dashboard image
   (snapshot on the VPN URL only — WebRTC cameras serve nothing locally),
   WiFi quality and a **doorbell ring** feature fed by the webhooks

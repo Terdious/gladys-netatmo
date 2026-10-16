@@ -170,6 +170,39 @@ export function buildFeatureMonitoring(name, externalId) {
   });
 }
 
+// Floodlight of the outdoor camera (NOC, issue #56). Netatmo has ONE
+// three-value setting (on / off / auto) and Gladys no standard three-value
+// light mode: it is split into two standard atomic controls. This one is the
+// light itself (a `light` / `binary`, so the light scene actions and the
+// dashboard light toggle work): 1 = forced on, 0 = not forced on.
+export function buildFeatureFloodlight(name, externalId) {
+  return feature({
+    name: `Floodlight - ${name}`,
+    external_id: `${externalId}:floodlight`,
+    selector: `${externalId}:floodlight`,
+    category: DEVICE_FEATURE_CATEGORIES.LIGHT,
+    type: DEVICE_FEATURE_TYPES.LIGHT.BINARY,
+    read_only: false,
+    min: 0,
+    max: 1,
+  });
+}
+
+// ...and this one the automatic mode (the floodlight lights up on a
+// detection): 1 = `auto`.
+export function buildFeatureFloodlightAuto(name, externalId) {
+  return feature({
+    name: `Floodlight automatic mode - ${name}`,
+    external_id: `${externalId}:floodlight_auto`,
+    selector: `${externalId}:floodlight_auto`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    read_only: false,
+    min: 0,
+    max: 1,
+  });
+}
+
 // Camera image shown in the Gladys camera dashboard (core PR #2623).
 export function buildFeatureCamera(name, externalId) {
   return feature({

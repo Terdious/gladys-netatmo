@@ -140,6 +140,34 @@ Wenn die Familie Sicherheit aktiviert ist, wird jede Kamera erstellt mit:
   sobald der Stream ihn enthält — auf der Seite von Gladys ist nichts zu
   konfigurieren.
 
+### Flutlicht der Außenkamera
+
+Die Außenkamera (`NOC`) erhält außerdem zwei Funktionen für ihr Flutlicht, das
+Netatmo auf **Ein**, **Aus** oder **Auto** stellt (leuchtet bei einer
+Erkennung):
+
+| Netatmo-Modus | **Floodlight** (Licht) | **Floodlight automatic mode** (Schalter) |
+| ------------- | ---------------------- | ---------------------------------------- |
+| Ein           | Ein                    | Aus                                      |
+| Aus           | Aus                    | Aus                                      |
+| Auto          | Aus                    | Ein                                      |
+
+- **Floodlight** einschalten erzwingt das Licht; den **Automatikmodus**
+  einschalten kehrt zu Auto zurück.
+- Das Ausschalten einer der beiden wirkt nur, wenn es der aktuelle Modus ist,
+  und stellt das Flutlicht dann auf Aus: Eine Szene, die die Lichter ausschaltet,
+  lässt ein Flutlicht im Modus Auto in Ruhe, und das Ausschalten des
+  Automatikmodus schaltet nie ein erzwungenes Licht aus.
+- Das Flutlicht ist ein Gladys-Licht: Die Szenenaktionen für Lichter
+  (einschalten / ausschalten) funktionieren damit.
+
+Ein in der Netatmo-App geänderter Modus erscheint bei der nächsten
+Aktualisierung (2 Minuten, oder sofort mit den Gladys-Plus-Webhooks).
+
+> ⚠️ **Wenn deine Außenkamera bereits in Gladys existierte**, erscheint das
+> Flutlicht nicht von selbst: Öffne den Bildschirm **Erkennung** und klicke bei
+> der Kamera auf **Aktualisieren**.
+
 ### Innenkamera Advance (`NPC`)
 
 Die Innenkamera Advance wird wie die Innenkamera erstellt: ein

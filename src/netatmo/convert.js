@@ -47,6 +47,8 @@ import {
   buildFeatureCarbonMonoxide,
   buildFeatureMonitoring,
   buildFeatureCamera,
+  buildFeatureFloodlight,
+  buildFeatureFloodlightAuto,
   buildFeatureDoorbellRing,
   buildFeatureCo2,
   buildFeatureHumidity,
@@ -340,10 +342,13 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeatureHuman(nameDevice, externalId),
       );
       if (model === SUPPORTED_MODULE_TYPE.NOC) {
-        // The outdoor Presence classifies what it sees.
+        // The outdoor Presence classifies what it sees, and has a floodlight
+        // (issue #56).
         features.push(
           buildFeatureAnimal(nameDevice, externalId),
           buildFeatureVehicle(nameDevice, externalId),
+          buildFeatureFloodlight(nameDevice, externalId),
+          buildFeatureFloodlightAuto(nameDevice, externalId),
         );
       }
       // Live stream (core PR #2625): the rtsp-camera service reads CAMERA_URL.

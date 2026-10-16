@@ -22,6 +22,16 @@ the notes of the version's GitHub Release.
   `write_camerapro`, `access_camerapro`): an account connected before must
   click **Connect** again, which the connection status asks for
   ([#55](https://github.com/Terdious/gladys-netatmo/issues/55)).
+- Floodlight of the outdoor camera (`NOC`): Netatmo's on / off / auto mode
+  becomes two writable features, **Floodlight** (a Gladys light: on = forced
+  on, so the light scene actions work) and **Floodlight automatic mode** (a
+  switch: on = auto), sent through `/api/setstate`. Turning one of them off
+  only acts when it is the current mode, so a "lights off" scene never
+  disables the automatic lighting. Read from the home status, and published at
+  once from the webhook `light_mode` event; a command refused for a missing
+  permission asks to reconnect. Existing cameras get the features with
+  **Update** on the Discovery screen
+  ([#56](https://github.com/Terdious/gladys-netatmo/issues/56)).
 
 ## [2.0.1] - 2026-10-16
 

@@ -99,6 +99,10 @@ export const writeValues = {
     [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: (valueFromGladys) =>
       valueFromGladys === 1 || valueFromGladys === true ? 'on' : 'off',
   },
+  [DEVICE_FEATURE_CATEGORIES.LIGHT]: {
+    /* outdoor camera floodlight (issue #56): see setValue for the mode sent */
+    [DEVICE_FEATURE_TYPES.LIGHT.BINARY]: toBinary,
+  },
   [DEVICE_FEATURE_CATEGORIES.SHUTTER]: {
     [DEVICE_FEATURE_TYPES.SHUTTER.STATE]: (valueFromGladys) => {
       const target = SHUTTER_TARGET_BY_STATE[Number(valueFromGladys)];
@@ -124,6 +128,9 @@ export const readValues = {
   },
   [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
     [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: toBinary,
+  },
+  [DEVICE_FEATURE_CATEGORIES.LIGHT]: {
+    [DEVICE_FEATURE_TYPES.LIGHT.BINARY]: toBinary,
   },
   [DEVICE_FEATURE_CATEGORIES.SHUTTER]: {
     [DEVICE_FEATURE_TYPES.SHUTTER.STATE]: identity,

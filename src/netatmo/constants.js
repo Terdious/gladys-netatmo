@@ -185,6 +185,15 @@ export const MONITORING_CAMERA_MODULE_TYPES = [
 // cannot work.
 export const HLS_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NACAMERA, SUPPORTED_MODULE_TYPE.NOC];
 
+// Floodlight of the outdoor camera (NOC, issue #56): homestatus `floodlight`,
+// written with /api/setstate (pyatmo FloodlightMixin). `auto` lights up on a
+// detection.
+export const FLOODLIGHT_MODES = {
+  ON: 'on',
+  OFF: 'off',
+  AUTO: 'auto',
+};
+
 // WebRTC cameras do not serve their snapshot on the local URL (pyatmo forces
 // the VPN URL for them): no `/command/ping` resolution, VPN URL only.
 export const VPN_ONLY_CAMERA_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NDB, SUPPORTED_MODULE_TYPE.NPC];

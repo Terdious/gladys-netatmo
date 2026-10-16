@@ -8,7 +8,7 @@
 // (core PR #2617: legitimate zeros are values, absences are not).
 // -----------------------------------------------------------------------------
 
-import { SUPPORTED_MODULE_TYPE, COVER_STATE } from './constants.js';
+import { SUPPORTED_MODULE_TYPE, COVER_STATE, FLOODLIGHT_MODES } from './constants.js';
 import { healthIndexToAqi, healthIndexToLevel } from './deviceMapping.js';
 
 /**
@@ -32,6 +32,18 @@ function shutterState(deviceNetatmo) {
   if (position === 100) return COVER_STATE.OPEN;
   if (position === 0) return COVER_STATE.CLOSE;
   return undefined;
+}
+
+/**
+ * Floodlight of the outdoor camera (issue #56), split over two binaries: the
+ * light (forced `on`) and the automatic mode (`auto`). Any other value
+ * (absent, unknown) emits nothing.
+ */
+function floodlightIs(mode) {
+  return (deviceNetatmo) =>
+    Object.values(FLOODLIGHT_MODES).includes(deviceNetatmo.floodlight)
+      ? deviceNetatmo.floodlight === mode
+      : undefined;
 }
 
 // Bubendorff / iDiamant roller shutters (issue #34): radio, wired, solar.
@@ -140,6 +152,8 @@ export const UPDATE_MAPPINGS = {
         ? undefined
         : deviceNetatmo.monitoring === 'on',
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
+    floodlight: floodlightIs(FLOODLIGHT_MODES.ON),
+    floodlight_auto: floodlightIs(FLOODLIGHT_MODES.AUTO),
   },
   // Indoor Camera Advance (issue #55): same homestatus fields as NACamera.
   [SUPPORTED_MODULE_TYPE.NPC]: {

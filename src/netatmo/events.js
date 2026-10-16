@@ -19,6 +19,11 @@
 // that do (smoke and carbon monoxide, see EVENT_CLEARED_SUB_TYPES) return
 // the feature to 0 at once instead of raising a new detection.
 //
+// One STATE event is published straight away too (issue #56): `light_mode`
+// carries the new floodlight mode of an outdoor camera in `sub_type` (on /
+// off / auto — pyatmo stores it verbatim). The refresh every webhook triggers
+// confirms it from homestatus right after.
+//
 // Some events carry an IDENTITY no feature can hold (issue #39): which known
 // person a camera recognized, which person left, which siren sounds. They are
 // fired as scene events (manifest `scene_triggers`, Gladys 5.1+) — a trigger,
@@ -31,6 +36,7 @@ import {
   EVENT_FEATURE_SUFFIXES,
   EVENT_RESET_MS,
   EVENT_CLEARED_SUB_TYPES,
+  FLOODLIGHT_MODES,
   SCENE_TRIGGERS,
   SCENE_EVENT_DEDUP_SIZE,
 } from './constants.js';
@@ -213,6 +219,42 @@ export function createEvents({
     }
   }
 
+  /** External ids of the features the user created on a device. */
+  function createdFeatureIds(deviceExternalId) {
+    const device = (gladys.devices ?? []).find((d) => d.external_id === deviceExternalId);
+    return new Set((device?.features ?? []).map((f) => f.external_id));
+  }
+
+  /**
+   * Publish the floodlight mode of a `light_mode` event on the two floodlight
+   * features (issue #56). An unknown mode is left to the refresh.
+   * @returns {Promise<string|undefined>} the light feature external id, if published
+   */
+  async function publishFloodlight(payload) {
+    const mode =
+      payload.sub_type === undefined ? undefined : String(payload.sub_type).toLowerCase();
+    const deviceId = eventDeviceIdOf(payload);
+    if (!Object.values(FLOODLIGHT_MODES).includes(mode) || !deviceId) {
+      logger.debug(`Webhook light_mode without a known mode or module — left to the refresh`);
+      return undefined;
+    }
+    const deviceExternalId = gladys.externalId(deviceId);
+    const created = createdFeatureIds(deviceExternalId);
+    const states = [
+      [`${deviceExternalId}:floodlight`, mode === FLOODLIGHT_MODES.ON ? 1 : 0],
+      [`${deviceExternalId}:floodlight_auto`, mode === FLOODLIGHT_MODES.AUTO ? 1 : 0],
+    ].filter(([featureExternalId]) => created.has(featureExternalId));
+    if (states.length === 0) {
+      logger.debug(`Webhook light_mode for ${deviceExternalId}: floodlight not created — ignored`);
+      return undefined;
+    }
+    logger.info(`Netatmo event: floodlight ${mode} on ${deviceExternalId}`);
+    for (const [featureExternalId, state] of states) {
+      await publish(featureExternalId, state);
+    }
+    return states[0][0];
+  }
+
   /** Arm (or re-arm) the automatic return to 0 of a detection feature. */
   function scheduleReset(featureExternalId) {
     const pending = resetTimers.get(featureExternalId);
@@ -247,6 +289,9 @@ export function createEvents({
     }
     const eventName = eventNameOf(payload);
     await fireSceneEvents(payload, eventName);
+    if (eventName === 'light_mode') {
+      return publishFloodlight(payload);
+    }
     const suffix = eventName ? EVENT_FEATURE_SUFFIXES[eventName] : undefined;
     if (!suffix) {
       // Connection/disconnection, on/off, daily summary…: nothing momentary to
