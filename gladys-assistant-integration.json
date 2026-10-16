@@ -1130,6 +1130,24 @@
       "default": false
     },
     {
+      "key": "bticino_api",
+      "type": "boolean",
+      "label": {
+        "en": "BTicino door entry (Classe 300) — preview",
+        "fr": "Interphone BTicino (Classe 300) — aperçu",
+        "de": "BTicino-Türsprechanlage (Classe 300) — Vorschau",
+        "es": "Portero BTicino (Classe 300) — vista previa"
+      },
+      "description": {
+        "en": "Discover the BTicino Classe 300X / Classe 300 EOS modules (signal, reachability) and write their raw Netatmo data to the logs to prepare the full support. Already connected? Click Connect again to grant the BTicino permissions.",
+        "fr": "Découvrir les modules BTicino Classe 300X / Classe 300 EOS (signal, joignabilité) et écrire leurs données Netatmo brutes dans les journaux pour préparer la prise en charge complète. Déjà connecté ? Cliquez à nouveau sur Connecter pour accorder les autorisations BTicino.",
+        "de": "BTicino-Module Classe 300X / Classe 300 EOS erkennen (Signal, Erreichbarkeit) und ihre Netatmo-Rohdaten in die Protokolle schreiben, um die vollständige Unterstützung vorzubereiten. Schon verbunden? Klicke erneut auf Verbinden, um die BTicino-Berechtigungen zu erteilen.",
+        "es": "Descubrir los módulos BTicino Classe 300X / Classe 300 EOS (señal, accesibilidad) y escribir sus datos brutos de Netatmo en los registros para preparar la compatibilidad completa. ¿Ya está conectado? Vuelva a hacer clic en Conectar para conceder los permisos de BTicino."
+      },
+      "required": false,
+      "default": false
+    },
+    {
       "key": "camera_quality",
       "type": "select",
       "label": {

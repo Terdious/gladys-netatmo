@@ -53,6 +53,7 @@ import { convertDevice } from './convert.js';
 import { UPDATE_MAPPINGS } from './updateMappings.js';
 import { readValues } from './deviceMapping.js';
 import { createCameraImages, buildLiveUrl } from './camera.js';
+import { createBticinoDiagnostic } from './bticino.js';
 
 const logger = createLogger({ name: 'netatmo-telemetry' });
 
@@ -92,6 +93,8 @@ function withTimeout(promise, ms, message) {
  * @param {(message: object|null) => any} [deps.onDegradedChange] called with
  *   the multi-language message when the account becomes degraded, with null
  *   when it recovers
+ * @param {object} [deps.bticinoDiagnostic] BTicino diagnostic logger (issue
+ *   #59), fed with the BTicino entries of every load
  */
 export function createTelemetry({
   gladys,
@@ -101,6 +104,7 @@ export function createTelemetry({
   loadTtlMs = DEFAULT_LOAD_TTL_MS,
   fetchImpl = fetch,
   onDegradedChange = () => {},
+  bticinoDiagnostic = createBticinoDiagnostic(),
 }) {
   // Last published value per feature external_id: {state, at}.
   const published = new Map();
@@ -151,6 +155,7 @@ export function createTelemetry({
       config.security_api,
       config.shutter_api,
       config.aircare_api,
+      config.bticino_api,
     ].join('|');
   }
 
@@ -236,8 +241,17 @@ export function createTelemetry({
   }
 
   /** Post-load bookkeeping: camera cache upkeep + stale-entry pruning. */
-  function afterLoad({ devices: rawDevices, partial, failed, homes = [] }) {
+  function afterLoad({ devices: rawDevices, partial, failed, homes = [], bticino }) {
     trackFailures(failed);
+    if (bticino) {
+      // BTicino diagnostic log (issue #59): only present with the toggle on,
+      // logged on change. Never allowed to break a load.
+      try {
+        bticinoDiagnostic.logLoad(bticino, { partial });
+      } catch (err) {
+        logger.debug(`BTicino diagnostic log failed: ${err.message}`);
+      }
+    }
     for (const rawDevice of rawDevices) {
       const id = netatmoId(rawDevice);
       if (id) {

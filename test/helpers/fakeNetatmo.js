@@ -470,6 +470,60 @@ export function addIndoorCameraAdvance(state, homeId = 'home-1') {
   });
 }
 
+// -----------------------------------------------------------------------------
+// BTicino Classe 300X door entry (issue #59). ASSUMED shapes: no public
+// payload exists (pyatmo has no BTicino fixture, it only knows the types and
+// models BNSL / BNCS as switches with `on`). Built from the generic homesdata
+// / homestatus module shape: the indoor unit (BNCX, wifi, bridging the
+// others, with a VPN URL and an access token to exercise the diagnostic
+// redaction), the street panel (BNEU), the door lock (BNDL), the staircase
+// light (BNSL, `on: false`) and a controlled socket (BNCS) missing from
+// homestatus (reported in `errors` → unreachable). Opt-in, like the shutters,
+// so the default fixtures (and their counts) stay intact. To be replaced by
+// the payloads the diagnostic log collects on the real installation.
+// -----------------------------------------------------------------------------
+
+export const BNCX_ID = '00:03:50:a1:b2:c3';
+export const BNEU_ID = '00:03:50:a1:b2:c4';
+export const BNDL_ID = '00:03:50:a1:b2:c5';
+export const BNSL_ID = '00:03:50:a1:b2:c6';
+export const BNCS_ID = '00:03:50:a1:b2:c7';
+
+export function addBticinoFixtures(state, homeId = 'home-1') {
+  const home = state.homes.find((h) => h.id === homeId);
+  home.modules.push(
+    {
+      id: BNCX_ID,
+      type: 'BNCX',
+      name: 'Poste intérieur',
+      setup_date: 1650000000,
+      room_id: 'room-1',
+      modules_bridged: [BNEU_ID, BNDL_ID, BNSL_ID, BNCS_ID],
+    },
+    { id: BNEU_ID, type: 'BNEU', name: 'Platine de rue', setup_date: 1650000000, bridge: BNCX_ID },
+    { id: BNDL_ID, type: 'BNDL', name: 'Gâche', setup_date: 1650000000, bridge: BNCX_ID },
+    { id: BNSL_ID, type: 'BNSL', name: 'Éclairage escalier', bridge: BNCX_ID },
+    { id: BNCS_ID, type: 'BNCS', name: 'Prise commandée', bridge: BNCX_ID },
+  );
+  const status = state.homeStatuses[homeId].home;
+  status.modules.push(
+    {
+      id: BNCX_ID,
+      type: 'BNCX',
+      firmware_revision: 52,
+      wifi_strength: 62,
+      reachable: true,
+      vpn_url:
+        'https://prodvpn-eu-6.netatmo.net/10.255.12.34/0123456789abcdef0123456789abcdef/MTU0ODk0MTY4MDqM,,',
+      access_token: 'secret-bticino-token',
+    },
+    { id: BNEU_ID, type: 'BNEU', bridge: BNCX_ID, firmware_revision: 12, reachable: true },
+    { id: BNDL_ID, type: 'BNDL', bridge: BNCX_ID, reachable: true },
+    { id: BNSL_ID, type: 'BNSL', bridge: BNCX_ID, reachable: true, on: false },
+  );
+  status.errors.push({ code: 6, id: BNCS_ID });
+}
+
 // Home Coach / Smart Indoor Air Quality Monitors (issue #37), shaped like the
 // pyatmo fixture gethomecoachsdata.json: one UNREACHABLE device without
 // dashboard_data, one reachable device whose generic `module_name` ("Indoor")
