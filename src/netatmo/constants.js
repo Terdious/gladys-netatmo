@@ -168,6 +168,27 @@ export const HOMES_CONCURRENCY = 2;
 // request (host API contract; the SDK does not export the constant).
 export const MAX_ENTRIES_PER_REQUEST = 100;
 
+// An API family failing for this many loads in a row (~6 minutes at the
+// 120 s cadence) marks the account degraded: one failed cycle is a hiccup.
+export const DEGRADED_AFTER_FAILED_LOADS = 3;
+
+// Degraded reasons: shown as the connection status message and in the device
+// badge tooltip (at most 200 characters per language).
+export const DEGRADED_MESSAGES = {
+  WEATHER: {
+    en: 'The Netatmo weather service is not responding: values come from the home status when available, retrying automatically.',
+    fr: "Le service météo Netatmo ne répond pas : les valeurs viennent de l'état de la maison quand il les fournit, nouvelle tentative automatique.",
+    de: 'Der Netatmo-Wetterdienst antwortet nicht: Die Werte kommen, soweit verfügbar, aus dem Hausstatus, neuer Versuch erfolgt automatisch.',
+    es: 'El servicio meteorológico de Netatmo no responde: los valores proceden del estado de la casa cuando está disponible, se reintentará automáticamente.',
+  },
+  PARTIAL: {
+    en: 'Part of the Netatmo cloud is not responding: some values are no longer refreshed, retrying automatically.',
+    fr: 'Une partie du cloud Netatmo ne répond pas : certaines valeurs ne sont plus actualisées, nouvelle tentative automatique.',
+    de: 'Ein Teil der Netatmo-Cloud antwortet nicht: Einige Werte werden nicht mehr aktualisiert, neuer Versuch erfolgt automatisch.',
+    es: 'Una parte de la nube de Netatmo no responde: algunos valores ya no se actualizan, se reintentará automáticamente.',
+  },
+};
+
 // The full scope set is requested in one go — like the core, where a single
 // (re)connection covers every device family, including the camera scopes the
 // Security milestone needs (read/write/access on camera + presence).

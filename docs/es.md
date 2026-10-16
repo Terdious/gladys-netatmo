@@ -268,6 +268,14 @@ relanzarse: solo mueve lo que queda.
   desconectado (batería agotada, apagado, fuera de alcance). Gladys deja de
   publicar sus últimos valores conocidos para que no le induzcan a error datos
   obsoletos; la insignia desaparece cuando el dispositivo vuelve.
+- **Un dispositivo muestra una insignia "Degradado", o el estado muestra un
+  mensaje estando Conectado:** una parte de la nube de Netatmo falla desde hace
+  varios minutos (por ejemplo el servicio meteorológico). Gladys sigue
+  publicando lo que el resto de la nube proporciona — las medidas de la estación
+  y de sus módulos también proceden del estado de la casa — y marca los
+  dispositivos que se quedan sin valores recientes. No hay nada que hacer: ambos
+  desaparecen solos en la primera actualización completa. Si persiste, los
+  **Logs** de la integración indican la API que falla.
 - **Un valor de cámara o un comando de vigilancia falla una vez con un mensaje
   de "reconectar":** a su autorización Netatmo le falta el permiso de cámara —
   vuelva a conectar su cuenta.

@@ -249,6 +249,13 @@ moves what is left.
   battery, powered off, out of range). Gladys stops publishing its last-known
   values so you are not misled by stale data; the badge clears when the device
   comes back.
+- **A device shows a "Degraded" badge, or the status carries a message while
+  Connected:** a part of the Netatmo cloud has been failing for several
+  minutes (for instance the weather service). Gladys keeps publishing what the
+  rest of the cloud still provides — station and module measures come from the
+  home status too — and marks the devices left without fresh values. Nothing to
+  do: both clear on their own on the first complete refresh. If it lasts, the
+  integration **Logs** name the failing API.
 - **A camera value or monitoring command fails once with a "reconnect" message:**
   your Netatmo authorization is missing the camera scope — reconnect your
   account.
