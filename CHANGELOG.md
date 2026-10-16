@@ -12,6 +12,10 @@ the notes of the version's GitHub Release.
 
 ### Added
 
+- German and Spanish: the configuration screen (labels, descriptions, select
+  options, links), the catalog description, the connection status messages
+  and the user documentation (`docs/de.md`, `docs/es.md`) now ship in the
+  four languages of Gladys (en, fr, de, es).
 - Catalog categories (Gladys 4.86+): the integration sits on the _Climate_,
   _Security_ and _Environment_ shelves of the integration catalog.
 - The thermostat and valve setpoints declare their half-degree `step`.

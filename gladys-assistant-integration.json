@@ -4,7 +4,9 @@
   "name": "Netatmo",
   "description": {
     "en": "Connect your Netatmo devices (weather station, thermostats, cameras) to Gladys Assistant.",
-    "fr": "Connectez vos appareils Netatmo (station météo, thermostats, caméras) à Gladys Assistant."
+    "fr": "Connectez vos appareils Netatmo (station météo, thermostats, caméras) à Gladys Assistant.",
+    "de": "Verbinde deine Netatmo-Geräte (Wetterstation, Thermostate, Kameras) mit Gladys Assistant.",
+    "es": "Conecte sus dispositivos Netatmo (estación meteorológica, termostatos, cámaras) a Gladys Assistant."
   },
   "version": "1.2.0",
   "docker_image": "ghcr.io/terdious/gladys-netatmo:1.2.0",
@@ -16,7 +18,9 @@
       "key": "events",
       "label": {
         "en": "Netatmo events",
-        "fr": "Événements Netatmo"
+        "fr": "Événements Netatmo",
+        "de": "Netatmo-Ereignisse",
+        "es": "Eventos de Netatmo"
       },
       "mode": "fire_and_forget"
     }
@@ -28,25 +32,33 @@
       "type": "section",
       "label": {
         "en": "Netatmo Connect application",
-        "fr": "Application Netatmo Connect"
+        "fr": "Application Netatmo Connect",
+        "de": "Netatmo-Connect-Anwendung",
+        "es": "Aplicación Netatmo Connect"
       },
       "description": {
         "en": "Gladys talks to Netatmo through YOUR own Netatmo Connect application. Create a Netatmo account, then a developer application to obtain the client id and client secret below. The scopes (read + write) are requested automatically at connection — nothing to configure on the portal. See the step-by-step in the Documentation.",
-        "fr": "Gladys communique avec Netatmo via VOTRE propre application Netatmo Connect. Créez un compte Netatmo, puis une application développeur pour obtenir l'identifiant et le secret client ci-dessous. Les scopes (lecture + écriture) sont demandés automatiquement à la connexion — rien à configurer sur le portail. Voir le pas-à-pas dans la Documentation."
+        "fr": "Gladys communique avec Netatmo via VOTRE propre application Netatmo Connect. Créez un compte Netatmo, puis une application développeur pour obtenir l'identifiant et le secret client ci-dessous. Les scopes (lecture + écriture) sont demandés automatiquement à la connexion — rien à configurer sur le portail. Voir le pas-à-pas dans la Documentation.",
+        "de": "Gladys kommuniziert mit Netatmo über DEINE eigene Netatmo-Connect-Anwendung. Erstelle ein Netatmo-Konto und anschließend eine Entwickleranwendung, um die unten verlangte Client-ID und das Client-Secret zu erhalten. Die Berechtigungen (Lesen + Schreiben) werden beim Verbinden automatisch angefordert — im Portal ist nichts zu konfigurieren. Die Schritt-für-Schritt-Anleitung findest du in der Dokumentation.",
+        "es": "Gladys se comunica con Netatmo a través de SU propia aplicación Netatmo Connect. Cree una cuenta Netatmo y luego una aplicación de desarrollador para obtener el ID de cliente y el secreto de cliente que se piden abajo. Los permisos (lectura + escritura) se solicitan automáticamente al conectar — no hay nada que configurar en el portal. Consulte el paso a paso en la Documentación."
       },
       "links": [
         {
           "url": "https://dev.netatmo.com/",
           "label": {
             "en": "Netatmo Connect",
-            "fr": "Netatmo Connect"
+            "fr": "Netatmo Connect",
+            "de": "Netatmo Connect",
+            "es": "Netatmo Connect"
           }
         },
         {
           "url": "https://dev.netatmo.com/apps/",
           "label": {
             "en": "Create an application",
-            "fr": "Créer une application"
+            "fr": "Créer une application",
+            "de": "Anwendung erstellen",
+            "es": "Crear una aplicación"
           }
         }
       ]
@@ -56,11 +68,15 @@
       "type": "string",
       "label": {
         "en": "Netatmo application client id",
-        "fr": "Identifiant client de l'application Netatmo"
+        "fr": "Identifiant client de l'application Netatmo",
+        "de": "Client-ID der Netatmo-Anwendung",
+        "es": "ID de cliente de la aplicación Netatmo"
       },
       "description": {
         "en": "The client id of the application created on dev.netatmo.com (Netatmo Connect).",
-        "fr": "L'identifiant client de l'application créée sur dev.netatmo.com (Netatmo Connect)."
+        "fr": "L'identifiant client de l'application créée sur dev.netatmo.com (Netatmo Connect).",
+        "de": "Die Client-ID der auf dev.netatmo.com (Netatmo Connect) erstellten Anwendung.",
+        "es": "El ID de cliente de la aplicación creada en dev.netatmo.com (Netatmo Connect)."
       },
       "required": true
     },
@@ -69,11 +85,15 @@
       "type": "secret",
       "label": {
         "en": "Netatmo application client secret",
-        "fr": "Secret client de l'application Netatmo"
+        "fr": "Secret client de l'application Netatmo",
+        "de": "Client-Secret der Netatmo-Anwendung",
+        "es": "Secreto de cliente de la aplicación Netatmo"
       },
       "description": {
         "en": "The client secret of the application created on dev.netatmo.com (Netatmo Connect).",
-        "fr": "Le secret client de l'application créée sur dev.netatmo.com (Netatmo Connect)."
+        "fr": "Le secret client de l'application créée sur dev.netatmo.com (Netatmo Connect).",
+        "de": "Das Client-Secret der auf dev.netatmo.com (Netatmo Connect) erstellten Anwendung.",
+        "es": "El secreto de cliente de la aplicación creada en dev.netatmo.com (Netatmo Connect)."
       },
       "required": true
     },
@@ -82,11 +102,15 @@
       "type": "oauth2",
       "label": {
         "en": "Netatmo account",
-        "fr": "Compte Netatmo"
+        "fr": "Compte Netatmo",
+        "de": "Netatmo-Konto",
+        "es": "Cuenta Netatmo"
       },
       "description": {
         "en": "Sign in with your Netatmo account to authorize Gladys to access your devices.",
-        "fr": "Connectez-vous avec votre compte Netatmo pour autoriser Gladys à accéder à vos appareils."
+        "fr": "Connectez-vous avec votre compte Netatmo pour autoriser Gladys à accéder à vos appareils.",
+        "de": "Melde dich mit deinem Netatmo-Konto an, um Gladys den Zugriff auf deine Geräte zu erlauben.",
+        "es": "Inicie sesión con su cuenta Netatmo para autorizar a Gladys a acceder a sus dispositivos."
       },
       "required": true
     },
@@ -95,11 +119,15 @@
       "type": "section",
       "label": {
         "en": "Devices to discover",
-        "fr": "Appareils à découvrir"
+        "fr": "Appareils à découvrir",
+        "de": "Zu erkennende Geräte",
+        "es": "Dispositivos a descubrir"
       },
       "description": {
         "en": "Choose which Netatmo device families Gladys should discover. Enabling a family and saving re-runs the discovery automatically — no manual re-scan needed. Security covers the cameras and their accessories (door/window tag, siren, smoke alarm).",
-        "fr": "Choisissez les familles d'appareils Netatmo que Gladys doit découvrir. Activer une famille et sauvegarder relance la découverte automatiquement — pas besoin de re-scanner. La Sécurité couvre les caméras et leurs accessoires (capteur porte/fenêtre, sirène, détecteur de fumée)."
+        "fr": "Choisissez les familles d'appareils Netatmo que Gladys doit découvrir. Activer une famille et sauvegarder relance la découverte automatiquement — pas besoin de re-scanner. La Sécurité couvre les caméras et leurs accessoires (capteur porte/fenêtre, sirène, détecteur de fumée).",
+        "de": "Wähle aus, welche Netatmo-Gerätefamilien Gladys erkennen soll. Wenn du eine Familie aktivierst und speicherst, wird die Erkennung automatisch neu gestartet — kein manueller Scan nötig. Sicherheit umfasst die Kameras und ihr Zubehör (Tür-/Fenstersensor, Sirene, Rauchmelder).",
+        "es": "Elija qué familias de dispositivos Netatmo debe descubrir Gladys. Al activar una familia y guardar, el descubrimiento se vuelve a ejecutar automáticamente — no hace falta volver a escanear. Seguridad incluye las cámaras y sus accesorios (sensor de puerta/ventana, sirena, detector de humo)."
       }
     },
     {
@@ -107,11 +135,15 @@
       "type": "boolean",
       "label": {
         "en": "Energy devices (thermostats, valves)",
-        "fr": "Appareils Énergie (thermostats, vannes)"
+        "fr": "Appareils Énergie (thermostats, vannes)",
+        "de": "Energie-Geräte (Thermostate, Ventile)",
+        "es": "Dispositivos de Energía (termostatos, válvulas)"
       },
       "description": {
         "en": "Discover the Netatmo Energy devices: thermostats, relay plugs and radiator valves.",
-        "fr": "Découvrir les appareils Netatmo Énergie : thermostats, relais et vannes de radiateur."
+        "fr": "Découvrir les appareils Netatmo Énergie : thermostats, relais et vannes de radiateur.",
+        "de": "Netatmo-Energie-Geräte erkennen: Thermostate, Relais und Heizkörperventile.",
+        "es": "Descubrir los dispositivos Netatmo Energía: termostatos, relés y válvulas de radiador."
       },
       "required": false,
       "default": true
@@ -121,11 +153,15 @@
       "type": "boolean",
       "label": {
         "en": "Weather devices (stations and modules)",
-        "fr": "Appareils Météo (stations et modules)"
+        "fr": "Appareils Météo (stations et modules)",
+        "de": "Wetter-Geräte (Stationen und Module)",
+        "es": "Dispositivos de Meteorología (estaciones y módulos)"
       },
       "description": {
         "en": "Discover the Netatmo Weather devices: stations, outdoor, wind, rain and indoor modules.",
-        "fr": "Découvrir les appareils Netatmo Météo : stations, modules extérieur, vent, pluie et intérieur."
+        "fr": "Découvrir les appareils Netatmo Météo : stations, modules extérieur, vent, pluie et intérieur.",
+        "de": "Netatmo-Wetter-Geräte erkennen: Stationen sowie Außen-, Wind-, Regen- und Innenmodule.",
+        "es": "Descubrir los dispositivos Netatmo Meteorología: estaciones y módulos exterior, viento, lluvia e interior."
       },
       "required": false,
       "default": true
@@ -135,11 +171,15 @@
       "type": "boolean",
       "label": {
         "en": "Security devices (cameras)",
-        "fr": "Appareils Sécurité (caméras)"
+        "fr": "Appareils Sécurité (caméras)",
+        "de": "Sicherheits-Geräte (Kameras)",
+        "es": "Dispositivos de Seguridad (cámaras)"
       },
       "description": {
         "en": "Discover the Netatmo Security devices: indoor (NACamera) and outdoor (NOC) cameras.",
-        "fr": "Découvrir les appareils Netatmo Sécurité : caméras intérieure (NACamera) et extérieure (NOC)."
+        "fr": "Découvrir les appareils Netatmo Sécurité : caméras intérieure (NACamera) et extérieure (NOC).",
+        "de": "Netatmo-Sicherheits-Geräte erkennen: Innen- (NACamera) und Außenkameras (NOC).",
+        "es": "Descubrir los dispositivos Netatmo Seguridad: cámaras de interior (NACamera) y de exterior (NOC)."
       },
       "required": false,
       "default": false
@@ -149,11 +189,15 @@
       "type": "select",
       "label": {
         "en": "Camera live stream quality",
-        "fr": "Qualité du flux vidéo des caméras"
+        "fr": "Qualité du flux vidéo des caméras",
+        "de": "Qualität des Kamera-Livestreams",
+        "es": "Calidad de la transmisión en directo de las cámaras"
       },
       "description": {
         "en": "Quality of the camera live stream (per-camera override via the camera_quality device param).",
-        "fr": "Qualité du flux vidéo des caméras (surcharge par caméra via le paramètre camera_quality)."
+        "fr": "Qualité du flux vidéo des caméras (surcharge par caméra via le paramètre camera_quality).",
+        "de": "Qualität des Kamera-Livestreams (pro Kamera über den Geräteparameter camera_quality überschreibbar).",
+        "es": "Calidad de la transmisión en directo de las cámaras (se puede cambiar por cámara con el parámetro de dispositivo camera_quality)."
       },
       "required": false,
       "default": "high",
@@ -162,28 +206,36 @@
           "value": "poor",
           "label": {
             "en": "Poor",
-            "fr": "Basse"
+            "fr": "Basse",
+            "de": "Sehr niedrig",
+            "es": "Muy baja"
           }
         },
         {
           "value": "low",
           "label": {
             "en": "Low",
-            "fr": "Faible"
+            "fr": "Faible",
+            "de": "Niedrig",
+            "es": "Baja"
           }
         },
         {
           "value": "medium",
           "label": {
             "en": "Medium",
-            "fr": "Moyenne"
+            "fr": "Moyenne",
+            "de": "Mittel",
+            "es": "Media"
           }
         },
         {
           "value": "high",
           "label": {
             "en": "High",
-            "fr": "Haute"
+            "fr": "Haute",
+            "de": "Hoch",
+            "es": "Alta"
           }
         }
       ]
