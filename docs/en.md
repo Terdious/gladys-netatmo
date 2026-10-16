@@ -172,6 +172,33 @@ When the Security family is enabled, each camera is created with:
   Netatmo app) gets audio. Gladys transports the audio whenever the stream
   carries it — there is nothing to configure on the Gladys side.
 
+### Outdoor camera floodlight
+
+The outdoor camera (`NOC`) also gets two features for its floodlight, which
+Netatmo sets to **On**, **Off** or **Auto** (lights up on a detection):
+
+| Netatmo mode | **Floodlight** (light) | **Floodlight automatic mode** (switch) |
+| ------------ | ---------------------- | -------------------------------------- |
+| On           | On                     | Off                                    |
+| Off          | Off                    | Off                                    |
+| Auto         | Off                    | On                                     |
+
+- Turning the **Floodlight** on forces the light on; turning the **automatic
+  mode** on goes back to Auto.
+- Turning one of them off only acts when it is the current mode, and then sets
+  the floodlight to Off: a scene that turns off the lights leaves a floodlight
+  in Auto alone, and switching the automatic mode off never turns off a light
+  forced on.
+- The floodlight is a Gladys light: the light scene actions (turn on / turn
+  off) work with it.
+
+A mode changed from the Netatmo app shows up at the next refresh (2 minutes, or
+right away with the Gladys Plus webhooks).
+
+> ⚠️ **If your outdoor camera already existed in Gladys**, the floodlight does
+> not appear on its own: go to the **Discovery** screen and click **Update** on
+> the camera.
+
 ### Indoor Camera Advance (`NPC`)
 
 The Indoor Camera Advance is created like the indoor camera: a **dashboard

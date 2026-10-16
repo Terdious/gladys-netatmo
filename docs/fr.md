@@ -183,6 +183,34 @@ Quand la famille Sécurité est activée, chaque caméra est créée avec :
   transporte l'audio dès que le flux en contient — il n'y a rien à configurer
   côté Gladys.
 
+### Éclairage de la caméra extérieure
+
+La caméra extérieure (`NOC`) reçoit aussi deux fonctionnalités pour son
+éclairage, que Netatmo règle sur **Allumé**, **Éteint** ou **Auto** (s'allume
+sur une détection) :
+
+| Mode Netatmo | **Floodlight** (lumière) | **Floodlight automatic mode** (interrupteur) |
+| ------------ | ------------------------ | -------------------------------------------- |
+| Allumé       | Allumé                   | Éteint                                       |
+| Éteint       | Éteint                   | Éteint                                       |
+| Auto         | Éteint                   | Allumé                                       |
+
+- Allumer **Floodlight** force l'éclairage ; allumer le **mode automatique**
+  revient en Auto.
+- Éteindre l'une des deux n'agit que si c'est le mode en cours, et règle alors
+  l'éclairage sur Éteint : une scène qui éteint les lumières laisse tranquille
+  un éclairage en Auto, et couper le mode automatique n'éteint jamais un
+  éclairage forcé.
+- L'éclairage est une lumière Gladys : les actions de scène des lumières
+  (allumer / éteindre) fonctionnent avec lui.
+
+Un mode changé depuis l'application Netatmo apparaît au rafraîchissement suivant
+(2 minutes, ou tout de suite avec les webhooks Gladys Plus).
+
+> ⚠️ **Si votre caméra extérieure existait déjà dans Gladys**, l'éclairage
+> n'apparaît pas tout seul : allez sur l'écran **Découverte** et cliquez sur
+> **Mettre à jour** sur la caméra.
+
 ### Caméra intérieure Advance (`NPC`)
 
 La caméra intérieure Advance est créée comme la caméra intérieure : une **image

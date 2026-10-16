@@ -130,6 +130,39 @@ test('Indoor Camera Advance events (NPC- prefix) drive the camera detections (is
   assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:motion'), [1, 0]);
 });
 
+test('a light_mode event publishes the floodlight mode on its two features (issue #56)', async () => {
+  const gladys = fakeGladys({ features: ['motion', 'floodlight', 'floodlight_auto'] });
+  const timers = fakeTimers();
+  const events = createEvents({ gladys, timers });
+  // pyatmo test_process_webhook_light_mode payload shape.
+  const lightMode = (subType) => ({
+    event_type: 'light_mode',
+    device_id: 'camera-1',
+    camera_id: 'camera-1',
+    home_id: 'home-1',
+    push_type: 'NOC-light_mode',
+    sub_type: subType,
+  });
+
+  assert.equal(await events.handleWebhook(lightMode('on')), 'ext:netatmo:camera-1:floodlight');
+  await events.handleWebhook(lightMode('auto'));
+  await events.handleWebhook(lightMode('off'));
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:floodlight'), [1, 0, 0]);
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:floodlight_auto'), [0, 1, 0]);
+  // A state, not a detection: nothing returns to 0 on its own.
+  assert.equal(events.pendingResets(), 0);
+
+  // Unknown or missing mode, unknown device: left to the refresh.
+  const before = gladys.published.length;
+  assert.equal(await events.handleWebhook(lightMode('strobe')), undefined);
+  assert.equal(await events.handleWebhook(lightMode(undefined)), undefined);
+  assert.equal(
+    await events.handleWebhook({ ...lightMode('on'), camera_id: 'other', device_id: 'other' }),
+    undefined,
+  );
+  assert.equal(gladys.published.length, before);
+});
+
 test('a carbon monoxide event (NCO-co_detected) publishes 1, then resets (issue #36)', async () => {
   const gladys = fakeGladys();
   const timers = fakeTimers();

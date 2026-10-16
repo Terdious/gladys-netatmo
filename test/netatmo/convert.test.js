@@ -234,7 +234,17 @@ test('converts cameras (NACamera/NOC) with wifi, writable monitoring and image',
     assert.deepEqual(
       suffixesOf(device),
       type === 'NOC'
-        ? ['wifi_strength', 'monitoring', 'camera', 'motion', 'human', 'animal', 'vehicle']
+        ? [
+            'wifi_strength',
+            'monitoring',
+            'camera',
+            'motion',
+            'human',
+            'animal',
+            'vehicle',
+            'floodlight',
+            'floodlight_auto',
+          ]
         : ['wifi_strength', 'monitoring', 'camera', 'motion', 'human'],
     );
     const motion = device.features.find((f) => f.external_id.endsWith(':motion'));
@@ -509,4 +519,29 @@ test('converts an Indoor Camera Advance (NPC) like NACamera, without a live URL 
     paramValue(device, 'modules_bridge_id'),
     JSON.stringify(['12:34:56:00:86:99', '12:34:56:00:e3:9b']),
   );
+});
+
+test('the outdoor camera floodlight is a light plus an automatic-mode switch (issue #56)', () => {
+  const device = convertDevice(gladys, {
+    id: '12:34:56:10:b9:0e',
+    type: 'NOC',
+    name: 'Front',
+    home: '91763b24c43d3e344f424e8b',
+    floodlight: 'auto',
+  });
+  const light = device.features.find((f) => f.external_id.endsWith(':floodlight'));
+  assert.equal(light.name, 'Floodlight - Front');
+  assert.equal(light.category, 'light');
+  assert.equal(light.type, 'binary');
+  assert.equal(light.read_only, false);
+  assert.equal(light.min, 0);
+  assert.equal(light.max, 1);
+  const auto = device.features.find((f) => f.external_id.endsWith(':floodlight_auto'));
+  assert.equal(auto.name, 'Floodlight automatic mode - Front');
+  assert.equal(auto.category, 'switch');
+  assert.equal(auto.type, 'binary');
+  assert.equal(auto.read_only, false);
+  // Only the outdoor camera has a floodlight.
+  const indoor = convertDevice(gladys, { id: 'cam-1', type: 'NACamera', home: 'home-1' });
+  assert.ok(!suffixesOf(indoor).some((suffix) => suffix.startsWith('floodlight')));
 });

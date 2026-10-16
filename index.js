@@ -261,6 +261,7 @@ export function setupIntegration(
         client,
         refresh: () => telemetry.refreshNow(config),
         scheduleRefresh: () => telemetry.scheduleRefresh(config),
+        getRawDevice: (id) => telemetry.getRawDevice(id),
       },
       { device, feature, value },
     );

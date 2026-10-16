@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { normalizeConfig } from '../../src/config.js';
 import { createNetatmoClient } from '../../src/netatmo/client.js';
 import { createTelemetry } from '../../src/netatmo/telemetry.js';
-import { setDeviceValue } from '../../src/netatmo/setValue.js';
+import { setDeviceValue, floodlightModeFor } from '../../src/netatmo/setValue.js';
 import { createWebhooks } from '../../src/netatmo/webhooks.js';
 import { startFakeNetatmo, addIndoorCameraAdvance, NPC_ID } from '../helpers/fakeNetatmo.js';
 import { waitFor } from '../helpers/fakeGladysCore.js';
@@ -484,6 +484,103 @@ test('setDeviceValue switches the camera monitoring through /api/setstate', asyn
     { home: { id: 'home-1', modules: [{ id: 'camera-1', monitoring: 'on' }] } },
     { home: { id: 'home-1', modules: [{ id: 'camera-1', monitoring: 'off' }] } },
   ]);
+});
+
+test('the outdoor camera floodlight mode is published on its two features (issue #56)', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  const noc = netatmo.state.homeStatuses['home-1'].home.modules.find((m) => m.id === 'noc-1');
+
+  // 'auto' (pyatmo fixture): the light is not forced on, the automatic mode is.
+  await telemetry.refreshValues(configSecurity);
+  assert.deepEqual(stateOf('ext:netatmo:noc-1:floodlight'), [0]);
+  assert.deepEqual(stateOf('ext:netatmo:noc-1:floodlight_auto'), [1]);
+
+  noc.floodlight = 'on';
+  await telemetry.refreshValues(configSecurity);
+  noc.floodlight = 'off';
+  await telemetry.refreshValues(configSecurity);
+  assert.deepEqual(stateOf('ext:netatmo:noc-1:floodlight'), [0, 1, 0]);
+  assert.deepEqual(stateOf('ext:netatmo:noc-1:floodlight_auto'), [1, 0]);
+
+  // Absent or unknown: nothing is published (no guess).
+  const before = gladys.published.length;
+  clock += 31 * 60 * 1000; // past the keep-alive: only a real value would go out
+  noc.floodlight = 'strobe';
+  await telemetry.refreshValues(configSecurity);
+  delete noc.floodlight;
+  await telemetry.refreshValues(configSecurity);
+  assert.ok(
+    !gladys.published
+      .slice(before)
+      .some((s) => s.device_feature_external_id.startsWith('ext:netatmo:noc-1:floodlight')),
+  );
+});
+
+test('floodlightModeFor: on sends the mode, off only leaves the CURRENT mode', () => {
+  // [suffix, on, current] -> mode sent (null: nothing to send)
+  const cases = [
+    ['floodlight', true, 'auto', 'on'],
+    ['floodlight', true, 'off', 'on'],
+    ['floodlight', false, 'on', 'off'],
+    ['floodlight', false, 'auto', null], // a "lights off" scene keeps the automatic mode
+    ['floodlight', false, 'off', null],
+    ['floodlight', false, undefined, 'off'],
+    ['floodlight_auto', true, 'off', 'auto'],
+    ['floodlight_auto', true, 'on', 'auto'],
+    ['floodlight_auto', false, 'auto', 'off'],
+    ['floodlight_auto', false, 'on', null], // never turns off a light forced on
+    ['floodlight_auto', false, 'off', null],
+    ['floodlight_auto', false, 'strobe', 'off'],
+  ];
+  for (const [suffix, on, current, expected] of cases) {
+    assert.equal(floodlightModeFor(suffix, on, current), expected, `${suffix} ${on} ${current}`);
+  }
+});
+
+test('setDeviceValue drives the floodlight through /api/setstate, then refreshes (issue #56)', async () => {
+  const configSecurity = normalizeConfig({ security_api: 'true' });
+  gladys.devices = await telemetry.syncDiscovery(configSecurity);
+  await telemetry.refreshValues(configSecurity);
+  const noc = gladys.devices.find((d) => d.external_id === 'ext:netatmo:noc-1');
+  const light = noc.features.find((f) => f.external_id.endsWith(':floodlight'));
+  const auto = noc.features.find((f) => f.external_id.endsWith(':floodlight_auto'));
+  let refreshes = 0;
+  const deps = {
+    gladys,
+    client,
+    refresh: async () => {
+      refreshes += 1;
+    },
+    getRawDevice: (id) => telemetry.getRawDevice(id),
+  };
+
+  // Current mode 'auto' (fixture): turning the light off has nothing to do,
+  // and neither has switching off the automatic mode once the light is on.
+  await setDeviceValue(deps, { device: noc, feature: light, value: 0 });
+  assert.deepEqual(netatmo.state.setStateRequests, []);
+  await setDeviceValue(deps, { device: noc, feature: light, value: 1 });
+  await setDeviceValue(deps, { device: noc, feature: auto, value: 0 });
+  // A quick on -> off, before any refresh: the acked mode is already known.
+  await setDeviceValue(deps, { device: noc, feature: light, value: 0 });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(netatmo.state.setStateRequests, [
+    { home: { id: 'home-1', modules: [{ id: 'noc-1', floodlight: 'on' }] } },
+    { home: { id: 'home-1', modules: [{ id: 'noc-1', floodlight: 'off' }] } },
+  ]);
+  assert.equal(refreshes, 2);
+
+  await setDeviceValue({ gladys, client }, { device: noc, feature: auto, value: 1 });
+  assert.deepEqual(netatmo.state.setStateRequests.at(-1), {
+    home: { id: 'home-1', modules: [{ id: 'noc-1', floodlight: 'auto' }] },
+  });
+
+  // A refusal for a missing scope: the actionable reconnect message.
+  netatmo.state.failSetStateWith = { status: 403, body: { error: { code: 13, message: 'scope' } } };
+  await assert.rejects(
+    setDeviceValue({ gladys, client }, { device: noc, feature: light, value: 1 }),
+    /reconnect your Netatmo/,
+  );
 });
 
 test('cameras stay absent with the default (opt-in) configuration', async () => {

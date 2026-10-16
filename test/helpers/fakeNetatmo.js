@@ -118,7 +118,8 @@ function buildDefaultHomeStatuses() {
           { id: 'valve-1', type: 'NRV', battery_state: 'medium', rf_strength: 65 },
           // wifi_status (not wifi_strength): exercises the ?? fallback.
           { id: 'camera-1', type: 'NACamera', monitoring: 'off', wifi_status: 55 },
-          { id: 'noc-1', type: 'NOC', monitoring: 'on', wifi_strength: 72 },
+          // Floodlight mode as in the pyatmo NOC fixture (issue #56).
+          { id: 'noc-1', type: 'NOC', monitoring: 'on', wifi_strength: 72, floodlight: 'auto' },
           // Siren idle; door tag open. battery_state string exercises the map.
           { id: 'siren-1', type: 'NIS', status: 'no_sound', battery_percent: 90, rf_strength: 70 },
           {
