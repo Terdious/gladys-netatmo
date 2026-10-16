@@ -14,7 +14,7 @@ your devices and keeps their values up to date.
 - A **Netatmo account**, with your devices already installed and working in the
   Netatmo app (Gladys reads what Netatmo exposes — a device must be online in
   Netatmo first).
-- A Gladys Assistant instance that supports external integrations.
+- Gladys Assistant **4.86 or later**.
 
 ---
 
