@@ -140,6 +140,28 @@ export const SUPPORTED_MODULE_TYPE = {
   NHC: 'NHC',
 };
 
+// Virtual devices (issue #57): built by the integration from home-level data
+// rather than from a Netatmo module. Their type is lowercase snake_case, which
+// no Netatmo module type is (NATherm1, NOC, NBR…), so the convert switch and
+// the UPDATE_MAPPINGS table can key on it without any collision.
+export const VIRTUAL_DEVICE_TYPE = {
+  // The persons known to the cameras of one home (face recognition): one
+  // presence feature per named person.
+  KNOWN_PERSONS: 'known_persons',
+};
+
+// Netatmo id of the known-persons device of a home: `persons-<home id>`, so
+// its external_id reads `ext:netatmo:persons-<home id>`. Netatmo module ids
+// are MAC addresses (`70:ee:50:…`) or digit strings (shutters): neither ever
+// starts with a word followed by a hyphen, and a home id is unique to the
+// account — the id can neither collide with a module nor between two homes.
+export const KNOWN_PERSONS_ID_PREFIX = 'persons-';
+
+// Feature suffix of a known person's presence: `person_<Netatmo person id>`.
+// The person id is the one Netatmo keeps for the face (a UUID, also used by
+// setpersonsaway/setpersonshome): stable across renames, never reused.
+export const PERSON_PRESENCE_SUFFIX_PREFIX = 'person_';
+
 export const SUPPORTED_CATEGORY_TYPE = {
   ENERGY: 'Energy',
   WEATHER: 'Weather',

@@ -63,13 +63,13 @@ expires beyond repair, the Configuration screen tells you to reconnect.
 
 Under **Devices to discover**, enable the families you own:
 
-| Toggle              | Discovers                                                                                       |
-| ------------------- | ----------------------------------------------------------------------------------------------- |
-| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`)                         |
-| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                               |
-| **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories |
-| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                |
-| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                           |
+| Toggle              | Discovers                                                                                                         |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`)                                           |
+| **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                 |
+| **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
+| **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                  |
+| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                             |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -298,6 +298,27 @@ discovered too:
 - **Carbon monoxide alarm** (`NCO`) — same as the smoke alarm: battery and
   signal (when Netatmo reports them), plus a **Carbon monoxide** feature fed by
   the webhooks.
+
+---
+
+## Known persons
+
+When the Security family is enabled, each home whose cameras recognize faces
+gets a **"<home> - Known persons"** device, with one **Presence** feature per
+person named in the Netatmo app: **Presence detected** when Netatmo considers
+the person at home, **No presence** when away — the state the Netatmo app shows.
+Use it in your scenes like any presence sensor.
+
+- Only **named** persons get a feature: an unrecognized face (no name in the
+  Netatmo app) is ignored.
+- The presence refreshes every 2 minutes, and **at once** with the Gladys Plus
+  webhooks (a known person arrives / leaves) or after the **Mark a person as
+  away / at home** scene actions.
+- When Netatmo does not report a person's presence, nothing is published: the
+  last known value stays.
+- A person added, renamed or deleted in the Netatmo app: click **Update** on
+  the device in the **Discovery** screen to add, rename or remove the feature.
+  The feature follows the Netatmo person id, so a rename keeps its history.
 
 ---
 

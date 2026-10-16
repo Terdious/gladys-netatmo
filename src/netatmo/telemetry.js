@@ -398,7 +398,10 @@ export function createTelemetry({
    * @returns {Array<{device_feature_external_id: string, state: number}>} states
    */
   function buildDeviceStates(gladysDevice, rawDevice) {
-    const mapping = UPDATE_MAPPINGS[rawDevice.type];
+    const entry = UPDATE_MAPPINGS[rawDevice.type];
+    // A function builds the table from the device itself (per-person
+    // features of the known-persons device, issue #57).
+    const mapping = typeof entry === 'function' ? entry(rawDevice) : entry;
     if (!mapping) {
       return [];
     }

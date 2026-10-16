@@ -113,11 +113,13 @@ export function setupIntegration(
   });
   // Gladys Plus webhooks (issue #5): a relayed event triggers an immediate
   // telemetry refresh (doctrine "trigger, not data"). Degrades to poll only
-  // when Gladys Plus is not linked.
+  // when Gladys Plus is not linked. The refresh starts from a FRESH load: a
+  // cycle in flight or a load still in the burst cache predates the event and
+  // would miss its new state (a known person arriving, issue #57).
   const webhooks = createWebhooks({
     gladys,
     client,
-    refresh: () => telemetry.refreshValues(config),
+    refresh: () => telemetry.refreshNow(config),
   });
   // Momentary detections (motion, person, smoke, doorbell ring…): published as
   // push features straight from the event payload — no API state reports them.

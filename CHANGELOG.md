@@ -21,6 +21,19 @@ the notes of the version's GitHub Release.
   setpoint is manual or a boost, and gets a "Change schedule" button listing the
   heating schedules of the home
   ([#58](https://github.com/Terdious/gladys-netatmo/issues/58)).
+- Presence of the persons known to the Netatmo cameras: with the Security
+  family enabled, each home gets a "<home> - Known persons" device with one
+  presence feature per person named in the Netatmo app (Presence detected =
+  at home, from the homestatus `out_of_sight`). Unnamed faces are skipped, a
+  person Netatmo does not report publishes nothing, and the state refreshes
+  every cycle and at once on the webhook events
+  ([#57](https://github.com/Terdious/gladys-netatmo/issues/57)).
+
+### Fixed
+
+- A webhook-triggered refresh now always starts from a fresh Netatmo load: a
+  cycle in flight or a load still in the 10 s burst cache could hide the state
+  the event announced ([#57](https://github.com/Terdious/gladys-netatmo/issues/57)).
 
 ## [2.0.1] - 2026-10-16
 

@@ -32,6 +32,8 @@ import {
   AIRCARE_MODULE_TYPES,
   HOMES_CONCURRENCY,
   HEATING_SCHEDULE_TYPE,
+  VIRTUAL_DEVICE_TYPE,
+  KNOWN_PERSONS_ID_PREFIX,
 } from './constants.js';
 
 const logger = createLogger({ name: 'netatmo-discovery' });
@@ -111,7 +113,8 @@ async function mapWithConcurrency(items, concurrency, fn) {
 
 /**
  * Detail one home through /homestatus: merge homesdata + homestatus per
- * module, and rebuild the modules missing from homestatus (unreachable).
+ * module, rebuild the modules missing from homestatus (unreachable), and add
+ * the virtual device of the home's known persons (issue #57).
  * @param {object} client Netatmo API client
  * @param {object} config normalized integration config
  * @param {object} homeData one entry of the homesdata `homes` array
@@ -187,7 +190,55 @@ export async function loadDeviceDetails(client, config, homeData) {
       });
     });
 
-  return [...reachableDevices, ...unreachableDevices];
+  const knownPersons = buildKnownPersonsDevice(config, homeData, home);
+  return [...reachableDevices, ...unreachableDevices, ...(knownPersons ? [knownPersons] : [])];
+}
+
+/**
+ * Virtual device of the persons known to the cameras of a home (issue #57):
+ * the NAMED persons of homesdata (`pseudo` — an unrecognized face is stored
+ * without one), each with its homestatus presence (`out_of_sight`: true =
+ * away). A person homestatus does not report keeps `out_of_sight` undefined:
+ * nothing is published for it. Gated by the Security toggle (the faces come
+ * from the cameras) through `apiNotConfigured`, like the camera modules.
+ * @param {object} config normalized integration config
+ * @param {object} homeData one entry of the homesdata `homes` array
+ * @param {object} homeStatus the homestatus `home` of the same home
+ * @returns {object|null} raw device, null when the home has no named person
+ */
+export function buildKnownPersonsDevice(config, homeData, homeStatus = {}) {
+  const statuses = new Map(
+    (homeStatus.persons ?? [])
+      .filter((person) => person && typeof person.id === 'string')
+      .map((person) => [person.id, person]),
+  );
+  const persons = (homeData.persons ?? [])
+    .filter(
+      (person) =>
+        person &&
+        typeof person.id === 'string' &&
+        typeof person.pseudo === 'string' &&
+        person.pseudo.trim() !== '',
+    )
+    .map((person) => ({
+      id: person.id,
+      pseudo: person.pseudo.trim(),
+      out_of_sight: statuses.get(person.id)?.out_of_sight,
+      last_seen: statuses.get(person.id)?.last_seen,
+    }));
+  if (persons.length === 0) {
+    return null;
+  }
+  return {
+    id: `${KNOWN_PERSONS_ID_PREFIX}${homeData.id}`,
+    type: VIRTUAL_DEVICE_TYPE.KNOWN_PERSONS,
+    name: `${homeData.name || homeData.id} - Known persons`,
+    home: homeData.id,
+    persons,
+    categoryAPI: SUPPORTED_CATEGORY_TYPE.SECURITY,
+    apiNotConfigured: !config.security_api,
+    homestatus: true,
+  };
 }
 
 /**

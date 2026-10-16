@@ -70,13 +70,13 @@ Konfiguration auf, dich erneut zu verbinden.
 
 Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
-| Schalter         | Erkennt                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------ |
-| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)                      |
-| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                     |
-| **Sicherheit**   | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör |
-| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                         |
-| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                             |
+| Schalter         | Erkennt                                                                                                               |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)                                                 |
+| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                                |
+| **Sicherheit**   | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör und die bekannten Personen |
+| **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                    |
+| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                        |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -319,6 +319,29 @@ verknüpfte Zubehör erkannt:
 - **Kohlenmonoxidmelder** (`NCO`) — wie der Rauchmelder: Batterie und Signal
   (sofern Netatmo sie meldet), dazu eine Funktion **Kohlenmonoxid**, die von
   den Webhooks gespeist wird.
+
+---
+
+## Bekannte Personen
+
+Wenn die Familie Sicherheit aktiviert ist, erhält jedes Zuhause, dessen Kameras
+Gesichter erkennen, ein Gerät **„<Zuhause> - Known persons“** mit einer Funktion
+**Presence** pro Person, die in der Netatmo-App einen Namen hat: **Anwesenheit
+erkannt**, wenn Netatmo die Person zu Hause sieht, **Keine Anwesenheit**, wenn
+sie abwesend ist — der Zustand, den die Netatmo-App anzeigt. Nutze sie in deinen
+Szenen wie jeden Anwesenheitssensor.
+
+- Nur Personen **mit Namen** erhalten eine Funktion: Ein unbekanntes Gesicht
+  (ohne Namen in der Netatmo-App) wird ignoriert.
+- Die Anwesenheit wird alle 2 Minuten aktualisiert, und **sofort** mit den
+  Gladys-Plus-Webhooks (eine bekannte Person kommt / geht) oder nach den
+  Szenenaktionen **Person als abwesend / anwesend markieren**.
+- Meldet Netatmo die Anwesenheit einer Person nicht, wird nichts
+  veröffentlicht: Der letzte bekannte Wert bleibt.
+- Eine Person wurde in der Netatmo-App hinzugefügt, umbenannt oder gelöscht:
+  Klicke im Tab **Entdecken** beim Gerät auf **Aktualisieren**, um die Funktion
+  hinzuzufügen, umzubenennen oder zu entfernen. Die Funktion folgt der
+  Netatmo-ID der Person: Eine Umbenennung behält ihren Verlauf.
 
 ---
 

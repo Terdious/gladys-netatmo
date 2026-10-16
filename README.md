@@ -68,6 +68,10 @@ capabilities land (Home + Security cameras, webhooks, …).
   smoke alarm (`NSD`) and the carbon monoxide alarm (`NCO`) are discovered
   with battery + signal — their smoke / CO state is webhook-driven. Net-new vs
   the core service.
+- **Known persons** (opt-in with the cameras): one virtual device per home
+  (`ext:netatmo:persons-<home id>`) with a `presence-sensor`/`binary` feature
+  per person named in the Netatmo app (1 = at home, from the homestatus
+  `out_of_sight`), refreshed every cycle and at once on the webhook events.
 - **Roller shutters** (opt-in via the `shutter_api` toggle): Bubendorff
   shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`) with open / close /
   stop, a writable position and RF quality (`/api/setstate` through the

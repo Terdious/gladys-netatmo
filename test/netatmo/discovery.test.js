@@ -15,6 +15,7 @@ import {
   loadAccount,
   loadDevices,
   netatmoId,
+  buildKnownPersonsDevice,
 } from '../../src/netatmo/discovery.js';
 import { startFakeNetatmo } from '../helpers/fakeNetatmo.js';
 
@@ -49,6 +50,8 @@ test('loadDevices merges the three API families', async () => {
     'doortag-1',
     'noc-1',
     'outdoor-1',
+    // Known persons of the home (issue #57), flagged apiNotConfigured here.
+    'persons-home-1',
     'plug-1',
     'siren-1',
     'smoke-1',
@@ -388,4 +391,66 @@ test('a Home Coach also listed in homesdata is merged, not duplicated', async ()
   assert.equal(coaches[0].categoryAPI, 'Aircare');
   assert.equal(coaches[0].home, 'home-1');
   assert.equal(coaches[0].dashboard_data.CO2, 494);
+});
+
+test('the known persons of a home load as one virtual Security device (issue #57)', async () => {
+  const security = normalizeConfig({ security_api: 'true' });
+  const { devices, partial } = await loadAccount(client, security);
+  assert.equal(partial, false);
+  const persons = byId(devices, 'persons-home-1');
+  assert.equal(persons.type, 'known_persons');
+  assert.equal(persons.name, 'Maison - Known persons');
+  assert.equal(persons.home, 'home-1');
+  assert.equal(persons.categoryAPI, 'Security');
+  assert.equal(persons.apiNotConfigured, false);
+  assert.deepEqual(persons.persons, [
+    { id: 'person-1', pseudo: 'Alice', out_of_sight: false, last_seen: 1557071156 },
+    { id: 'person-2', pseudo: 'Bob', out_of_sight: true, last_seen: 1559282761 },
+  ]);
+  // Behind the Security toggle, like the cameras.
+  const off = await loadDevices(client, normalizeConfig());
+  assert.equal(byId(off, 'persons-home-1').apiNotConfigured, true);
+});
+
+test('known persons: unnamed faces skipped, unreported persons without presence (issue #57)', () => {
+  // pyatmo fixtures homesdata.json + homestatus_91763b24c43d3e344f424e8b.json,
+  // plus an unrecognized face (no pseudo) and a person homestatus omits.
+  const homeData = {
+    id: '91763b24c43d3e344f424e8b',
+    name: 'MYHOME',
+    persons: [
+      { id: '91827374-7e04-5298-83ad-a0cb8372dff1', pseudo: 'John Doe', url: 'https://x/1' },
+      { id: '91827375-7e04-5298-83ae-a0cb8372dff2', pseudo: 'Jane Doe', url: 'https://x/2' },
+      { id: '91827376-7e04-5298-83af-a0cb8372dff3', pseudo: 'Richard Doe', url: 'https://x/3' },
+      { id: 'face-unknown', url: 'https://x/4' },
+      { id: 'face-blank', pseudo: '  ' },
+      { id: 'person-new', pseudo: 'Newcomer' },
+    ],
+  };
+  const homeStatus = {
+    persons: [
+      { id: '91827374-7e04-5298-83ad-a0cb8372dff1', last_seen: 1557071156, out_of_sight: true },
+      { id: '91827375-7e04-5298-83ae-a0cb8372dff2', last_seen: 1559282761, out_of_sight: false },
+      { id: '91827376-7e04-5298-83af-a0cb8372dff3', last_seen: 1559224132, out_of_sight: true },
+      { id: 'face-unknown', last_seen: 1559224132, out_of_sight: false },
+    ],
+  };
+  const device = buildKnownPersonsDevice({ security_api: true }, homeData, homeStatus);
+  assert.equal(device.id, 'persons-91763b24c43d3e344f424e8b');
+  assert.equal(device.name, 'MYHOME - Known persons');
+  assert.deepEqual(
+    device.persons.map((person) => [person.pseudo, person.out_of_sight]),
+    [
+      ['John Doe', true],
+      ['Jane Doe', false],
+      ['Richard Doe', true],
+      ['Newcomer', undefined],
+    ],
+  );
+  // No named person (or no persons at all): no device.
+  assert.equal(
+    buildKnownPersonsDevice({}, { id: 'h', persons: [{ id: 'face-unknown' }] }, homeStatus),
+    null,
+  );
+  assert.equal(buildKnownPersonsDevice({}, { id: 'h' }), null);
 });

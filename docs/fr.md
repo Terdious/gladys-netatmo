@@ -66,13 +66,13 @@ vous invite à vous reconnecter.
 
 Sous **Appareils à découvrir**, activez les familles que vous possédez :
 
-| Interrupteur         | Découvre                                                                                              |
-| -------------------- | ----------------------------------------------------------------------------------------------------- |
-| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`)                               |
-| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                     |
-| **Sécurité**         | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires |
-| **Volets roulants**  | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                     |
-| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                      |
+| Interrupteur         | Découvre                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`)                                                        |
+| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                                              |
+| **Sécurité**         | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires et les personnes connues |
+| **Volets roulants**  | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                                              |
+| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                                               |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -319,6 +319,29 @@ Quand la famille Sécurité est activée, les accessoires liés à vos caméras 
 - **Détecteur de monoxyde de carbone** (`NCO`) — comme le détecteur de fumée :
   batterie et signal (quand Netatmo les remonte), plus la fonctionnalité
   **Monoxyde de carbone** alimentée par les webhooks.
+
+---
+
+## Personnes connues
+
+Quand la famille Sécurité est activée, chaque maison dont les caméras
+reconnaissent des visages obtient un appareil **« <maison> - Known persons »**,
+avec une fonctionnalité **Presence** par personne nommée dans l'application
+Netatmo : **Présence détectée** quand Netatmo considère la personne à la maison,
+**Pas de présence** quand elle est absente — l'état affiché par l'application
+Netatmo. Utilisez-la dans vos scènes comme n'importe quel détecteur de présence.
+
+- Seules les personnes **nommées** ont une fonctionnalité : un visage inconnu
+  (sans nom dans l'application Netatmo) est ignoré.
+- La présence est actualisée toutes les 2 minutes, et **immédiatement** avec les
+  webhooks Gladys Plus (une personne connue arrive / part) ou après les actions
+  de scène **Marquer une personne absente / présente**.
+- Quand Netatmo ne remonte pas la présence d'une personne, rien n'est publié :
+  la dernière valeur connue reste.
+- Une personne ajoutée, renommée ou supprimée dans l'application Netatmo :
+  cliquez sur **Mettre à jour** sur l'appareil dans l'écran **Découverte** pour
+  ajouter, renommer ou retirer la fonctionnalité. La fonctionnalité suit
+  l'identifiant Netatmo de la personne : un renommage conserve son historique.
 
 ---
 
