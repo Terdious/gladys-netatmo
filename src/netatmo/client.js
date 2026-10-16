@@ -10,8 +10,9 @@
 // (Weather stations), gethomecoachsdata (Home Coach air quality monitors,
 // issue #37), setroomthermpoint (room setpoint: manual, boost or back to the
 // schedule), switchhomeschedule (active heating schedule, issue #58),
-// setthermmode (heating mode of a home) and setpersonsaway / setpersonshome
-// (presence of the persons known to the cameras).
+// setthermmode (heating mode of a home), setpersonsaway / setpersonshome
+// (presence of the persons known to the cameras) and webrtc/offer +
+// webrtc/terminate (live view of the WebRTC cameras, issue #70).
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
@@ -33,7 +34,11 @@ const REQUEST_TIMEOUT_MS = 30 * 1000;
  * @param {string} [deps.baseUrl] Netatmo base URL (tests)
  */
 export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATMO_BASE_URL }) {
-  async function requestOnce(path, accessToken, { method = 'GET', form, json } = {}) {
+  async function requestOnce(
+    path,
+    accessToken,
+    { method = 'GET', form, json, timeoutMs = REQUEST_TIMEOUT_MS } = {},
+  ) {
     return fetchImpl(`${baseUrl}${path}`, {
       method,
       headers: {
@@ -46,14 +51,15 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
       ...(json ? { body: JSON.stringify(json) } : {}),
       // A hung connection must never stall a whole refresh cycle (the
       // single-flight would keep returning the stuck promise for minutes).
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   }
 
   /**
    * Authenticated request returning the parsed JSON body.
    * @param {string} path API path (from API_PATHS, may carry a query string)
-   * @param {object} [options] `{method, form}` (form POST) or `{method, json}` (JSON POST)
+   * @param {object} [options] `{method, form}` (form POST) or `{method, json}` (JSON POST),
+   *   plus an optional `timeoutMs` (default 30 s)
    * @returns {Promise<object>} parsed response body
    */
   async function request(path, options = {}) {
@@ -255,6 +261,40 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     return request(API_PATHS.DROP_WEBHOOK, { method: 'POST', form: { app_types: 'app_security' } });
   }
 
+  /**
+   * Relay a WebRTC SDP offer to a camera (issue #70, pyatmo
+   * `WebRTCCameraMixin.async_start_stream`). The offer must carry every ICE
+   * candidate: Netatmo takes no trickle from third-party applications. The
+   * answer is in the `body` of the response (`sdpAnswer`, `session_id`,
+   * `tag_id`, and a `status` of its own: `error` with `error.code` when the
+   * camera cannot stream, under an HTTP 200).
+   * @param {{homeId: string, deviceId: string, sdp: string, sessionId: string,
+   *   timeoutMs?: number}} offer target camera, complete SDP offer, session id
+   * @returns {Promise<object>} parsed response body
+   */
+  async function webRtcOffer({ homeId, deviceId, sdp, sessionId, timeoutMs }) {
+    return request(API_PATHS.WEBRTC_OFFER, {
+      method: 'POST',
+      form: { home_id: homeId, device_id: deviceId, sdp, session_id: sessionId },
+      ...(timeoutMs ? { timeoutMs } : {}),
+    });
+  }
+
+  /**
+   * End a WebRTC session (pyatmo `WebRTCCameraMixin.async_stop_stream`), with
+   * the ids the offer answered.
+   * @param {{homeId: string, deviceId: string, sessionId: string,
+   *   tagId?: string|null}} session target camera and session ids
+   * @returns {Promise<object>} parsed response body
+   */
+  async function webRtcTerminate({ homeId, deviceId, sessionId, tagId }) {
+    const form = { home_id: homeId, device_id: deviceId, session_id: sessionId };
+    if (tagId) {
+      form.tag_id = tagId;
+    }
+    return request(API_PATHS.WEBRTC_TERMINATE, { method: 'POST', form });
+  }
+
   return {
     request,
     getHomesData,
@@ -270,5 +310,7 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     setState,
     addWebhook,
     dropWebhook,
+    webRtcOffer,
+    webRtcTerminate,
   };
 }

@@ -22,6 +22,7 @@ import {
   SUPPORTED_MODULE_TYPE,
   CAMERA_MODULE_TYPES,
   HLS_CAMERA_MODULE_TYPES,
+  WEBRTC_CAMERA_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
   BTICINO_MODULE_TYPES,
   BTICINO_SWITCH_MODULE_TYPES,
@@ -174,9 +175,14 @@ function pushThermPreset(features, homeId, nameDevice, externalId) {
  * @param {object} netatmoDevice raw device from loadDevices()
  * @param {Map<string, {liveUrl: string, quality: string}>} [cameraEnrichments]
  * per-camera live stream data (id → CAMERA_URL/camera_quality params)
+ * @param {object} [options] discovery options
+ * @param {{name: string, value: string}|null} [options.cameraStreamParam] the
+ * GLADYS_CAMERA_STREAM_PROTOCOL param of the WebRTC cameras (issue #70), null
+ * when the SDK or the core cannot relay their live view
  * @returns {object|null} Gladys device payload, or null when not supported
  */
-export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
+export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options = {}) {
+  const { cameraStreamParam = null } = options;
   const { home, name, type: model, room = {}, plug = {} } = netatmoDevice;
   const id = netatmoId(netatmoDevice);
   const homeId = home || netatmoDevice.home_id;
@@ -422,7 +428,8 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       // Video doorbell (issue #35): dashboard image (VPN snapshot) + the ring,
       // fed by the webhook event stream. No monitoring switch (the API offers
       // none for the doorbell) and no CAMERA_URL: it streams over WebRTC only,
-      // which the core rtsp-camera service cannot play.
+      // which the core rtsp-camera service cannot play — its live view is
+      // negotiated by the browser instead (issue #70, param below).
       features.push(
         buildFeatureCamera(nameDevice, externalId),
         buildFeatureDoorbellRing(nameDevice, externalId),
@@ -432,7 +439,8 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
     case SUPPORTED_MODULE_TYPE.NOC:
     case SUPPORTED_MODULE_TYPE.NPC: {
       // The Indoor Camera Advance (issue #55) gets the NACamera feature set.
-      // It streams over WebRTC only: no live-stream params (HLS only, below).
+      // It streams over WebRTC only: no HLS live-stream params (below), the
+      // WebRTC param instead (issue #70).
       features.push(buildFeatureMonitoring(nameDevice, externalId));
       features.push(buildFeatureCamera(nameDevice, externalId));
       // Momentary detections, fed by the webhook event stream (issue #5) —
@@ -526,6 +534,13 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
     default:
       logger.debug(`Skipping unsupported Netatmo device "${nameDevice}" (${model})`);
       return null;
+  }
+
+  // WebRTC live view (issue #70): the browser negotiates the stream, Gladys
+  // relays the signalling to onCameraWebRtcOffer. Upserted on the devices
+  // already created, like every param.
+  if (cameraStreamParam && WEBRTC_CAMERA_MODULE_TYPES.includes(model)) {
+    params.push({ ...cameraStreamParam });
   }
 
   return {

@@ -209,8 +209,8 @@ widget. Two differences, both on Netatmo's side:
 
 - its snapshot is fetched through the Netatmo VPN URL: like the video doorbell,
   this camera does not serve it on the local network;
-- there is no live stream button: it streams over WebRTC only, which the Gladys
-  camera live view cannot play.
+- its live view is negotiated in **WebRTC** (see _WebRTC live view_ below):
+  with an older Gladys, the camera box shows the still image.
 
 > ⚠️ **Netatmo account connected before this version?** This camera needs three
 > new Netatmo permissions (`read_camerapro`, `write_camerapro`,
@@ -233,14 +233,38 @@ created with:
   Plus webhooks (see below): polling alone cannot report a ring;
 - its **Wifi** link quality.
 
-There is no monitoring switch (Netatmo offers none for the doorbell) and no live
-stream button: the doorbell streams over WebRTC only, which the Gladys camera
-live view cannot play.
+There is no monitoring switch (Netatmo offers none for the doorbell). Its live
+view is negotiated in **WebRTC** (see _WebRTC live view_ below): with an older
+Gladys, the camera box shows the still image.
 
 > ⚠️ **Netatmo account connected before this version?** The doorbell needs two
 > new Netatmo permissions (`read_doorbell`, `access_doorbell`): click
 > **Connect** again on the Configuration screen and accept them. Until then the
 > connection status shows a "click Connect again" hint.
+
+### WebRTC live view (doorbell and Indoor Camera Advance)
+
+The video doorbell and the Indoor Camera Advance stream **only in WebRTC**,
+through the Netatmo cloud: no HLS, nothing on the local network. With a Gladys
+version newer than 5.2.1 that includes the WebRTC camera live view
+([Gladys#3215](https://github.com/GladysAssistant/Gladys/pull/3215)), the
+dashboard camera box plays their live video. The browser sets up the stream;
+Gladys and the integration only relay that set-up to Netatmo, and the video
+goes straight from the Netatmo cloud to the browser, at home as through Gladys
+Plus.
+
+- **Older Gladys:** the camera box shows the still image, refreshed
+  automatically, as before. After updating Gladys, save the integration
+  configuration once (or scan again on the **Discovery** screen): the existing
+  doorbell and camera switch to the live view, nothing to recreate.
+- **Stopping:** the live view ends when you pause it, leave the dashboard or
+  close the tab (Gladys ends a forgotten session after 30 seconds).
+- **The live view does not start:** the box shows a message and the last image.
+  Check that the camera is online in the Netatmo app and that the browser
+  supports WebRTC. A strict firewall or VPN can block the WebRTC traffic to the
+  Netatmo cloud. If the connection status or the integration **Logs** ask you to
+  reconnect, the authorization lacks `access_doorbell` / `access_camerapro`:
+  click **Connect** again.
 
 ---
 
@@ -633,6 +657,8 @@ moves what is left.
 - **A shutter command fails with a "reconnect" message:** your Netatmo
   authorization predates the shutter support — click Connect again.
 - **No camera sound:** see the microphone tip in the Cameras section above.
+- **Doorbell or Indoor Camera Advance without live video:** see _WebRTC live
+  view_ in the Video doorbell section (Gladys version, browser, firewall).
 - **"Some Netatmo permissions are missing" status:** a newer version added
   permissions (video doorbell, Indoor Camera Advance, BTicino door entry) — click Connect again and accept them. The
   integration **Logs** list the missing ones.

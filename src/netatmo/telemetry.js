@@ -95,6 +95,8 @@ function withTimeout(promise, ms, message) {
  *   when it recovers
  * @param {object} [deps.bticinoDiagnostic] BTicino diagnostic logger (issue
  *   #59), fed with the BTicino entries of every load
+ * @param {object} [deps.webRtc] WebRTC relay (src/netatmo/webrtc.js): the
+ *   stream-protocol param of the WebRTC cameras in the discovery (issue #70)
  */
 export function createTelemetry({
   gladys,
@@ -105,6 +107,7 @@ export function createTelemetry({
   fetchImpl = fetch,
   onDegradedChange = () => {},
   bticinoDiagnostic = createBticinoDiagnostic(),
+  webRtc = null,
 }) {
   // Last published value per feature external_id: {state, at}.
   const published = new Map();
@@ -567,16 +570,31 @@ export function createTelemetry({
   /** Publish the discovered devices + transport badges for the given load. */
   async function publishDiscovery({ devices: rawDevices, partial }, config) {
     const enrichments = await buildCameraEnrichments(config);
-    const devices = rawDevices
-      .map((rawDevice) => convertDevice(gladys, rawDevice, enrichments))
-      .filter(Boolean);
+    const convertAll = (cameraStreamParam) =>
+      rawDevices
+        .map((rawDevice) => convertDevice(gladys, rawDevice, enrichments, { cameraStreamParam }))
+        .filter(Boolean);
+    const cameraStreamParam = webRtc?.discoveryParam() ?? null;
+    let devices = convertAll(cameraStreamParam);
     if (partial) {
       // publishDiscoveredDevices REPLACES the previous list: a partial load
       // would make devices vanish from the Discovery screen. Keep the last
       // complete list; badges still reflect what was loaded.
       logger.warn('Partial Netatmo load — keeping the previously published discovery list');
     } else {
-      await gladys.publishDiscoveredDevices(devices);
+      try {
+        await gladys.publishDiscoveredDevices(devices);
+      } catch (err) {
+        // A Gladys core without the WebRTC relay (issue #70) rejects the
+        // whole list over the unknown GLADYS_* param: publish it again
+        // without, the doorbell and the Advance keep the still image.
+        if (!cameraStreamParam || !webRtc.isParamRejection(err)) {
+          throw err;
+        }
+        webRtc.rejectedByCore();
+        devices = convertAll(null);
+        await gladys.publishDiscoveredDevices(devices);
+      }
       for (const [id, enrichment] of enrichments) {
         lastLiveUrls.set(id, enrichment.liveUrl);
       }

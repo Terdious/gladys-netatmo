@@ -224,8 +224,9 @@ el widget **Cámaras Netatmo**. Dos diferencias, ambas del lado de Netatmo:
 
 - su captura se obtiene a través de la URL VPN de Netatmo: como el timbre con
   vídeo, esta cámara no la sirve en la red local;
-- no hay botón de transmisión en directo: solo transmite por WebRTC, que la
-  vista en directo de las cámaras de Gladys no puede reproducir.
+- su vídeo en directo se negocia en **WebRTC** (vea _Vídeo en directo WebRTC_
+  más abajo): con un Gladys más antiguo, el recuadro de cámara muestra la
+  imagen fija.
 
 > ⚠️ **¿Cuenta Netatmo conectada antes de esta versión?** Esta cámara necesita
 > tres nuevos permisos de Netatmo (`read_camerapro`, `write_camerapro`,
@@ -251,15 +252,44 @@ se crea con:
   por sí sola no puede reportar un timbrazo;
 - la calidad de su enlace **Wifi**.
 
-No hay interruptor de vigilancia (Netatmo no ofrece ninguno para el timbre) ni
-botón de transmisión en directo: el timbre solo transmite por WebRTC, que la
-vista en directo de las cámaras de Gladys no puede reproducir.
+No hay interruptor de vigilancia (Netatmo no ofrece ninguno para el timbre).
+Su vídeo en directo se negocia en **WebRTC** (vea _Vídeo en directo WebRTC_ más
+abajo): con un Gladys más antiguo, el recuadro de cámara muestra la imagen
+fija.
 
 > ⚠️ **¿Cuenta Netatmo conectada antes de esta versión?** El timbre necesita dos
 > nuevos permisos de Netatmo (`read_doorbell`, `access_doorbell`): vuelva a
 > hacer clic en **Conectar** en la pantalla Configuración y acéptelos. Mientras
 > tanto, el estado de la conexión muestra una invitación a volver a hacer clic
 > en Conectar.
+
+### Vídeo en directo WebRTC (timbre y cámara de interior Advance)
+
+El timbre con vídeo y la cámara de interior Advance transmiten **solo en
+WebRTC**, a través de la nube de Netatmo: ni HLS, ni nada en la red local. Con
+una versión de Gladys posterior a la 5.2.1 que incluya el vídeo en directo
+WebRTC de las cámaras
+([Gladys#3215](https://github.com/GladysAssistant/Gladys/pull/3215)), el
+recuadro de cámara del panel reproduce su vídeo en directo. El navegador
+establece la transmisión; Gladys y la integración solo transmiten ese
+establecimiento a Netatmo, y el vídeo va directamente de la nube de Netatmo al
+navegador, en casa como a través de Gladys Plus.
+
+- **Gladys más antiguo:** el recuadro de cámara muestra la imagen fija,
+  actualizada automáticamente, como antes. Tras actualizar Gladys, guarde una
+  vez la configuración de la integración (o vuelva a escanear en la pantalla
+  **Descubrimiento**): el timbre y la cámara existentes pasan al vídeo en
+  directo, no hay que volver a crearlos.
+- **Detención:** el vídeo en directo se detiene cuando lo pone en pausa, sale
+  del panel o cierra la pestaña (Gladys termina una sesión olvidada al cabo de
+  30 segundos).
+- **El vídeo en directo no arranca:** el recuadro muestra un mensaje y la última
+  imagen. Compruebe que la cámara está en línea en la aplicación Netatmo y que
+  el navegador admite WebRTC. Un cortafuegos estricto o una VPN pueden bloquear
+  el tráfico WebRTC hacia la nube de Netatmo. Si el estado de la conexión o los
+  **Registros** de la integración piden volver a conectar la cuenta, a la
+  autorización le falta `access_doorbell` / `access_camerapro`: vuelva a hacer
+  clic en **Conectar**.
 
 ---
 
@@ -682,6 +712,9 @@ relanzarse: solo mueve lo que queda.
   vuelva a hacer clic en Conectar.
 - **No hay sonido en la cámara:** consulte el consejo sobre el micrófono en la
   sección Cámaras más arriba.
+- **Timbre o cámara de interior Advance sin vídeo en directo:** consulte _Vídeo
+  en directo WebRTC_ en la sección Timbre con vídeo (versión de Gladys,
+  navegador, cortafuegos).
 - **Estado "faltan algunos permisos de Netatmo":** una versión más reciente
   añadió permisos (timbre con vídeo, cámara de interior Advance, portero BTicino) — vuelva a hacer clic en Conectar y
   acéptelos. Los **Registros** de la integración indican cuáles faltan.

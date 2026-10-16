@@ -73,12 +73,13 @@ forum topic.
 - [#61](https://github.com/Terdious/gladys-netatmo/issues/61) Home Coach
   air quality as a standard level (translated, no more French-only text) —
   core PR GladysAssistant/Gladys#3213.
-- Live stream of the WebRTC cameras (video doorbell NDB, Indoor Camera
-  Advance NPC): Netatmo serves them over WebRTC only, which the Gladys
-  camera stream (ffmpeg → HLS) cannot read; until then, snapshot only. Two
-  paths: a core WebRTC player with the signalling relayed to the integration
-  (proposed upstream), or an experimental WebRTC → HTTP bridge inside the
-  integration that `CAMERA_URL` points to.
+- [#70](https://github.com/Terdious/gladys-netatmo/issues/70) WebRTC live
+  view of the video doorbell (NDB) and the Indoor Camera Advance (NPC) —
+  integration side done (offer / terminate relay, stream-protocol param,
+  feature-detected), inert until core PR GladysAssistant/Gladys#3215 and SDK
+  PR GladysAssistant/integration-sdk-js#43 ship; then bump the SDK and
+  validate on a real doorbell. Fallback if the core declines: a WebRTC →
+  HTTP bridge inside the integration that `CAMERA_URL` points to.
 - Floodlight mode as one feature: proposed core light operating-mode type
   (off / on / auto); the two provisional features (#56) will be migrated.
 - [#41](https://github.com/Terdious/gladys-netatmo/issues/41) Siren control
