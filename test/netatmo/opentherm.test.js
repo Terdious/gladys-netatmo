@@ -260,6 +260,8 @@ test('the OTM room is a heated room of the home summary', async () => {
       therm_setpoint_temperature: 20,
       heating_power_request: 30,
       open_window: false,
+      therm_setpoint_mode: 'schedule',
+      therm_setpoint_end_time: undefined,
     },
   ]);
   // The relay alone heats no room of its own.

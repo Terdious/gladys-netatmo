@@ -66,13 +66,13 @@ vous invite à vous reconnecter.
 
 Sous **Appareils à découvrir**, activez les familles que vous possédez :
 
-| Interrupteur         | Découvre                                                                                                     |
-| -------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`), thermostat modulant (`OTM` + `OTH`) |
-| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                            |
-| **Sécurité**         | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires        |
-| **Volets roulants**  | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                            |
-| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                             |
+| Interrupteur         | Découvre                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`), thermostat modulant (`OTM` + `OTH`)                   |
+| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                                              |
+| **Sécurité**         | Caméras intérieure (`NACamera`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires et les personnes connues |
+| **Volets roulants**  | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                                              |
+| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                                               |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -282,11 +282,15 @@ détectée** de la caméra couvre toutes les personnes.
 
 ### Actions
 
-| Action                            | Ce qu'elle fait                                                                                                                            |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Changer le mode du chauffage**  | Planning, Absence ou Hors-gel pour toute la maison ; durée optionnelle en minutes (Absence et Hors-gel : retour au planning ensuite)       |
-| **Marquer une personne absente**  | une personne connue, ou — personne laissée vide — toute la maison vide (réarme la surveillance des caméras réglée pour suivre la présence) |
-| **Marquer une personne présente** | une personne connue, ou — personne laissée vide — toutes les personnes connues                                                             |
+| Action                               | Ce qu'elle fait                                                                                                                                                                                                       |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Changer le mode du chauffage**     | Planning, Absence ou Hors-gel pour toute la maison ; durée optionnelle en minutes (Absence et Hors-gel : retour au planning ensuite)                                                                                  |
+| **Marquer une personne absente**     | une personne connue, ou — personne laissée vide — toute la maison vide (réarme la surveillance des caméras réglée pour suivre la présence)                                                                            |
+| **Marquer une personne présente**    | une personne connue, ou — personne laissée vide — toutes les personnes connues                                                                                                                                        |
+| **Régler la consigne d'une pièce**   | consigne manuelle (7 à 30 °C) de la pièce du thermostat ou de la vanne choisi ; durée optionnelle en minutes, puis retour au planning (vide : la durée par défaut d'une consigne manuelle dans l'application Netatmo) |
+| **Booster une pièce**                | chauffe à pleine puissance (boost) la pièce du thermostat ou de la vanne choisi ; durée optionnelle en minutes (vide : la durée par défaut du boost dans l'application Netatmo)                                       |
+| **Revenir au planning**              | met fin à la consigne manuelle ou au boost de la pièce : elle suit à nouveau le planning                                                                                                                              |
+| **Choisir le planning de chauffage** | active l'un des plannings de chauffage de la maison                                                                                                                                                                   |
 
 La **maison** est celle de l'appareil choisi dans l'action (un thermostat ou une
 vanne pour le chauffage, une caméra pour les personnes). Laissez-le vide si
@@ -294,6 +298,14 @@ votre compte n'a qu'une maison. Le champ personne accepte une variable de scène
 : « Une personne connue arrive → Marquer une personne présente » avec
 l'information **Personne**. Chaque action renvoie le nom de la **Maison** aux
 étapes suivantes.
+
+Les trois actions de **pièce** s'appliquent à la pièce du thermostat ou de la
+vanne choisi (obligatoire) et renvoient aussi le nom de la **Pièce**.
+**Choisir le planning de chauffage** prend le **nom du planning exactement comme
+dans l'application Netatmo** (majuscules / minuscules ignorées) : l'éditeur de
+scènes ne peut pas lister les plannings Netatmo. Un nom inexistant fait échouer
+l'action, et les journaux de la scène citent les plannings de la maison. Elle
+renvoie aussi le nom du **Planning**.
 
 ---
 
@@ -303,11 +315,11 @@ Trois widgets rejoignent le choix des widgets du tableau de bord (Gladys **5.1**
 ou plus récent) : **Éditer le tableau de bord**, ajoutez un widget et cherchez «
 Netatmo ».
 
-| Widget                | Affiche                                                                                                                                                           | Réglages                                                                                                          |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Météo Netatmo**     | les tuiles en direct de la station (températures, humidité, CO2, bruit, pression, pluie, vent) et une ligne d'état par module à la batterie faible ou injoignable | la station (vide : la première) et les mesures affichées : Vue d'ensemble, Intérieur, ou Extérieur, pluie et vent |
-| **Chauffage Netatmo** | le mode du chauffage de la maison, une ligne par pièce (température mesurée → consigne) et les boutons Planning / Hors-gel / Absence                              | un thermostat ou une vanne de la maison (vide : votre unique maison)                                              |
-| **Caméras Netatmo**   | la dernière image de chaque caméra, sa surveillance, et des boutons pour l'activer / la couper                                                                    | une caméra affichée en grand (vide : toutes les caméras en liste)                                                 |
+| Widget                | Affiche                                                                                                                                                                                                                                                                                                   | Réglages                                                                                                          |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Météo Netatmo**     | les tuiles en direct de la station (températures, humidité, CO2, bruit, pression, pluie, vent) et une ligne d'état par module à la batterie faible ou injoignable                                                                                                                                         | la station (vide : la première) et les mesures affichées : Vue d'ensemble, Intérieur, ou Extérieur, pluie et vent |
+| **Chauffage Netatmo** | le mode du chauffage et le planning actif de la maison, une ligne par pièce (température mesurée → consigne, marquée Manuel ou Boost quand la consigne ne vient pas du planning), les boutons Planning / Hors-gel / Absence et, avec plusieurs plannings, un bouton **Changer de planning** qui les liste | un thermostat ou une vanne de la maison (vide : votre unique maison)                                              |
+| **Caméras Netatmo**   | la dernière image de chaque caméra, sa surveillance, et des boutons pour l'activer / la couper                                                                                                                                                                                                            | une caméra affichée en grand (vide : toutes les caméras en liste)                                                 |
 
 Les tuiles suivent les valeurs en direct ; le reste se rafraîchit avec
 l'intégration (2 minutes, ou dès que le mode du chauffage, la surveillance ou
@@ -332,6 +344,29 @@ Quand la famille Sécurité est activée, les accessoires liés à vos caméras 
 - **Détecteur de monoxyde de carbone** (`NCO`) — comme le détecteur de fumée :
   batterie et signal (quand Netatmo les remonte), plus la fonctionnalité
   **Monoxyde de carbone** alimentée par les webhooks.
+
+---
+
+## Personnes connues
+
+Quand la famille Sécurité est activée, chaque maison dont les caméras
+reconnaissent des visages obtient un appareil **« <maison> - Known persons »**,
+avec une fonctionnalité **Presence** par personne nommée dans l'application
+Netatmo : **Présence détectée** quand Netatmo considère la personne à la maison,
+**Pas de présence** quand elle est absente — l'état affiché par l'application
+Netatmo. Utilisez-la dans vos scènes comme n'importe quel détecteur de présence.
+
+- Seules les personnes **nommées** ont une fonctionnalité : un visage inconnu
+  (sans nom dans l'application Netatmo) est ignoré.
+- La présence est actualisée toutes les 2 minutes, et **immédiatement** avec les
+  webhooks Gladys Plus (une personne connue arrive / part) ou après les actions
+  de scène **Marquer une personne absente / présente**.
+- Quand Netatmo ne remonte pas la présence d'une personne, rien n'est publié :
+  la dernière valeur connue reste.
+- Une personne ajoutée, renommée ou supprimée dans l'application Netatmo :
+  cliquez sur **Mettre à jour** sur l'appareil dans l'écran **Découverte** pour
+  ajouter, renommer ou retirer la fonctionnalité. La fonctionnalité suit
+  l'identifiant Netatmo de la personne : un renommage conserve son historique.
 
 ---
 

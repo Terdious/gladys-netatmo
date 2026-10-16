@@ -7,8 +7,11 @@
 // theme. Three widgets:
 //   - netatmo_weather: live tiles bound to the station's features (they follow
 //     the published states, no TTL involved) + module health rows;
-//   - netatmo_heating: one row per heated room (measured → setpoint), the
-//     home's heating mode and one button per mode (setthermmode);
+//   - netatmo_heating: one row per heated room (measured → setpoint, tagged
+//     when the setpoint is manual or a boost), the home's heating mode and
+//     active schedule, one button per mode (setthermmode) and a "Change
+//     schedule" button whose form lists the heating schedules
+//     (switchhomeschedule, issue #58);
 //   - netatmo_cameras: the latest snapshot of each camera, served through
 //     onWidgetGetImage under a content-addressed key (when the bytes change,
 //     the key changes: the core caches an image one hour by key), the
@@ -30,6 +33,7 @@ import {
 import {
   CAMERA_MODULE_TYPES,
   ENERGY_MODULE_TYPES,
+  NETATMO_SETPOINT_MODES,
   NETATMO_THERM_MODES,
   PARAMS,
   SUPPORTED_MODULE_TYPE,
@@ -102,6 +106,27 @@ const TEXTS = {
   allModulesOk: text('All OK', 'Tout va bien', 'Alles in Ordnung', 'Todo bien'),
   unreachable: text('Unreachable', 'Injoignable', 'Nicht erreichbar', 'Inaccesible'),
   heatingMode: text('Heating mode', 'Mode du chauffage', 'Heizmodus', 'Modo de calefacción'),
+  activeSchedule: text(
+    'Active schedule',
+    'Planning actif',
+    'Aktiver Zeitplan',
+    'Programación activa',
+  ),
+  schedule: text('Schedule', 'Planning', 'Zeitplan', 'Programación'),
+  changeSchedule: text(
+    'Change schedule',
+    'Changer de planning',
+    'Zeitplan wechseln',
+    'Cambiar programación',
+  ),
+  setpointManual: text('Manual', 'Manuel', 'Manuell', 'Manual'),
+  setpointBoost: text('Boost', 'Boost', 'Boost', 'Boost'),
+  updateGladys: text(
+    'Update Gladys to choose the schedule from the widget.',
+    'Mettez Gladys à jour pour choisir le planning depuis le widget.',
+    'Aktualisiere Gladys, um den Zeitplan im Widget auszuwählen.',
+    'Actualice Gladys para elegir la programación desde el widget.',
+  ),
   unknownMode: text('Unknown', 'Inconnu', 'Unbekannt', 'Desconocido'),
   monitoring: text('Monitoring', 'Surveillance', 'Überwachung', 'Vigilancia'),
   on: text('On', 'Activée', 'Ein', 'Activada'),
@@ -140,6 +165,14 @@ const lowBattery = (percent) =>
     `Batterie faible (${percent} %)`,
     `Akku schwach (${percent} %)`,
     `Batería baja (${percent} %)`,
+  );
+
+const scheduleSet = (name) =>
+  Object.fromEntries(
+    Object.entries(TEXTS.activeSchedule).map(([language, label]) => [
+      language,
+      `${label}: ${bounded(name, 100)}`,
+    ]),
   );
 
 const modeSet = (mode) =>
@@ -395,6 +428,75 @@ async function getWeatherContent({ gladys, telemetry }, { settings }) {
 const hasHeating = (home) =>
   (home.modules ?? []).some((module) => ENERGY_MODULE_TYPES.includes(module.type));
 
+// Widget action of the schedule button (its form carries the schedule id).
+const SWITCH_SCHEDULE_ACTION = 'switch_schedule';
+// Above this many schedules the form shows a dropdown instead of radio buttons.
+const MAX_RADIO_SCHEDULES = 5;
+
+/** A multi-language text in the request language (English fallback). */
+function inLanguage(value, language) {
+  return value[language] ?? value[String(language ?? '').slice(0, 2)] ?? value.en;
+}
+
+/** Tag of a room whose setpoint is not the schedule's (issue #58). */
+function setpointTagOf(room, language) {
+  if (room.therm_setpoint_mode === NETATMO_SETPOINT_MODES.MAX) {
+    return ` · ${inLanguage(TEXTS.setpointBoost, language)}`;
+  }
+  if (room.therm_setpoint_mode === NETATMO_SETPOINT_MODES.MANUAL) {
+    return ` · ${inLanguage(TEXTS.setpointManual, language)}`;
+  }
+  return '';
+}
+
+function roomIconOf(room) {
+  if (room.open_window) {
+    return 'wind';
+  }
+  if (room.therm_setpoint_mode === NETATMO_SETPOINT_MODES.MAX) {
+    return 'zap';
+  }
+  return room.therm_setpoint_mode === NETATMO_SETPOINT_MODES.MANUAL ? 'edit-2' : 'thermometer';
+}
+
+/** Same multi-language text in every language (a Netatmo name). */
+const sameInEveryLanguage = (value) => text(value, value, value, value);
+
+/**
+ * The "Change schedule" button: a form listing the heating schedules of the
+ * home (widget action fields, Gladys 5.2+), the active one pre-selected. The
+ * content budget allows 4 buttons and the heating modes already take 3: one
+ * button with a form serves any number of schedules.
+ */
+function scheduleButtonOf(home) {
+  const schedules = home.schedules ?? [];
+  const selected = schedules.find((schedule) => schedule.selected);
+  return {
+    type: 'button',
+    label: TEXTS.changeSchedule,
+    icon: 'list',
+    style: 'secondary',
+    action: {
+      key: SWITCH_SCHEDULE_ACTION,
+      params: { home_id: home.id },
+      fields: [
+        {
+          key: 'schedule_id',
+          type: 'select',
+          required: true,
+          display: schedules.length > MAX_RADIO_SCHEDULES ? 'dropdown' : 'radio',
+          label: TEXTS.schedule,
+          options: schedules.map((schedule) => ({
+            value: schedule.id,
+            label: sameInEveryLanguage(bounded(schedule.name, 40)),
+          })),
+          ...(selected ? { default: selected.id } : {}),
+        },
+      ],
+    },
+  };
+}
+
 async function getHeatingContent(ctx, { settings, language, units }) {
   const homes = ctx.telemetry.getHomes();
   if (homes.length === 0) {
@@ -408,25 +510,41 @@ async function getHeatingContent(ctx, { settings, language, units }) {
   const home = resolveHome(ctx, settings?.device, hasHeating, 'a heating');
   const mode = home.therm_mode;
   const style = MODE_STYLE[mode] ?? { color: WIDGET_COLORS.NEUTRAL, icon: 'help-circle' };
+  const schedules = home.schedules ?? [];
+  const activeSchedule = schedules.find((schedule) => schedule.selected);
   const items = [
     {
       label: TEXTS.heatingMode,
       value: THERM_MODE_LABELS[mode] ?? TEXTS.unknownMode,
       ...style,
     },
-    // One row per heated room: measured → setpoint (status holds 10 rows).
-    ...(home.rooms ?? []).slice(0, 9).map((room) => ({
+  ];
+  if (schedules.length > 0) {
+    items.push({
+      label: TEXTS.activeSchedule,
+      value: activeSchedule ? bounded(activeSchedule.name, 40) : TEXTS.unknownMode,
+      icon: 'clock',
+      color: WIDGET_COLORS.PRIMARY,
+    });
+  }
+  // One row per heated room: measured → setpoint (status holds 10 rows), with
+  // a tag when the setpoint is manual or a boost rather than the schedule's.
+  for (const room of (home.rooms ?? []).slice(0, 10 - items.length)) {
+    items.push({
       label: bounded(room.name, 40),
-      value: `${formatTemperature(room.therm_measured_temperature, { language, units })} → ${formatTemperature(room.therm_setpoint_temperature, { language, units })}`,
-      icon: room.open_window ? 'wind' : 'thermometer',
+      value: bounded(
+        `${formatTemperature(room.therm_measured_temperature, { language, units })} → ${formatTemperature(room.therm_setpoint_temperature, { language, units })}${setpointTagOf(room, language)}`,
+        40,
+      ),
+      icon: roomIconOf(room),
       color:
         room.heating_power_request > 0
           ? WIDGET_COLORS.WARNING
           : room.open_window
             ? WIDGET_COLORS.INFO
             : WIDGET_COLORS.NEUTRAL,
-    })),
-  ];
+    });
+  }
   const buttons = THERM_MODE_PRESETS.map(({ mode: buttonMode }) => ({
     type: 'button',
     label: THERM_MODE_LABELS[buttonMode],
@@ -434,6 +552,9 @@ async function getHeatingContent(ctx, { settings, language, units }) {
     style: buttonMode === mode ? 'primary' : 'secondary',
     action: { key: `mode_${buttonMode}`, params: { home_id: home.id, mode: buttonMode } },
   }));
+  if (schedules.length > 1) {
+    buttons.push(scheduleButtonOf(home));
+  }
   return {
     ttl_seconds: 120,
     components: [
@@ -444,7 +565,41 @@ async function getHeatingContent(ctx, { settings, language, units }) {
   };
 }
 
-async function heatingAction({ client, refresh }, { actionKey, params }) {
+/** The "Change schedule" form was sent: switchhomeschedule on the home. */
+async function switchScheduleAction({ client, refresh, telemetry }, { params, values }) {
+  const homeId = params?.home_id;
+  if (!homeId) {
+    throw new Error(`Unknown widget action: ${SWITCH_SCHEDULE_ACTION}`);
+  }
+  const scheduleId = values?.schedule_id;
+  if (typeof scheduleId !== 'string' || scheduleId === '') {
+    // An older core drops the action fields and sends no values.
+    throw new Error(TEXTS.updateGladys.en);
+  }
+  const home = telemetry?.getHomes().find((entry) => entry.id === homeId);
+  const schedule = home?.schedules?.find((entry) => entry.id === scheduleId);
+  if (home && !schedule) {
+    throw new Error(`Unknown heating schedule ${scheduleId} for the Netatmo home ${home.name}`);
+  }
+  logger.info(`Widget action: heating schedule of ${homeId} -> ${scheduleId}`);
+  try {
+    await client.switchHomeSchedule(homeId, scheduleId);
+  } catch (err) {
+    rethrowScopeError(err);
+  }
+  if (refresh) {
+    Promise.resolve()
+      .then(refresh)
+      .catch((err) => logger.warn(`Refresh after the schedule change failed: ${err.message}`));
+  }
+  return scheduleSet(schedule?.name ?? scheduleId);
+}
+
+async function heatingAction(ctx, { actionKey, params, values }) {
+  if (actionKey === SWITCH_SCHEDULE_ACTION) {
+    return switchScheduleAction(ctx, { params, values });
+  }
+  const { client, refresh } = ctx;
   const mode = params?.mode;
   if (actionKey !== `mode_${mode}` || !THERM_MODE_LABELS[mode] || !params?.home_id) {
     throw new Error(`Unknown widget action: ${actionKey}`);
@@ -629,7 +784,7 @@ async function camerasAction({ gladys, client, refresh }, { actionKey, params })
 // --- Registry ------------------------------------------------------------------
 
 // One entry per declared widget: get(ctx, {settings, language, units}) and an
-// optional action(ctx, {actionKey, params, settings}). ctx is
+// optional action(ctx, {actionKey, params, settings, values}). ctx is
 // {gladys, client, telemetry, refresh}.
 export const WIDGETS = {
   [WIDGET_KEYS.WEATHER]: { get: getWeatherContent },

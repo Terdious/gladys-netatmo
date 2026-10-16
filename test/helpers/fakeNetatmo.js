@@ -3,11 +3,12 @@
 //   - POST /oauth2/token: authorization_code and refresh_token grants,
 //     with rotating refresh tokens (like the real Netatmo);
 //   - Bearer-protected API: homesdata, homestatus, getthermostatsdata,
-//     getstationsdata, setroomthermpoint, setthermmode, setpersonsaway and
-//     setpersonshome (form), gethomecoachsdata, setstate (JSON);
+//     getstationsdata, setroomthermpoint, switchhomeschedule, setthermmode,
+//     setpersonsaway and setpersonshome (form), gethomecoachsdata, setstate
+//     (JSON);
 //   - two fake cameras (/vpn/<id> and /local/<id>: command/ping + snapshot).
 // Behaviour toggles (`failTokenWith`, `rejectAccessToken`, `failSetpointWith`,
-// `failHomesWith`, `failLocalSnapshot`) let the tests exercise the failure
+// `failSwitchScheduleWith`, `failHomesWith`, `failLocalSnapshot`) let the tests exercise the failure
 // paths. `overrides` (path prefix → {status, body}) short-circuits the normal
 // routes of /oauth2/token and /api/* with a canned answer (default HTTP 200),
 // for the degraded payload shapes (`status: 'error'`, missing fields...).
@@ -67,6 +68,13 @@ function buildDefaultHomes() {
         { id: 'person-1', pseudo: 'Alice', url: 'https://example.invalid/alice.jpg' },
         { id: 'person-2', pseudo: 'Bob', url: 'https://example.invalid/bob.jpg' },
       ],
+      // Schedules (issue #58), pyatmo homesdata.json shape: two heating
+      // schedules (one selected) and a cooling one that is not a heating schedule.
+      schedules: [
+        { id: 'schedule-week', name: 'Semaine', type: 'therm', selected: true, default: false },
+        { id: 'schedule-holidays', name: 'Vacances', type: 'therm', default: false },
+        { id: 'schedule-cooling', name: 'Default', type: 'cooling', default: false },
+      ],
     },
   ];
 }
@@ -83,6 +91,7 @@ function buildDefaultHomeStatuses() {
             id: 'room-1',
             therm_measured_temperature: 19.5,
             therm_setpoint_temperature: 21,
+            therm_setpoint_mode: 'schedule',
             open_window: false,
             heating_power_request: 0,
           },
@@ -90,6 +99,9 @@ function buildDefaultHomeStatuses() {
             id: 'room-2',
             therm_measured_temperature: 17,
             therm_setpoint_temperature: 19,
+            // A manual setpoint until a given time (issue #58).
+            therm_setpoint_mode: 'manual',
+            therm_setpoint_end_time: 1800003600,
             open_window: true,
             heating_power_request: 42,
           },
@@ -121,6 +133,12 @@ function buildDefaultHomeStatuses() {
           { id: 'co-1', type: 'NCO', battery_percent: 92 },
         ],
         errors: [{ code: 6, id: 'valve-2' }],
+        // Presence of the known persons (issue #57), pyatmo homestatus shape:
+        // out_of_sight true = away.
+        persons: [
+          { id: 'person-1', last_seen: 1557071156, out_of_sight: false },
+          { id: 'person-2', last_seen: 1559282761, out_of_sight: true },
+        ],
       },
     },
   };
@@ -416,6 +434,8 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     rejectAccessToken: null, // set to a token value to answer 401 for it
     failSetpointWith: null, // set to {status, body} to make setroomthermpoint fail
     setpointRequests: [], // every parsed form POSTed to /api/setroomthermpoint
+    switchScheduleRequests: [], // every parsed form POSTed to /api/switchhomeschedule
+    failSwitchScheduleWith: null, // set to {status, body} to make switchhomeschedule fail
     setStateRequests: [], // every parsed JSON body POSTed to /api/setstate
     setThermModeRequests: [], // every parsed form POSTed to /api/setthermmode
     setPersonsAwayRequests: [], // every raw form body POSTed to /api/setpersonsaway
@@ -597,10 +617,49 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           return;
         }
         if (req.method === 'POST' && req.url.startsWith('/api/setroomthermpoint')) {
-          state.setpointRequests.push(Object.fromEntries(new URLSearchParams(body)));
+          const form = Object.fromEntries(new URLSearchParams(body));
+          state.setpointRequests.push(form);
           if (state.failSetpointWith) {
             respond(state.failSetpointWith.body, state.failSetpointWith.status);
             return;
+          }
+          // Like the real cloud: the next homestatus reports the new setpoint
+          // mode of the room (`home` reads back as `schedule`).
+          const room = state.homeStatuses[form.home_id]?.home.rooms?.find(
+            (entry) => entry.id === form.room_id,
+          );
+          if (room) {
+            room.therm_setpoint_mode = form.mode === 'home' ? 'schedule' : form.mode;
+            if (form.temp !== undefined) {
+              room.therm_setpoint_temperature = Number(form.temp);
+            }
+            if (form.endtime !== undefined) {
+              room.therm_setpoint_end_time = Number(form.endtime);
+            } else {
+              delete room.therm_setpoint_end_time;
+            }
+          }
+          respond({ status: 'ok' });
+          return;
+        }
+        if (req.method === 'POST' && req.url.startsWith('/api/switchhomeschedule')) {
+          const form = Object.fromEntries(new URLSearchParams(body));
+          state.switchScheduleRequests.push(form);
+          if (state.failSwitchScheduleWith) {
+            respond(state.failSwitchScheduleWith.body, state.failSwitchScheduleWith.status);
+            return;
+          }
+          const home = state.homes.find((entry) => entry.id === form.home_id);
+          const schedules = home?.schedules ?? [];
+          if (!schedules.some((schedule) => schedule.id === form.schedule_id)) {
+            respond({ error: { code: 21, message: 'Invalid schedule id' } }, 400);
+            return;
+          }
+          // Like the real cloud: the next homesdata reports the selected schedule.
+          for (const schedule of schedules) {
+            if (schedule.type === 'therm' || schedule.type === undefined) {
+              schedule.selected = schedule.id === form.schedule_id;
+            }
           }
           respond({ status: 'ok' });
           return;

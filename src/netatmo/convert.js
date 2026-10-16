@@ -22,6 +22,7 @@ import {
   SUPPORTED_MODULE_TYPE,
   CAMERA_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
+  VIRTUAL_DEVICE_TYPE,
   PARAMS,
 } from './constants.js';
 import { netatmoId } from './discovery.js';
@@ -59,6 +60,7 @@ import {
   buildFeatureShutterPosition,
   buildFeatureHealthIndex,
   buildFeatureHealthLevel,
+  buildFeaturePersonPresence,
 } from './features.js';
 
 const logger = createLogger({ name: 'netatmo-convert' });
@@ -424,6 +426,16 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
         buildFeaturePressure(`Absolute pressure - ${nameDevice}`, externalId, 'absolute_pressure'),
         buildFeatureHealthIndex(nameDevice, externalId),
         buildFeatureHealthLevel(nameDevice, externalId),
+      );
+      break;
+    case VIRTUAL_DEVICE_TYPE.KNOWN_PERSONS:
+      // Known persons of a home (issue #57): one presence feature per named
+      // person, keyed by the Netatmo person id (a rename only changes the
+      // feature name).
+      features.push(
+        ...(netatmoDevice.persons ?? []).map((person) =>
+          buildFeaturePersonPresence(person.pseudo, externalId, person.id),
+        ),
       );
       break;
     default:

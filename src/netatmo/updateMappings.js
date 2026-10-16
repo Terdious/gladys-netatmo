@@ -6,9 +6,17 @@
 // Key order drives the emission order of the states. A value extractor
 // returning undefined/null means "no value available, skip the emission"
 // (core PR #2617: legitimate zeros are values, absences are not).
+//
+// A device whose features depend on its own payload (the known persons of a
+// home, issue #57) maps to a FUNCTION of the raw device returning that table.
 // -----------------------------------------------------------------------------
 
-import { SUPPORTED_MODULE_TYPE, COVER_STATE } from './constants.js';
+import {
+  SUPPORTED_MODULE_TYPE,
+  COVER_STATE,
+  VIRTUAL_DEVICE_TYPE,
+  PERSON_PRESENCE_SUFFIX_PREFIX,
+} from './constants.js';
 import { healthIndexToAqi, healthIndexToLevel } from './deviceMapping.js';
 
 /**
@@ -54,6 +62,21 @@ function boilerFault(deviceNetatmo) {
     return true;
   }
   return deviceNetatmo.homestatus ? false : undefined;
+}
+
+/**
+ * Presence table of the known persons of a home (issue #57): one suffix per
+ * named person, at home (true) when homestatus says `out_of_sight: false`,
+ * away (false) when true. A person homestatus does not report has no
+ * boolean there: no value, nothing published.
+ */
+function knownPersonsMapping(deviceNetatmo) {
+  return Object.fromEntries(
+    (deviceNetatmo.persons ?? []).map((person) => [
+      `${PERSON_PRESENCE_SUFFIX_PREFIX}${person.id}`,
+      () => (typeof person.out_of_sight === 'boolean' ? !person.out_of_sight : undefined),
+    ]),
+  );
 }
 
 export const UPDATE_MAPPINGS = {
@@ -253,4 +276,5 @@ export const UPDATE_MAPPINGS = {
     health_level: (deviceNetatmo) => healthIndexToLevel(deviceNetatmo.dashboard_data?.health_idx),
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
+  [VIRTUAL_DEVICE_TYPE.KNOWN_PERSONS]: knownPersonsMapping,
 };

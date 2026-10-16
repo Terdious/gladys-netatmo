@@ -13,7 +13,15 @@ import { normalizeConfig } from '../../src/config.js';
 import { createNetatmoClient } from '../../src/netatmo/client.js';
 import { createTelemetry } from '../../src/netatmo/telemetry.js';
 import { createEvents, eventPersonsOf } from '../../src/netatmo/events.js';
-import { SCENE_ACTIONS, endtimeOf, findPerson, resolveHome } from '../../src/netatmo/scenes.js';
+import {
+  SCENE_ACTIONS,
+  endtimeOf,
+  findPerson,
+  findSchedule,
+  resolveHome,
+  resolveRoom,
+  setpointOf,
+} from '../../src/netatmo/scenes.js';
 import { startFakeNetatmo } from '../helpers/fakeNetatmo.js';
 
 const manifest = JSON.parse(
@@ -394,4 +402,152 @@ test('findPerson and endtimeOf helpers', () => {
     NOW / 1000 + 600,
   );
   assert.throws(() => endtimeOf(60 * 24 * 31, () => NOW), /Invalid duration/);
+});
+
+// --- Advanced heating (issue #58) -------------------------------------------------
+
+test('set_room_setpoint sets a manual setpoint on the room of the device, for a duration', async () => {
+  let refreshed = false;
+  const outputs = await SCENE_ACTIONS.set_room_setpoint(
+    ctx({ refresh: async () => (refreshed = true) }),
+    { device: 'ext:netatmo:valve-1', temperature: 20.3, duration_minutes: 45 },
+  );
+  assert.deepEqual(outputs, { home_name: 'Maison', room_name: 'Chambre' });
+  await SCENE_ACTIONS.set_room_setpoint(ctx(), {
+    device: 'ext:netatmo:therm-1',
+    temperature: '18',
+  });
+  assert.deepEqual(netatmo.state.setpointRequests, [
+    {
+      home_id: 'home-1',
+      room_id: 'room-2',
+      mode: 'manual',
+      temp: '20.5',
+      endtime: String(NOW / 1000 + 45 * 60),
+    },
+    { home_id: 'home-1', room_id: 'room-1', mode: 'manual', temp: '18' },
+  ]);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(refreshed, true);
+});
+
+test('boost_room boosts the room, back_to_schedule returns it to the schedule', async () => {
+  assert.deepEqual(
+    await SCENE_ACTIONS.boost_room(ctx(), {
+      device: 'ext:netatmo:therm-1',
+      duration_minutes: 30,
+    }),
+    { home_name: 'Maison', room_name: 'Salon' },
+  );
+  await SCENE_ACTIONS.boost_room(ctx(), { device: 'ext:netatmo:therm-1' });
+  await SCENE_ACTIONS.room_back_to_schedule(ctx(), { device: 'ext:netatmo:therm-1' });
+  assert.deepEqual(netatmo.state.setpointRequests, [
+    { home_id: 'home-1', room_id: 'room-1', mode: 'max', endtime: String(NOW / 1000 + 1800) },
+    { home_id: 'home-1', room_id: 'room-1', mode: 'max' },
+    { home_id: 'home-1', room_id: 'room-1', mode: 'home' },
+  ]);
+  // Like the cloud, the next load reads the room back on the schedule.
+  await telemetry.refreshValues(config);
+  const room = telemetry.getHomes()[0].rooms.find((entry) => entry.id === 'room-1');
+  assert.equal(room.therm_setpoint_mode, 'schedule');
+});
+
+test('the room actions refuse a missing device, a non-heating device and a bad setpoint', async () => {
+  await assert.rejects(SCENE_ACTIONS.boost_room(ctx(), {}), /Choose the thermostat or valve/);
+  await assert.rejects(
+    SCENE_ACTIONS.room_back_to_schedule(ctx(), { device: 'ext:netatmo:camera-1' }),
+    /is not a Netatmo thermostat or valve/,
+  );
+  await assert.rejects(
+    SCENE_ACTIONS.room_back_to_schedule(ctx(), { device: 'ext:other:x' }),
+    /not a Netatmo device/,
+  );
+  await assert.rejects(
+    SCENE_ACTIONS.set_room_setpoint(ctx(), { device: 'ext:netatmo:therm-1', temperature: 35 }),
+    /Invalid setpoint 35/,
+  );
+  await assert.rejects(
+    SCENE_ACTIONS.set_room_setpoint(ctx(), {
+      device: 'ext:netatmo:therm-1',
+      temperature: 20,
+      duration_minutes: 0,
+    }),
+    /Invalid duration/,
+  );
+  assert.equal(netatmo.state.setpointRequests.length, 0);
+});
+
+test('the room actions surface the missing-scope message', async () => {
+  netatmo.state.failSetpointWith = { status: 403, body: { error: { code: 13, message: 'scope' } } };
+  await assert.rejects(
+    SCENE_ACTIONS.boost_room(ctx(), { device: 'ext:netatmo:therm-1' }),
+    /reconnect your Netatmo/,
+  );
+});
+
+test('set_heating_schedule switches to the schedule named in the scene, case ignored', async () => {
+  let refreshed = false;
+  const outputs = await SCENE_ACTIONS.set_heating_schedule(
+    ctx({ refresh: async () => (refreshed = true) }),
+    { schedule: '  vacances ' },
+  );
+  assert.deepEqual(outputs, { home_name: 'Maison', schedule_name: 'Vacances' });
+  await SCENE_ACTIONS.set_heating_schedule(ctx(), {
+    device: 'ext:netatmo:valve-1',
+    schedule: 'schedule-week',
+  });
+  assert.deepEqual(netatmo.state.switchScheduleRequests, [
+    { home_id: 'home-1', schedule_id: 'schedule-holidays' },
+    { home_id: 'home-1', schedule_id: 'schedule-week' },
+  ]);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(refreshed, true);
+});
+
+test('set_heating_schedule names the available schedules when the name is unknown', async () => {
+  await assert.rejects(
+    SCENE_ACTIONS.set_heating_schedule(ctx(), { schedule: 'Default' }),
+    /"Default" is not a heating schedule of the Netatmo home Maison \(available: "Semaine", "Vacances"\)/,
+  );
+  netatmo.state.failSwitchScheduleWith = {
+    status: 403,
+    body: { error: { code: 13, message: 'scope' } },
+  };
+  await assert.rejects(
+    SCENE_ACTIONS.set_heating_schedule(ctx(), { schedule: 'Semaine' }),
+    /reconnect your Netatmo/,
+  );
+});
+
+test('resolveRoom, setpointOf and findSchedule helpers', () => {
+  const room = resolveRoom(ctx(), 'ext:netatmo:valve-1');
+  assert.equal(room.roomId, 'room-2');
+  assert.equal(room.home.id, 'home-1');
+  // A room the summary does not list yet: named from the device params.
+  const unlisted = {
+    gladys: {
+      devices: [
+        {
+          external_id: 'ext:netatmo:v9',
+          model: 'NRV',
+          params: [
+            { name: 'home_id', value: 'h9' },
+            { name: 'room_id', value: 'r9' },
+            { name: 'room_name', value: 'Grenier' },
+          ],
+        },
+      ],
+    },
+    telemetry: { getHomes: () => [] },
+  };
+  assert.equal(resolveRoom(unlisted, 'ext:netatmo:v9').roomName, 'Grenier');
+  assert.equal(setpointOf(7), 7);
+  assert.equal(setpointOf(' 21.74 '), 21.5);
+  assert.throws(() => setpointOf('abc'), /Invalid setpoint/);
+  assert.throws(() => setpointOf(6.5), /Invalid setpoint/);
+  const home = { name: 'H', schedules: [{ id: 'S1', name: 'Hiver ', selected: true }] };
+  assert.equal(findSchedule(home, 'HIVER').id, 'S1');
+  assert.equal(findSchedule(home, 's1').name, 'Hiver ');
+  assert.throws(() => findSchedule(home, ''), /available: "Hiver "/);
+  assert.throws(() => findSchedule({ name: 'H' }, 'x'), /has no heating schedule known yet/);
 });
