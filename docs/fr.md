@@ -198,6 +198,44 @@ une scène, utilisez donc le déclencheur « la valeur passe à Oui ».
 
 ---
 
+## Scènes : déclencheurs et actions Netatmo
+
+L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys **5.1** ou
+plus récent) : choisissez **Déclencheur d'intégration** ou **Action
+d'intégration**, puis l'entrée Netatmo.
+
+### Déclencheurs (nécessitent les webhooks Gladys Plus)
+
+| Déclencheur                    | Se déclenche quand                               | Informations transmises aux actions |
+| ------------------------------ | ------------------------------------------------ | ----------------------------------- |
+| **Une personne connue arrive** | une caméra intérieure reconnaît un visage connu  | Personne, Caméra, Maison            |
+| **Une personne connue part**   | Netatmo marque une personne connue comme absente | Personne, Caméra, Maison            |
+| **La sirène sonne**            | une sirène intérieure se met à sonner            | Sirène, Maison                      |
+
+Filtres optionnels : la **caméra** (ou la sirène) — vide = n'importe laquelle —
+et la **personne** : tapez le nom **exactement comme dans l'application
+Netatmo** (l'éditeur de scènes ne peut pas lister les personnes Netatmo ; un
+champ vide = n'importe quelle personne connue). Un visage non reconnu ne
+déclenche jamais « Une personne connue arrive » — la fonctionnalité **Personne
+détectée** de la caméra couvre toutes les personnes.
+
+### Actions
+
+| Action                            | Ce qu'elle fait                                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Changer le mode du chauffage**  | Planning, Absence ou Hors-gel pour toute la maison ; durée optionnelle en minutes (Absence et Hors-gel : retour au planning ensuite)       |
+| **Marquer une personne absente**  | une personne connue, ou — personne laissée vide — toute la maison vide (réarme la surveillance des caméras réglée pour suivre la présence) |
+| **Marquer une personne présente** | une personne connue, ou — personne laissée vide — toutes les personnes connues                                                             |
+
+La **maison** est celle de l'appareil choisi dans l'action (un thermostat ou une
+vanne pour le chauffage, une caméra pour les personnes). Laissez-le vide si
+votre compte n'a qu'une maison. Le champ personne accepte une variable de scène
+: « Une personne connue arrive → Marquer une personne présente » avec
+l'information **Personne**. Chaque action renvoie le nom de la **Maison** aux
+étapes suivantes.
+
+---
+
 ## Accessoires de sécurité (bridgés par caméra)
 
 Quand la famille Sécurité est activée, les accessoires liés à vos caméras sont

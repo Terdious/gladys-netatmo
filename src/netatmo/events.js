@@ -14,13 +14,53 @@
 // Each detection is published as 1, then automatically back to 0 after
 // EVENT_RESET_MS: the stream carries no "cleared" counterpart, and a feature
 // stuck at 1 would make a scene trigger fire once and never again.
+//
+// Some events carry an IDENTITY no feature can hold (issue #39): which known
+// person a camera recognized, which person left, which siren sounds. They are
+// fired as scene events (manifest `scene_triggers`, Gladys 5.1+) — a trigger,
+// never a state: one event per Netatmo event, never re-fired.
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
 
-import { EVENT_FEATURE_SUFFIXES, EVENT_RESET_MS } from './constants.js';
+import {
+  EVENT_FEATURE_SUFFIXES,
+  EVENT_RESET_MS,
+  SCENE_TRIGGERS,
+  SCENE_EVENT_DEDUP_SIZE,
+} from './constants.js';
 
 const logger = createLogger({ name: 'netatmo-events' });
+
+// Every scene trigger key this module fires: each one must be declared in the
+// manifest `scene_triggers` field (the core answers 404 otherwise).
+export const SCENE_TRIGGER_KEYS = Object.values(SCENE_TRIGGERS);
+
+// Webhook event name -> scene trigger key of the person events.
+const PERSON_EVENT_TRIGGERS = {
+  person: SCENE_TRIGGERS.KNOWN_PERSON_ARRIVED,
+  person_away: SCENE_TRIGGERS.KNOWN_PERSON_LEFT,
+};
+
+/**
+ * The persons a webhook payload is about: the `persons` array of a camera
+ * `person` event (`[{id, is_known, face_url…}]`), or a single `person_id`.
+ * Malformed entries are skipped.
+ * @param {object} payload parsed webhook body
+ * @returns {Array<{id: string, is_known?: boolean}>} the persons
+ */
+export function eventPersonsOf(payload) {
+  const persons = Array.isArray(payload?.persons)
+    ? payload.persons.filter((person) => person && typeof person.id === 'string')
+    : [];
+  if (persons.length > 0) {
+    return persons;
+  }
+  if (typeof payload?.person_id === 'string') {
+    return [{ id: payload.person_id, is_known: payload.is_known }];
+  }
+  return [];
+}
 
 /**
  * Extract the event name of a webhook payload: the part after the module-type
@@ -49,17 +89,115 @@ export function eventDeviceIdOf(payload) {
 /**
  * Create the momentary-event engine.
  * @param {object} deps dependencies
- * @param {object} deps.gladys SDK instance (devices, publishStates, externalId)
+ * @param {object} deps.gladys SDK instance (devices, publishStates,
+ * publishSceneEvent, externalId)
+ * @param {() => Array<object>} [deps.getHomes] homes summaries of the last
+ * account load (names, known persons, modules — see discovery summarizeHome)
  * @param {number} [deps.resetMs] auto-reset delay (tests)
  * @param {{setTimeout: Function, clearTimeout: Function}} [deps.timers] injectable timers (tests)
  */
 export function createEvents({
   gladys,
+  getHomes = () => [],
   resetMs = EVENT_RESET_MS,
   timers = { setTimeout, clearTimeout },
 }) {
   // Pending auto-resets, keyed by feature external id.
   const resetTimers = new Map();
+  // Recently fired scene events (dedup of re-delivered webhooks), in order.
+  const firedSceneEvents = new Set();
+
+  /** Fire one scene event, defensively (an older core answers 404, a burst 429). */
+  async function fireSceneEvent(key, data, dedupKey) {
+    if (dedupKey) {
+      if (firedSceneEvents.has(dedupKey)) {
+        logger.debug(`Scene event ${key} already fired for ${dedupKey} — duplicate ignored`);
+        return false;
+      }
+      firedSceneEvents.add(dedupKey);
+      if (firedSceneEvents.size > SCENE_EVENT_DEDUP_SIZE) {
+        firedSceneEvents.delete(firedSceneEvents.values().next().value);
+      }
+    }
+    try {
+      await gladys.publishSceneEvent(key, data);
+      logger.info(`Scene event ${key} fired`);
+      return true;
+    } catch (err) {
+      logger.warn(`Scene event ${key} refused: ${err.message}`);
+      return false;
+    }
+  }
+
+  /** The home a payload is about: its `home_id`, else the home of the module. */
+  function homeOf(payload, moduleId) {
+    const homes = getHomes();
+    const homeId = payload.home_id ?? payload.home?.id;
+    return (
+      homes.find((home) => home.id === homeId) ??
+      homes.find((home) => (home.modules ?? []).some((module) => module.id === moduleId))
+    );
+  }
+
+  /**
+   * Name of a module for the scene variables: the name the user gave the
+   * device in Gladys, else its Netatmo name.
+   */
+  function moduleNameOf(home, moduleId) {
+    const externalId = gladys.externalId(moduleId);
+    const device = (gladys.devices ?? []).find((d) => d.external_id === externalId);
+    const netatmoName = (home?.modules ?? []).find((module) => module.id === moduleId)?.name;
+    return device?.name ?? netatmoName ?? null;
+  }
+
+  /**
+   * Fire the scene events a webhook payload carries (issue #39): a known
+   * person seen / gone, a siren sounding.
+   * @param {object} payload parsed webhook body
+   * @param {string|undefined} eventName event name (eventNameOf)
+   * @returns {Promise<number>} number of scene events fired
+   */
+  async function fireSceneEvents(payload, eventName) {
+    let fired = 0;
+    const moduleId = eventDeviceIdOf(payload);
+    const home = homeOf(payload, moduleId);
+    const homeName = home?.name ?? payload.home_name ?? null;
+    const personTrigger = PERSON_EVENT_TRIGGERS[eventName];
+    if (personTrigger) {
+      for (const person of eventPersonsOf(payload)) {
+        const knownPerson = (home?.persons ?? []).find((entry) => entry.id === person.id);
+        // An unrecognized face is not a "known person" (is_known false), and
+        // neither is an id the homes data does not know without the flag.
+        if (person.is_known === false || (!knownPerson && person.is_known !== true)) {
+          continue;
+        }
+        const data = {
+          camera: moduleId ? gladys.externalId(moduleId) : null,
+          person: knownPerson?.pseudo ?? null,
+          camera_name: moduleId ? moduleNameOf(home, moduleId) : null,
+          home_name: homeName,
+        };
+        const dedupKey = payload.event_id ? `${payload.event_id}:${person.id}` : undefined;
+        if (await fireSceneEvent(personTrigger, data, dedupKey)) {
+          fired += 1;
+        }
+      }
+    }
+    // siren_sounding: sub_type 0 reports the END of the sound — not an event
+    // a scene waits for; anything else is the siren starting.
+    if (eventName === 'siren_sounding' && moduleId && Number(payload.sub_type) !== 0) {
+      const data = {
+        siren: gladys.externalId(moduleId),
+        siren_name: moduleNameOf(home, moduleId),
+        home_name: homeName,
+      };
+      const dedupKey = payload.event_id ? `${payload.event_id}:${moduleId}` : undefined;
+      if (await fireSceneEvent(SCENE_TRIGGERS.SIREN_SOUNDING, data, dedupKey)) {
+        fired += 1;
+      }
+    }
+    return fired;
+  }
 
   /** Publish one feature state, defensively (a failing publish must not throw). */
   async function publish(featureExternalId, state) {
@@ -103,6 +241,7 @@ export function createEvents({
       return undefined;
     }
     const eventName = eventNameOf(payload);
+    await fireSceneEvents(payload, eventName);
     const suffix = eventName ? EVENT_FEATURE_SUFFIXES[eventName] : undefined;
     if (!suffix) {
       // Connection/disconnection, on/off, daily summary…: nothing momentary to
@@ -141,5 +280,5 @@ export function createEvents({
     resetTimers.clear();
   }
 
-  return { handleWebhook, stop, pendingResets: () => resetTimers.size };
+  return { handleWebhook, fireSceneEvents, stop, pendingResets: () => resetTimers.size };
 }

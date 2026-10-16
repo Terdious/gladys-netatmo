@@ -33,6 +33,11 @@ capabilities land (Home + Security cameras, webhooks, …).
 - **Heating mode**: the home's mode (schedule / away / frost guard) as a
   writable thermostat preset on every thermostat and valve (`setthermmode`,
   then an immediate refresh).
+- **Scene triggers and actions** (Gladys 5.1+): "a known person arrives /
+  leaves" and "the siren sounds" fired from the webhook events with the
+  person, camera and home names; "change the heating mode" (optional
+  duration) and "mark a person as away / at home" (`setpersonsaway` /
+  `setpersonshome`).
 - **Cameras** (opt-in via the `security_api` toggle, like the core): indoor
   `NACamera` and outdoor `NOC` cameras are discovered from the same
   homesdata/homestatus payloads, with WiFi quality, a **writable monitoring
@@ -131,6 +136,7 @@ never appear on the configuration form.
 │  │  ├─ deviceMapping.js            # value transforms (read/write)
 │  │  ├─ telemetry.js                # 120s refresh loop, dedup, transport badges
 │  │  ├─ camera.js                   # snapshots: local-first URL, ≤150KB pipeline
+│  │  ├─ scenes.js                   # scene actions (heating mode, persons)
 │  │  └─ setValue.js                 # setpoint, heating mode, camera monitoring
 │  └─ config.js                      # config defaults + normalization
 ├─ gladys-assistant-integration.json # manifest (name, config schema, image…)

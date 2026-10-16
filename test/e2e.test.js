@@ -206,3 +206,14 @@ test('saving the configuration re-runs the discovery automatically', async () =>
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:camera-1'));
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:doortag-1'));
 });
+
+test('a scene action reaches its handler through the real SDK wiring', async () => {
+  // The account was loaded by the previous steps: its single home is known.
+  const result = await sendAndWaitResult(EXTERNAL_INTEGRATION.SCENE_ACTION_RUN, {
+    key: 'set_heating_mode',
+    fields: { mode: 'hg' },
+  });
+  assert.equal(result.success, true);
+  assert.deepEqual(result.data.outputs, { home_name: 'Maison' });
+  assert.deepEqual(netatmo.state.setThermModeRequests.at(-1), { home_id: 'home-1', mode: 'hg' });
+});

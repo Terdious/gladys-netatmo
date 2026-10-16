@@ -31,7 +31,8 @@ export function getDeviceParam(device, name) {
   return (device.params ?? []).find((param) => param.name === name)?.value;
 }
 
-function rethrowScopeError(err) {
+/** Rethrow a Netatmo error, a missing write scope with an actionable message. */
+export function rethrowScopeError(err) {
   if (err.status === 403 && err.body?.error?.code === 13) {
     // Core behaviour: scope-rights failure gets its own actionable message.
     throw new Error(

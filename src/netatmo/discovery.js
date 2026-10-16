@@ -216,6 +216,36 @@ export async function loadWeatherStationDetails(client, config) {
 }
 
 /**
+ * Summary of one homesdata home for the features that are not device states
+ * (issue #39 scene triggers and actions, issue #40 widgets): its name, its
+ * known persons (face recognition, homesdata `persons`), its modules and its
+ * heating mode — live from homestatus through the home's devices, homesdata
+ * snapshot otherwise.
+ * @param {object} homeData one entry of the homesdata `homes` array
+ * @param {Array} devices raw devices loaded for this home
+ * @returns {{id: string, name: string, persons: Array<{id: string, pseudo: string}>,
+ *   modules: Array<{id: string, name: string, type: string}>, therm_mode: string|undefined,
+ *   therm_mode_endtime: number|undefined}} the home summary
+ */
+export function summarizeHome(homeData, devices = []) {
+  const withMode = devices.find((device) => device.therm_mode !== undefined);
+  return {
+    id: homeData.id,
+    name: homeData.name || homeData.id,
+    persons: (homeData.persons ?? [])
+      .filter((person) => person && typeof person.id === 'string')
+      .map((person) => ({ id: person.id, pseudo: person.pseudo })),
+    modules: (homeData.modules ?? []).map((module) => ({
+      id: module.id,
+      name: module.name,
+      type: module.type,
+    })),
+    therm_mode: withMode ? withMode.therm_mode : homeData.therm_mode,
+    therm_mode_endtime: withMode ? withMode.therm_mode_endtime : homeData.therm_mode_endtime,
+  };
+}
+
+/**
  * Load every raw Netatmo device, merging the three API families
  * (port of the core `loadDevices`).
  * @param {object} client Netatmo API client
@@ -234,11 +264,13 @@ export async function loadDevices(client, config) {
  * for the duration of a Netatmo hiccup.
  * @param {object} client Netatmo API client
  * @param {object} config normalized integration config
- * @returns {Promise<{devices: Array, partial: boolean}>} raw devices + flag
+ * @returns {Promise<{devices: Array, partial: boolean, homes: Array}>} raw
+ * devices + flag + the homesdata homes summaries (see summarizeHome)
  */
 export async function loadAccount(client, config) {
   let listDevices = [];
   let partial = false;
+  let homeSummaries = [];
 
   // Cameras ride in the same homesdata/homestatus payloads as the Energy
   // modules (no dedicated API call), so the topology load also runs when only
@@ -255,6 +287,7 @@ export async function loadAccount(client, config) {
       if (results.includes(null)) {
         partial = true;
       }
+      homeSummaries = homes.map((home, index) => summarizeHome(home, results[index] ?? []));
       listDevices = results.filter(Boolean).flat();
     } catch (err) {
       partial = true;
@@ -363,5 +396,5 @@ export async function loadAccount(client, config) {
     // logging it here would repeat the same line every 120s cycle.
     logger.debug(`Netatmo devices not supported: ${notHandled}`);
   }
-  return { devices: listDevices, partial };
+  return { devices: listDevices, partial, homes: homeSummaries };
 }

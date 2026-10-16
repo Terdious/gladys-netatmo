@@ -102,6 +102,9 @@ export function createTelemetry({
   // Last successfully published image per camera id: served as a fallback
   // when an on-demand snapshot cannot complete within the ack budget.
   const lastImages = new Map();
+  // Homesdata homes summaries (names, known persons, modules, heating mode),
+  // by home id — read by the scene triggers/actions (issue #39).
+  const homesById = new Map();
 
   // --- Account load (single-flight + short TTL) ------------------------------
   let loadCache = null; // {key, at, promise}
@@ -139,7 +142,15 @@ export function createTelemetry({
   let lastNotHandledCount = null;
 
   /** Post-load bookkeeping: camera cache upkeep + stale-entry pruning. */
-  function afterLoad({ devices: rawDevices, partial }) {
+  function afterLoad({ devices: rawDevices, partial, homes = [] }) {
+    // A partial load only refreshes the homes it did see: absence is not
+    // proof that a home is gone.
+    if (!partial) {
+      homesById.clear();
+    }
+    for (const home of homes) {
+      homesById.set(home.id, home);
+    }
     const notHandledCount = rawDevices.filter((rawDevice) => rawDevice.not_handled).length;
     if (!partial && notHandledCount !== lastNotHandledCount) {
       logger.info(`Netatmo devices not supported: ${notHandledCount}`);
@@ -508,10 +519,19 @@ export function createTelemetry({
     }
   }
 
+  /**
+   * Homes summaries of the last account load (see discovery summarizeHome).
+   * @returns {Array<object>} one entry per homesdata home
+   */
+  function getHomes() {
+    return [...homesById.values()];
+  }
+
   return {
     syncDiscovery,
     refreshValues,
     refreshNow,
+    getHomes,
     getCameraSnapshot,
     resetDedup,
     start,

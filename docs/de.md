@@ -199,6 +199,43 @@ einer Szene den Auslöser „Wert wird Ja“.
 
 ---
 
+## Szenen: Netatmo-Auslöser und -Aktionen
+
+Die Integration fügt dem Szenen-Editor eigene Karten hinzu (Gladys **5.1** oder
+neuer): Wähle **Integrations-Auslöser** oder **Integrations-Aktion** und dann
+den Netatmo-Eintrag.
+
+### Auslöser (erfordern die Gladys-Plus-Webhooks)
+
+| Auslöser                          | Löst aus, wenn                                     | An die Aktionen weitergegebene Informationen |
+| --------------------------------- | -------------------------------------------------- | -------------------------------------------- |
+| **Eine bekannte Person kommt an** | eine Innenkamera ein bekanntes Gesicht erkennt     | Person, Kamera, Zuhause                      |
+| **Eine bekannte Person geht**     | Netatmo eine bekannte Person als abwesend markiert | Person, Kamera, Zuhause                      |
+| **Die Sirene ertönt**             | eine Innensirene zu ertönen beginnt                | Sirene, Zuhause                              |
+
+Optionale Filter: die **Kamera** (oder Sirene) — leer = jede — und die
+**Person**: Gib den Namen **genau wie in der Netatmo-App** ein (der
+Szenen-Editor kann die Netatmo-Personen nicht auflisten; ein leeres Feld = jede
+bekannte Person). Ein unbekanntes Gesicht löst „Eine bekannte Person kommt an“
+nie aus — die Funktion **Person erkannt** der Kamera deckt alle Personen ab.
+
+### Aktionen
+
+| Aktion                            | Was sie tut                                                                                                                                  |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Heizmodus ändern**              | Zeitplan, Abwesend oder Frostschutz für das ganze Zuhause; optionale Dauer in Minuten (Abwesend und Frostschutz: danach zurück zum Zeitplan) |
+| **Person als abwesend markieren** | eine bekannte Person oder — Person leer gelassen — das ganze Zuhause leer (aktiviert die anwesenheitsabhängige Kameraüberwachung wieder)     |
+| **Person als anwesend markieren** | eine bekannte Person oder — Person leer gelassen — alle bekannten Personen                                                                   |
+
+Das **Zuhause** ist das des Geräts, das du in der Aktion wählst (ein Thermostat
+oder Ventil für die Heizung, eine Kamera für die Personen). Lass es leer, wenn
+dein Konto nur ein Zuhause hat. Das Personenfeld akzeptiert eine
+Szenen-Variable: „Eine bekannte Person kommt an → Person als anwesend
+markieren“ mit der Information **Person**. Jede Aktion gibt den Namen des
+**Zuhauses** an die folgenden Schritte weiter.
+
+---
+
 ## Sicherheitszubehör (über die Kamera angebunden)
 
 Wenn die Familie Sicherheit aktiviert ist, wird auch das mit deinen Kameras

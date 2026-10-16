@@ -21,6 +21,8 @@ export const API_PATHS = {
   GET_WEATHER_STATIONS: '/api/getstationsdata?get_favorites=false',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
   SET_THERM_MODE: '/api/setthermmode',
+  SET_PERSONS_AWAY: '/api/setpersonsaway',
+  SET_PERSONS_HOME: '/api/setpersonshome',
   SET_STATE: '/api/setstate',
   ADD_WEBHOOK: '/api/addwebhook',
   DROP_WEBHOOK: '/api/dropwebhook',
@@ -51,6 +53,27 @@ export const EVENT_FEATURE_SUFFIXES = {
   vehicle: 'vehicle',
   smoke: 'smoke',
 };
+
+// Scene triggers (issue #39, manifest `scene_triggers`, Gladys 5.1+), fired
+// with publishSceneEvent from the webhook event stream. Keys are FOREVER:
+// scenes store them, a renamed key is a removed key.
+export const SCENE_TRIGGERS = {
+  KNOWN_PERSON_ARRIVED: 'known_person_arrived',
+  KNOWN_PERSON_LEFT: 'known_person_left',
+  SIREN_SOUNDING: 'siren_sounding',
+};
+
+// Scene actions (issue #39, manifest `scene_actions`), handled by
+// src/netatmo/scenes.js. Same rule: keys are never renamed.
+export const SCENE_ACTION_KEYS = {
+  SET_HEATING_MODE: 'set_heating_mode',
+  SET_PERSONS_AWAY: 'set_persons_away',
+  SET_PERSONS_HOME: 'set_persons_home',
+};
+
+// Webhooks may be re-delivered: the last scene events fired are remembered
+// (by Netatmo event id + person) so a duplicate never starts a scene twice.
+export const SCENE_EVENT_DEDUP_SIZE = 100;
 
 // A momentary event has no "cleared" counterpart in the Netatmo stream: the
 // feature is set to 1 then automatically back to 0 after this delay, like any
