@@ -3,8 +3,8 @@
 //   - POST /oauth2/token: authorization_code and refresh_token grants,
 //     with rotating refresh tokens (like the real Netatmo);
 //   - Bearer-protected API: homesdata, homestatus, getthermostatsdata,
-//     getstationsdata, setroomthermpoint and setthermmode (form), setstate
-//     (JSON);
+//     getstationsdata, setroomthermpoint, setthermmode, setpersonsaway and
+//     setpersonshome (form), setstate (JSON);
 //   - two fake cameras (/vpn/<id> and /local/<id>: command/ping + snapshot).
 // Behaviour toggles (`failTokenWith`, `rejectAccessToken`, `failSetpointWith`,
 // `failLocalSnapshot`) let the tests exercise the failure paths.
@@ -58,6 +58,11 @@ function buildDefaultHomes() {
         { id: 'smoke-1', type: 'NSD', name: 'Détecteur de fumée', bridge: 'camera-1' },
         // Carbon monoxide alarm (issue #36): modelled on the smoke alarm.
         { id: 'co-1', type: 'NCO', name: 'Détecteur de CO', room_id: 'room-1' },
+      ],
+      // Persons known to the indoor camera (face recognition), homesdata shape.
+      persons: [
+        { id: 'person-1', pseudo: 'Alice', url: 'https://example.invalid/alice.jpg' },
+        { id: 'person-2', pseudo: 'Bob', url: 'https://example.invalid/bob.jpg' },
       ],
     },
   ];
@@ -268,6 +273,9 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     setpointRequests: [], // every parsed form POSTed to /api/setroomthermpoint
     setStateRequests: [], // every parsed JSON body POSTed to /api/setstate
     setThermModeRequests: [], // every parsed form POSTed to /api/setthermmode
+    setPersonsAwayRequests: [], // every raw form body POSTed to /api/setpersonsaway
+    setPersonsHomeRequests: [], // every raw form body POSTed to /api/setpersonshome
+    failPersonsWith: null, // set to {status, body} to make setpersonsaway/home fail
     failSetThermModeWith: null, // set to {status, body} to make setthermmode fail
     failSetStateWith: null, // set to {status, body} to make setstate fail
     addWebhookRequests: [], // every parsed form POSTed to /api/addwebhook
@@ -429,6 +437,21 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
           const homeStatus = state.homeStatuses[form.home_id];
           if (homeStatus) {
             homeStatus.home.therm_mode = form.mode;
+          }
+          respond({ status: 'ok' });
+          return;
+        }
+        const personsMatch = req.url.match(/^\/api\/setpersons(away|home)/);
+        if (req.method === 'POST' && personsMatch) {
+          // Raw body kept: setpersonshome repeats the `person_ids[]` field.
+          const requests =
+            personsMatch[1] === 'away'
+              ? state.setPersonsAwayRequests
+              : state.setPersonsHomeRequests;
+          requests.push(body);
+          if (state.failPersonsWith) {
+            respond(state.failPersonsWith.body, state.failPersonsWith.status);
+            return;
           }
           respond({ status: 'ok' });
           return;

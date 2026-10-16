@@ -25,6 +25,462 @@
       "mode": "fire_and_forget"
     }
   ],
+  "scene_triggers": [
+    {
+      "key": "known_person_arrived",
+      "label": {
+        "en": "A known person arrives",
+        "fr": "Une personne connue arrive",
+        "de": "Eine bekannte Person kommt an",
+        "es": "Llega una persona conocida"
+      },
+      "description": {
+        "en": "An indoor camera recognized a person known to Netatmo (needs the Gladys Plus webhooks).",
+        "fr": "Une caméra intérieure a reconnu une personne connue de Netatmo (nécessite les webhooks Gladys Plus).",
+        "de": "Eine Innenkamera hat eine Netatmo bekannte Person erkannt (erfordert die Gladys-Plus-Webhooks).",
+        "es": "Una cámara de interior reconoció a una persona conocida por Netatmo (requiere los webhooks de Gladys Plus)."
+      },
+      "fields": [
+        {
+          "key": "camera",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          },
+          "description": {
+            "en": "The camera that saw the person. Leave empty for any camera.",
+            "fr": "La caméra qui a vu la personne. Laissez vide pour n'importe quelle caméra.",
+            "de": "Die Kamera, die die Person gesehen hat. Leer lassen für jede Kamera.",
+            "es": "La cámara que vio a la persona. Déjela vacía para cualquier cámara."
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person (Netatmo name)",
+            "fr": "Personne (nom Netatmo)",
+            "de": "Person (Netatmo-Name)",
+            "es": "Persona (nombre Netatmo)"
+          },
+          "description": {
+            "en": "The name exactly as shown in the Netatmo app. Leave empty for any known person.",
+            "fr": "Le nom exactement comme dans l'application Netatmo. Laissez vide pour n'importe quelle personne connue.",
+            "de": "Der Name genau wie in der Netatmo-App. Leer lassen für jede bekannte Person.",
+            "es": "El nombre exactamente como aparece en la aplicación Netatmo. Déjelo vacío para cualquier persona conocida."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person",
+            "fr": "Personne",
+            "de": "Person",
+            "es": "Persona"
+          }
+        },
+        {
+          "key": "camera_name",
+          "type": "string",
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          }
+        },
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        }
+      ]
+    },
+    {
+      "key": "known_person_left",
+      "label": {
+        "en": "A known person leaves",
+        "fr": "Une personne connue part",
+        "de": "Eine bekannte Person geht",
+        "es": "Se va una persona conocida"
+      },
+      "description": {
+        "en": "Netatmo marked a known person as away (needs the Gladys Plus webhooks).",
+        "fr": "Netatmo a marqué une personne connue comme absente (nécessite les webhooks Gladys Plus).",
+        "de": "Netatmo hat eine bekannte Person als abwesend markiert (erfordert die Gladys-Plus-Webhooks).",
+        "es": "Netatmo marcó a una persona conocida como ausente (requiere los webhooks de Gladys Plus)."
+      },
+      "fields": [
+        {
+          "key": "camera",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          },
+          "description": {
+            "en": "The camera that reported the departure. Leave empty for any camera.",
+            "fr": "La caméra qui a signalé le départ. Laissez vide pour n'importe quelle caméra.",
+            "de": "Die Kamera, die das Gehen gemeldet hat. Leer lassen für jede Kamera.",
+            "es": "La cámara que informó de la salida. Déjela vacía para cualquier cámara."
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person (Netatmo name)",
+            "fr": "Personne (nom Netatmo)",
+            "de": "Person (Netatmo-Name)",
+            "es": "Persona (nombre Netatmo)"
+          },
+          "description": {
+            "en": "The name exactly as shown in the Netatmo app. Leave empty for any known person.",
+            "fr": "Le nom exactement comme dans l'application Netatmo. Laissez vide pour n'importe quelle personne connue.",
+            "de": "Der Name genau wie in der Netatmo-App. Leer lassen für jede bekannte Person.",
+            "es": "El nombre exactamente como aparece en la aplicación Netatmo. Déjelo vacío para cualquier persona conocida."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person",
+            "fr": "Personne",
+            "de": "Person",
+            "es": "Persona"
+          }
+        },
+        {
+          "key": "camera_name",
+          "type": "string",
+          "label": {
+            "en": "Camera",
+            "fr": "Caméra",
+            "de": "Kamera",
+            "es": "Cámara"
+          }
+        },
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        }
+      ]
+    },
+    {
+      "key": "siren_sounding",
+      "label": {
+        "en": "The siren sounds",
+        "fr": "La sirène sonne",
+        "de": "Die Sirene ertönt",
+        "es": "La sirena suena"
+      },
+      "description": {
+        "en": "A Netatmo indoor siren started sounding (needs the Gladys Plus webhooks).",
+        "fr": "Une sirène intérieure Netatmo s'est mise à sonner (nécessite les webhooks Gladys Plus).",
+        "de": "Eine Netatmo-Innensirene hat zu ertönen begonnen (erfordert die Gladys-Plus-Webhooks).",
+        "es": "Una sirena de interior Netatmo empezó a sonar (requiere los webhooks de Gladys Plus)."
+      },
+      "fields": [
+        {
+          "key": "siren",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Siren",
+            "fr": "Sirène",
+            "de": "Sirene",
+            "es": "Sirena"
+          },
+          "description": {
+            "en": "Leave empty for any siren.",
+            "fr": "Laissez vide pour n'importe quelle sirène.",
+            "de": "Leer lassen für jede Sirene.",
+            "es": "Déjela vacía para cualquier sirena."
+          }
+        }
+      ],
+      "variables": [
+        {
+          "key": "siren_name",
+          "type": "string",
+          "label": {
+            "en": "Siren",
+            "fr": "Sirène",
+            "de": "Sirene",
+            "es": "Sirena"
+          }
+        },
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        }
+      ]
+    }
+  ],
+  "scene_actions": [
+    {
+      "key": "set_heating_mode",
+      "label": {
+        "en": "Change the heating mode",
+        "fr": "Changer le mode du chauffage",
+        "de": "Heizmodus ändern",
+        "es": "Cambiar el modo de calefacción"
+      },
+      "description": {
+        "en": "Schedule, away or frost protection for the whole Netatmo home, optionally for a set time.",
+        "fr": "Planning, absence ou hors-gel pour toute la maison Netatmo, éventuellement pour une durée.",
+        "de": "Zeitplan, abwesend oder Frostschutz für das ganze Netatmo-Zuhause, optional für eine bestimmte Dauer.",
+        "es": "Programación, ausencia o antihielo para toda la casa Netatmo, opcionalmente durante un tiempo."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Thermostat or valve",
+            "fr": "Thermostat ou vanne",
+            "de": "Thermostat oder Ventil",
+            "es": "Termostato o válvula"
+          },
+          "description": {
+            "en": "Any thermostat or valve of the home. Leave empty if your account has a single home.",
+            "fr": "N'importe quel thermostat ou vanne de la maison. Laissez vide si votre compte n'a qu'une maison.",
+            "de": "Ein beliebiges Thermostat oder Ventil des Zuhauses. Leer lassen, wenn dein Konto nur ein Zuhause hat.",
+            "es": "Cualquier termostato o válvula de la casa. Déjelo vacío si su cuenta tiene una sola casa."
+          }
+        },
+        {
+          "key": "mode",
+          "type": "select",
+          "required": true,
+          "default": "schedule",
+          "label": {
+            "en": "Heating mode",
+            "fr": "Mode du chauffage",
+            "de": "Heizmodus",
+            "es": "Modo de calefacción"
+          },
+          "options": [
+            {
+              "value": "schedule",
+              "label": {
+                "en": "Schedule",
+                "fr": "Planning",
+                "de": "Zeitplan",
+                "es": "Programación"
+              }
+            },
+            {
+              "value": "away",
+              "label": {
+                "en": "Away",
+                "fr": "Absence",
+                "de": "Abwesend",
+                "es": "Ausencia"
+              }
+            },
+            {
+              "value": "hg",
+              "label": {
+                "en": "Frost protection",
+                "fr": "Hors-gel",
+                "de": "Frostschutz",
+                "es": "Antihielo"
+              }
+            }
+          ]
+        },
+        {
+          "key": "duration_minutes",
+          "type": "number",
+          "min": 1,
+          "max": 43200,
+          "label": {
+            "en": "Duration (minutes)",
+            "fr": "Durée (minutes)",
+            "de": "Dauer (Minuten)",
+            "es": "Duración (minutos)"
+          },
+          "description": {
+            "en": "Away and frost protection only: back to the schedule after this time. Empty = until the next change.",
+            "fr": "Absence et hors-gel uniquement : retour au planning après cette durée. Vide = jusqu'au prochain changement.",
+            "de": "Nur abwesend und Frostschutz: nach dieser Dauer zurück zum Zeitplan. Leer = bis zur nächsten Änderung.",
+            "es": "Solo ausencia y antihielo: vuelta a la programación tras este tiempo. Vacío = hasta el próximo cambio."
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        }
+      ]
+    },
+    {
+      "key": "set_persons_away",
+      "label": {
+        "en": "Mark a person as away",
+        "fr": "Marquer une personne absente",
+        "de": "Person als abwesend markieren",
+        "es": "Marcar a una persona como ausente"
+      },
+      "description": {
+        "en": "Tell Netatmo a known person left, or that the whole home is empty (re-arms the camera monitoring).",
+        "fr": "Indique à Netatmo qu'une personne connue est partie, ou que toute la maison est vide (réarme la surveillance des caméras).",
+        "de": "Teilt Netatmo mit, dass eine bekannte Person gegangen ist oder das ganze Zuhause leer ist (aktiviert die Kameraüberwachung wieder).",
+        "es": "Indica a Netatmo que una persona conocida se fue, o que toda la casa está vacía (reactiva la vigilancia de las cámaras)."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Camera of the home",
+            "fr": "Caméra de la maison",
+            "de": "Kamera des Zuhauses",
+            "es": "Cámara de la casa"
+          },
+          "description": {
+            "en": "Any camera of the Netatmo home. Leave empty if your account has a single home.",
+            "fr": "N'importe quelle caméra de la maison Netatmo. Laissez vide si votre compte n'a qu'une maison.",
+            "de": "Eine beliebige Kamera des Netatmo-Zuhauses. Leer lassen, wenn dein Konto nur ein Zuhause hat.",
+            "es": "Cualquier cámara de la casa Netatmo. Déjela vacía si su cuenta tiene una sola casa."
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person (Netatmo name)",
+            "fr": "Personne (nom Netatmo)",
+            "de": "Person (Netatmo-Name)",
+            "es": "Persona (nombre Netatmo)"
+          },
+          "description": {
+            "en": "The name as shown in the Netatmo app. Leave empty to mark the whole home as empty.",
+            "fr": "Le nom comme dans l'application Netatmo. Laissez vide pour marquer toute la maison comme vide.",
+            "de": "Der Name wie in der Netatmo-App. Leer lassen, um das ganze Zuhause als leer zu markieren.",
+            "es": "El nombre como aparece en la aplicación Netatmo. Déjelo vacío para marcar toda la casa como vacía."
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        }
+      ]
+    },
+    {
+      "key": "set_persons_home",
+      "label": {
+        "en": "Mark a person as at home",
+        "fr": "Marquer une personne présente",
+        "de": "Person als anwesend markieren",
+        "es": "Marcar a una persona como presente"
+      },
+      "description": {
+        "en": "Tell Netatmo a known person is at home, or every known person.",
+        "fr": "Indique à Netatmo qu'une personne connue est à la maison, ou toutes les personnes connues.",
+        "de": "Teilt Netatmo mit, dass eine bekannte Person zu Hause ist, oder alle bekannten Personen.",
+        "es": "Indica a Netatmo que una persona conocida está en casa, o todas las personas conocidas."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Camera of the home",
+            "fr": "Caméra de la maison",
+            "de": "Kamera des Zuhauses",
+            "es": "Cámara de la casa"
+          },
+          "description": {
+            "en": "Any camera of the Netatmo home. Leave empty if your account has a single home.",
+            "fr": "N'importe quelle caméra de la maison Netatmo. Laissez vide si votre compte n'a qu'une maison.",
+            "de": "Eine beliebige Kamera des Netatmo-Zuhauses. Leer lassen, wenn dein Konto nur ein Zuhause hat.",
+            "es": "Cualquier cámara de la casa Netatmo. Déjela vacía si su cuenta tiene una sola casa."
+          }
+        },
+        {
+          "key": "person",
+          "type": "string",
+          "label": {
+            "en": "Person (Netatmo name)",
+            "fr": "Personne (nom Netatmo)",
+            "de": "Person (Netatmo-Name)",
+            "es": "Persona (nombre Netatmo)"
+          },
+          "description": {
+            "en": "The name as shown in the Netatmo app. Leave empty to mark every known person at home.",
+            "fr": "Le nom comme dans l'application Netatmo. Laissez vide pour marquer toutes les personnes connues présentes.",
+            "de": "Der Name wie in der Netatmo-App. Leer lassen, um alle bekannten Personen als anwesend zu markieren.",
+            "es": "El nombre como aparece en la aplicación Netatmo. Déjelo vacío para marcar a todas las personas conocidas como presentes."
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "key": "home_name",
+          "type": "string",
+          "label": {
+            "en": "Home",
+            "fr": "Maison",
+            "de": "Zuhause",
+            "es": "Casa"
+          }
+        }
+      ]
+    }
+  ],
   "transports": ["cloud"],
   "config_schema": [
     {

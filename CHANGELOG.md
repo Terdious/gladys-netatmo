@@ -18,6 +18,16 @@ the notes of the version's GitHub Release.
   the whole home, then an immediate refresh shows the new mode on every device
   of the home. Existing thermostats get the feature through **Update** on the
   Discovery screen ([#38](https://github.com/Terdious/gladys-netatmo/issues/38)).
+- **Scene triggers** (Gladys Plus webhooks): "A known person arrives" (an
+  indoor camera recognized a known face), "A known person leaves" and "The
+  siren sounds", with the person, camera / siren and home names passed on to
+  the scene and optional camera and person filters
+  ([#39](https://github.com/Terdious/gladys-netatmo/issues/39)).
+- **Scene actions**: "Change the heating mode" (schedule / away / frost
+  protection, optional duration), "Mark a person as away" (or the whole home
+  empty) and "Mark a person as at home" (or every known person), on the home
+  of the chosen device or the account's single home
+  ([#39](https://github.com/Terdious/gladys-netatmo/issues/39)).
 - Bubendorff / iDiamant roller shutters (`NBR` radio, `NBO` wired, `NBS`
   solar), behind a new **Roller shutters (Bubendorff / iDiamant)** toggle (off
   by default): open / close / stop, a writable position (0-100 %, read from

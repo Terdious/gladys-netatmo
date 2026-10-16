@@ -30,6 +30,7 @@ import { createTelemetry } from './src/netatmo/telemetry.js';
 import { createWebhooks } from './src/netatmo/webhooks.js';
 import { createEvents } from './src/netatmo/events.js';
 import { setDeviceValue } from './src/netatmo/setValue.js';
+import { SCENE_ACTIONS } from './src/netatmo/scenes.js';
 import { CONNECTION_MESSAGES, WEBHOOK_KEY } from './src/netatmo/constants.js';
 
 /**
@@ -113,7 +114,9 @@ export function setupIntegration(
   });
   // Momentary detections (motion, person, smoke, doorbell ring…): published as
   // push features straight from the event payload — no API state reports them.
-  const events = createEvents({ gladys });
+  // Identity events (known person seen / gone, siren sounding) are fired as
+  // scene events: the homes summaries give the person and home names.
+  const events = createEvents({ gladys, getHomes: () => telemetry.getHomes() });
 
   // Tokens wiped after the 24h grace window: ask the user to reconnect.
   oauth.onAuthLost(async (message) => {
@@ -251,6 +254,21 @@ export function setupIntegration(
       { device, feature, value },
     );
   });
+
+  // --- Scene actions: operations a scene author placed in a scene -----------
+  // One handler per key of the manifest `scene_actions` field, receiving the
+  // RESOLVED fields (variables substituted, defaults applied), resolving the
+  // declared outputs (see src/netatmo/scenes.js). Throwing fails that action
+  // only: the scene logs it and continues.
+  for (const [actionKey, handler] of Object.entries(SCENE_ACTIONS)) {
+    gladys.onSceneAction(actionKey, (fields) => {
+      logger.info(`onSceneAction <- ${actionKey}`);
+      return handler(
+        { gladys, client, telemetry, refresh: () => telemetry.refreshNow(config) },
+        fields,
+      );
+    });
+  }
 
   // --- Camera: Gladys asks for a fresh snapshot ------------------------------
   gladys.onGetImage(async (device) => {

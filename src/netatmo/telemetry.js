@@ -116,6 +116,9 @@ export function createTelemetry({
   // Last successfully published image per camera id: served as a fallback
   // when an on-demand snapshot cannot complete within the ack budget.
   const lastImages = new Map();
+  // Homesdata homes summaries (names, known persons, modules, heating mode),
+  // by home id — read by the scene triggers/actions (issue #39).
+  const homesById = new Map();
   // Every device of the account seen by a load, by Netatmo id: during an
   // outage, the devices a partial load misses still get a degraded badge.
   const knownDevices = new Map();
@@ -213,13 +216,21 @@ export function createTelemetry({
   }
 
   /** Post-load bookkeeping: camera cache upkeep + stale-entry pruning. */
-  function afterLoad({ devices: rawDevices, partial, failed }) {
+  function afterLoad({ devices: rawDevices, partial, failed, homes = [] }) {
     trackFailures(failed);
     for (const rawDevice of rawDevices) {
       const id = netatmoId(rawDevice);
       if (id) {
         knownDevices.set(id, rawDevice);
       }
+    }
+    // A partial load only refreshes the homes it did see: absence is not
+    // proof that a home is gone.
+    if (!partial) {
+      homesById.clear();
+    }
+    for (const home of homes) {
+      homesById.set(home.id, home);
     }
     const notHandledCount = rawDevices.filter((rawDevice) => rawDevice.not_handled).length;
     if (!partial && notHandledCount !== lastNotHandledCount) {
@@ -667,10 +678,19 @@ export function createTelemetry({
     clearDelayedRefresh();
   }
 
+  /**
+   * Homes summaries of the last account load (see discovery summarizeHome).
+   * @returns {Array<object>} one entry per homesdata home
+   */
+  function getHomes() {
+    return [...homesById.values()];
+  }
+
   return {
     syncDiscovery,
     refreshValues,
     refreshNow,
+    getHomes,
     scheduleRefresh,
     getCameraSnapshot,
     getDegradedMessage,

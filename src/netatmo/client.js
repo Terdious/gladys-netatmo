@@ -8,7 +8,8 @@
 // Endpoints mirror the core service: homesdata/homestatus (Energy topology +
 // live status), getthermostatsdata (legacy Energy details), getstationsdata
 // (Weather stations), setroomthermpoint (thermostat setpoint) and
-// setthermmode (heating mode of a home).
+// setthermmode (heating mode of a home), setpersonsaway / setpersonshome
+// (presence of the persons known to the cameras).
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
@@ -154,6 +155,34 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
   }
 
   /**
+   * Mark one person as away, or the whole home as empty when no person is
+   * given (issue #39) — what re-arms the camera monitoring set to follow the
+   * presence.
+   * @param {string} homeId Netatmo home id
+   * @param {string} [personId] Netatmo person id; absent = everybody
+   * @returns {Promise<object>} parsed response body
+   */
+  async function setPersonsAway(homeId, personId) {
+    const form = { home_id: homeId };
+    if (personId) {
+      form.person_id = personId;
+    }
+    return request(API_PATHS.SET_PERSONS_AWAY, { method: 'POST', form });
+  }
+
+  /**
+   * Mark persons as at home (issue #39). The ids travel as a repeated
+   * `person_ids[]` form field, like pyatmo does.
+   * @param {string} homeId Netatmo home id
+   * @param {string[]} personIds Netatmo person ids
+   * @returns {Promise<object>} parsed response body
+   */
+  async function setPersonsHome(homeId, personIds) {
+    const form = [['home_id', homeId], ...personIds.map((id) => ['person_ids[]', id])];
+    return request(API_PATHS.SET_PERSONS_HOME, { method: 'POST', form });
+  }
+
+  /**
    * Set the state of a module through the JSON /api/setstate endpoint: camera
    * monitoring on/off (core PR #2623) or a roller shutter target_position +
    * bridge (issue #34). Every field besides homeId/moduleId goes into the
@@ -195,6 +224,8 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     getStationsData,
     setRoomThermpoint,
     setThermMode,
+    setPersonsAway,
+    setPersonsHome,
     setState,
     addWebhook,
     dropWebhook,

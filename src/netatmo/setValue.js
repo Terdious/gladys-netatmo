@@ -44,7 +44,8 @@ function isScopeError(err) {
   return err.status === 403 && err.body?.error?.code === 13;
 }
 
-function rethrowScopeError(err) {
+/** Rethrow a Netatmo error, a missing write scope with an actionable message. */
+export function rethrowScopeError(err) {
   if (isScopeError(err)) {
     // Core behaviour: scope-rights failure gets its own actionable message.
     throw new Error(

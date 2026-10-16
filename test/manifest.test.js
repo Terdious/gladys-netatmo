@@ -14,6 +14,8 @@ import { readFile } from 'node:fs/promises';
 import { DEFAULT_CONFIG } from '../src/config.js';
 import { WEBHOOK_KEY, CONNECTION_MESSAGES, DEGRADED_MESSAGES } from '../src/netatmo/constants.js';
 import * as featureBuilders from '../src/netatmo/features.js';
+import { SCENE_ACTIONS } from '../src/netatmo/scenes.js';
+import { SCENE_TRIGGER_KEYS } from '../src/netatmo/events.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -42,6 +44,10 @@ const CATEGORIES_MIN_GLADYS_VERSION = [4, 86, 0];
 // Feature types older Gladys releases do not know, with the first release
 // accepting them: an older core refuses the WHOLE discovery list (400) as
 // soon as one feature carries an unknown category/type.
+// Capability fields (scene triggers / actions, widgets): older cores reject
+// them as unknown manifest fields.
+const CAPABILITY_FIELDS = ['scene_triggers', 'scene_actions', 'widgets'];
+const CAPABILITY_MIN_GLADYS_VERSION = [5, 1, 0];
 const FEATURE_TYPE_MIN_GLADYS_VERSION = {
   'thermostat/preset': [5, 2, 0],
 };
@@ -187,6 +193,55 @@ test('every feature type the code publishes is known to the minimum Gladys versi
         isAtLeast(minGladysVersion(), minVersion),
         `${featureType} requires gladys_version >= ${minVersion.join('.')}, got "${manifest.gladys_version}"`,
       );
+    }
+  }
+});
+
+const keysOf = (list) => (list ?? []).map((entry) => entry.key);
+
+test('declaring scene triggers, scene actions or widgets requires Gladys >= 5.1.0', () => {
+  const declared = CAPABILITY_FIELDS.filter((field) => manifest[field] !== undefined);
+  assert.ok(declared.length > 0, 'the manifest declares capability fields');
+  assert.ok(
+    isAtLeast(minGladysVersion(), CAPABILITY_MIN_GLADYS_VERSION),
+    `${declared.join(', ')} requires gladys_version >= 5.1.0, got "${manifest.gladys_version}"`,
+  );
+});
+
+test('every scene_actions key has an onSceneAction handler, and vice versa', () => {
+  const declared = keysOf(manifest.scene_actions);
+  for (const key of declared) {
+    assert.equal(typeof SCENE_ACTIONS[key], 'function', `scene action "${key}" has no handler`);
+  }
+  for (const key of Object.keys(SCENE_ACTIONS)) {
+    assert.ok(declared.includes(key), `handler "${key}" is not declared in scene_actions`);
+  }
+});
+
+test('every scene trigger the code fires is declared in scene_triggers, and vice versa', () => {
+  // An undeclared key is a 404 on publishSceneEvent; a declared key nobody
+  // fires is a dead card in the scene editor.
+  const declared = keysOf(manifest.scene_triggers);
+  assert.deepEqual([...SCENE_TRIGGER_KEYS].sort(), [...declared].sort());
+});
+
+test('scene declarations: unique keys, allowed field types, scalar variables and outputs', () => {
+  for (const list of ['scene_triggers', 'scene_actions']) {
+    const keys = keysOf(manifest[list]);
+    assert.equal(new Set(keys).size, keys.length, `${list} keys are unique`);
+    for (const entry of manifest[list]) {
+      assert.match(entry.key, /^[a-z0-9_]{1,40}$/);
+      // boolean has no "any" state: trigger filters cannot use it (spec §3).
+      const allowed = ['string', 'number', 'select', 'multi_select', 'section'];
+      if (list === 'scene_actions') {
+        allowed.push('boolean');
+      }
+      for (const field of entry.fields ?? []) {
+        assert.ok(allowed.includes(field.type), `${list}.${entry.key}.${field.key} type`);
+      }
+      for (const output of [...(entry.variables ?? []), ...(entry.outputs ?? [])]) {
+        assert.ok(['string', 'number', 'boolean'].includes(output.type));
+      }
     }
   }
 });

@@ -233,6 +233,44 @@ perdida" de la aplicación Netatmo no son disparadores aparte.
 
 ---
 
+## Escenas: activadores y acciones de Netatmo
+
+La integración añade sus propias tarjetas al editor de escenas (Gladys **5.1** o
+posterior): elija **Activador de integración** o **Acción de integración** y
+luego la entrada de Netatmo.
+
+### Activadores (requieren los webhooks de Gladys Plus)
+
+| Activador                      | Se activa cuando                                  | Información transmitida a las acciones |
+| ------------------------------ | ------------------------------------------------- | -------------------------------------- |
+| **Llega una persona conocida** | una cámara de interior reconoce una cara conocida | Persona, Cámara, Casa                  |
+| **Se va una persona conocida** | Netatmo marca a una persona conocida como ausente | Persona, Cámara, Casa                  |
+| **La sirena suena**            | una sirena de interior empieza a sonar            | Sirena, Casa                           |
+
+Filtros opcionales: la **cámara** (o la sirena) — vacío = cualquiera — y la
+**persona**: escriba el nombre **exactamente como aparece en la aplicación
+Netatmo** (el editor de escenas no puede listar las personas de Netatmo; un
+campo vacío = cualquier persona conocida). Una cara no reconocida nunca activa
+«Llega una persona conocida»: la funcionalidad **Persona detectada** de la
+cámara cubre a todas las personas.
+
+### Acciones
+
+| Acción                                 | Qué hace                                                                                                                                    |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cambiar el modo de calefacción**     | Programación, Ausencia o Antihielo para toda la casa; duración opcional en minutos (Ausencia y Antihielo: vuelta a la programación después) |
+| **Marcar a una persona como ausente**  | una persona conocida o — persona vacía — toda la casa vacía (reactiva la vigilancia de las cámaras configurada para seguir la presencia)    |
+| **Marcar a una persona como presente** | una persona conocida o — persona vacía — todas las personas conocidas                                                                       |
+
+La **casa** es la del dispositivo que elija en la acción (un termostato o una
+válvula para la calefacción, una cámara para las personas). Déjelo vacío si su
+cuenta tiene una sola casa. El campo persona acepta una variable de escena:
+«Llega una persona conocida → Marcar a una persona como presente» con la
+información **Persona**. Cada acción devuelve el nombre de la **Casa** a los
+pasos siguientes.
+
+---
+
 ## Accesorios de seguridad (conectados a través de la cámara)
 
 Cuando la familia Seguridad está activada, también se descubren los accesorios

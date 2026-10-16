@@ -217,6 +217,42 @@ doorbell rings** trigger. A ring fires once: the follow-up "call answered" /
 
 ---
 
+## Scenes: Netatmo triggers and actions
+
+The integration adds its own cards to the scene editor (Gladys **5.1** or
+later): pick **Integration trigger** or **Integration action**, then the Netatmo
+entry.
+
+### Triggers (need the Gladys Plus webhooks)
+
+| Trigger                    | Fires when                               | Information passed on to the actions |
+| -------------------------- | ---------------------------------------- | ------------------------------------ |
+| **A known person arrives** | an indoor camera recognizes a known face | Person, Camera, Home                 |
+| **A known person leaves**  | Netatmo marks a known person as away     | Person, Camera, Home                 |
+| **The siren sounds**       | an indoor siren starts sounding          | Siren, Home                          |
+
+Optional filters: the **camera** (or siren) — empty means any — and the
+**person**: type the name **exactly as shown in the Netatmo app** (the scene
+editor cannot list the Netatmo persons; an empty field means any known person).
+An unrecognized face never fires "A known person arrives" — the **Person
+detected** feature of the camera covers every person.
+
+### Actions
+
+| Action                       | What it does                                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Change the heating mode**  | Schedule, Away or Frost protection for the whole home; optional duration in minutes (Away and Frost protection: back to the schedule afterwards) |
+| **Mark a person as away**    | one known person, or — person left empty — the whole home empty (re-arms the camera monitoring set to follow the presence)                       |
+| **Mark a person as at home** | one known person, or — person left empty — every known person                                                                                    |
+
+The **home** is the one of the device you choose in the action (a thermostat or
+valve for the heating, a camera for the persons). Leave it empty when your
+account has a single home. The person field accepts a scene variable: "A known
+person arrives → Mark a person as at home" with the **Person** information.
+Each action returns the **Home** name to the following steps.
+
+---
+
 ## Security accessories (camera-bridged)
 
 When the Security family is enabled, the accessories linked to your cameras are
