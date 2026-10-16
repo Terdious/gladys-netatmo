@@ -72,7 +72,7 @@ Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
 | Schalter         | Erkennt                                                                                                               |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)                                                 |
+| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`), modulierendes Thermostat (`OTM` + `OTH`)       |
 | **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule                                                |
 | **Sicherheit**   | Innen- (`NACamera`) und Außenkameras (`NOC`), Video-Türklingel (`NDB`) sowie deren Zubehör und die bekannten Personen |
 | **Rollläden**    | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                    |
@@ -91,9 +91,9 @@ Die Werte werden alle **2 Minuten** aktualisiert (Ratenbegrenzung von Netatmo).
 
 ## Heizmodus (Zeitplan / abwesend / Frostschutz)
 
-Jedes Thermostat (`NATherm1`) und jedes Heizkörperventil (`NRV`) hat eine
-Funktion **Heizmodus** (ein Thermostat-_Preset_ in Gladys) mit drei
-Möglichkeiten:
+Jedes Thermostat (`NATherm1`, modulierendes `OTM`) und jedes Heizkörperventil
+(`NRV`) hat eine Funktion **Heizmodus** (ein Thermostat-_Preset_ in Gladys) mit
+drei Möglichkeiten:
 
 | In Gladys       | In der Netatmo-App        |
 | --------------- | ------------------------- |
@@ -114,6 +114,30 @@ Standardaktion „Gerätewert setzen“.
 > Funktion nicht von selbst: Öffne den Bildschirm **Erkennung** und klicke bei
 > jedem Thermostat und Ventil auf **Aktualisieren**. Gladys **5.2** oder neuer
 > ist erforderlich (das Thermostat-Preset gibt es vorher nicht).
+
+---
+
+## Modulierendes Thermostat (OpenTherm)
+
+Das aktuelle Netatmo-Thermostat, das **modulierende** Modell (OpenTherm),
+gehört zur Familie Energie. Seine beiden Module werden jeweils als Gerät
+angelegt:
+
+- das **Thermostat** (`OTM`): Raumtemperatur, ein steuerbarer **Sollwert**, der
+  **Heizmodus** (siehe oben), der **Kesselstatus** (an, während der Kessel
+  heizt), Akku und Funksignal, wie beim älteren `NATherm1`;
+- das **OpenTherm-Relais** (`OTH`), das mit dem Kessel verbunden ist: seine
+  WLAN-Qualität, die **Außentemperatur**, nach der Netatmo die Heizung
+  moduliert, und eine Funktion **Kesselstörung**: 1, solange der Kessel
+  Netatmo eine Störung meldet (Wasserdruck, Flamme, Wartung…), sonst 0. Die
+  Netatmo-App zeigt, um welche Störung es sich handelt.
+
+Der Raum des Thermostats erscheint im Widget **Netatmo-Heizung**, und das
+Thermostat kann in der Szenenaktion **Heizmodus ändern** gewählt werden. Ein
+nicht erreichbares Thermostat erhält das Badge **nicht erreichbar**, und
+Akku und Signal werden nicht mehr veröffentlicht. Du musst dich nicht erneut
+verbinden: Die Thermostat-Berechtigungen sind seit der ersten Version Teil der
+Verbindung.
 
 ---
 

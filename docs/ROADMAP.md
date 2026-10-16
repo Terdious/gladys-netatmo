@@ -50,7 +50,8 @@ The new devices follow the Netatmo API as implemented by pyatmo (Home
 Assistant) and openHAB; a few payload details still need a real device:
 battery / WiFi field names of the CO alarm, the doorbell id field of
 `incoming_call` and its VPN-only snapshot, intermediate shutter positions,
-and the `person_away` / `siren_sounding` payloads. Feedback welcome on the
+the `person_away` / `siren_sounding` payloads, and when the OpenTherm relay
+reports (and clears) its `boiler_error`. Feedback welcome on the
 forum topic.
 
 ### Waiting on others

@@ -65,7 +65,7 @@ Under **Devices to discover**, enable the families you own:
 
 | Toggle              | Discovers                                                                                                         |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`)                                           |
+| **Energy**          | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`)    |
 | **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                 |
 | **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
 | **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                  |
@@ -84,8 +84,9 @@ Values refresh every **2 minutes** (Netatmo rate limits).
 
 ## Heating mode (schedule / away / frost protection)
 
-Each thermostat (`NATherm1`) and radiator valve (`NRV`) carries a **Heating
-mode** feature (a thermostat _preset_ in Gladys) with three choices:
+Each thermostat (`NATherm1`, modulating `OTM`) and radiator valve (`NRV`)
+carries a **Heating mode** feature (a thermostat _preset_ in Gladys) with three
+choices:
 
 | In Gladys            | In the Netatmo app         |
 | -------------------- | -------------------------- |
@@ -106,6 +107,28 @@ Use it in a scene ("everybody left → heating to Away") with the standard
 > appear on its own: go to the **Discovery** screen and click **Update** on each
 > thermostat and valve. Gladys **5.2** or later is required (the thermostat
 > preset does not exist before).
+
+---
+
+## Modulating thermostat (OpenTherm)
+
+The current Netatmo thermostat, the **modulating** (OpenTherm) model, comes
+with the Energy family. Its two modules are each created as a device:
+
+- the **thermostat** (`OTM`): room temperature, a writable **setpoint**, the
+  **Heating mode** (see above), the **Boiler status** (on while the boiler
+  heats), battery and RF signal, like the older `NATherm1`;
+- the **OpenTherm relay** (`OTH`) wired to the boiler: its WiFi quality, the
+  **outdoor temperature** Netatmo modulates the heating on, and a **Boiler
+  fault** feature: 1 while the boiler reports a fault to Netatmo (water
+  pressure, flame, maintenance…), 0 otherwise. The Netatmo app tells which
+  fault it is.
+
+The thermostat's room shows up in the **Netatmo heating** widget, and the
+thermostat can be chosen in the **Change the heating mode** scene action. A
+thermostat out of reach gets the **unreachable** badge and its battery and
+signal are no longer published. No reconnection is needed: the thermostat
+permissions have been part of the connection since the first version.
 
 ---
 
