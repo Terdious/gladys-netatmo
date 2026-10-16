@@ -18,7 +18,9 @@ import { setDeviceValue } from '../../src/netatmo/setValue.js';
 import {
   BTICINO_DIAGNOSTIC_TAG,
   BTICINO_DIAGNOSTIC_MAX_LINE,
+  BTICINO_OAUTH_SCOPES,
   OAUTH_SCOPES,
+  requestedScopes,
 } from '../../src/netatmo/constants.js';
 import {
   bticinoEntriesOf,
@@ -109,12 +111,21 @@ async function discover(config = BTICINO_ONLY) {
 
 // --- Scopes and toggle --------------------------------------------------------
 
-test('the BTicino scopes are requested at connection (pyatmo names, read + write)', () => {
-  for (const scope of ['read_bfi', 'write_bfi', 'read_mx', 'write_mx']) {
-    assert.ok(OAUTH_SCOPES.includes(scope), scope);
+test('the BTicino scopes are requested only while the toggle is on (pyatmo names, read + write)', () => {
+  const bticinoScopes = ['read_bfi', 'write_bfi', 'read_mx', 'write_mx'];
+  assert.deepEqual(BTICINO_OAUTH_SCOPES, bticinoScopes);
+  // Toggle off (default): an account without a door entry is never asked.
+  for (const scope of bticinoScopes) {
+    assert.ok(!OAUTH_SCOPES.includes(scope), scope);
+    assert.ok(!requestedScopes(normalizeConfig()).includes(scope), scope);
   }
+  // Toggle on: the base set plus the BTicino scopes.
+  assert.deepEqual(requestedScopes(normalizeConfig({ bticino_api: 'true' })), [
+    ...OAUTH_SCOPES,
+    ...bticinoScopes,
+  ]);
   // Netatmo knows no `access_*` scope for BTicino: none is requested.
-  assert.ok(!OAUTH_SCOPES.some((scope) => /^access_(bfi|mx)$/.test(scope)));
+  assert.ok(!BTICINO_OAUTH_SCOPES.some((scope) => scope.startsWith('access_')));
 });
 
 test('the BTicino family is opt-in: nothing discovered, nothing logged while off', async () => {

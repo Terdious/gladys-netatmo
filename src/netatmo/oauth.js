@@ -36,7 +36,7 @@ import { createLogger } from '@gladysassistant/integration-sdk';
 import {
   NETATMO_BASE_URL,
   OAUTH2,
-  OAUTH_SCOPES,
+  requestedScopes,
   TOKEN_REFRESH_RATIO,
   TOKEN_REFRESH_MIN_DELAY_MS,
   TOKEN_EXPIRY_MARGIN_MS,
@@ -133,6 +133,10 @@ export function createNetatmoOAuth({
   // Scopes requested but not granted by the current token (empty while the
   // granted set is unknown: no token response seen since the start).
   let missingScopeList = [];
+  // Scopes granted by the last token response (null while unknown): kept to
+  // recompute the missing list when the requested set changes (BTicino
+  // toggle, issue #59) without waiting for the next refresh.
+  let grantedScopeList = null;
   // Called when that list changes (a refresh revealed it, a reconnect fixed it).
   let missingScopesCallback = null;
 
@@ -171,7 +175,7 @@ export function createNetatmoOAuth({
     const params = new URLSearchParams({
       client_id: config.client_id,
       redirect_uri: redirectUri,
-      scope: OAUTH_SCOPES.join(' '),
+      scope: requestedScopes(config).join(' '),
       state,
     });
     return `${baseUrl}${OAUTH2.AUTHORIZE_PATH}?${params.toString()}`;
@@ -242,7 +246,19 @@ export function createNetatmoOAuth({
     if (!granted) {
       return; // nothing echoed: keep what we knew
     }
-    const missing = OAUTH_SCOPES.filter((requested) => !granted.includes(requested));
+    grantedScopeList = granted;
+    await updateMissingScopes();
+  }
+
+  /** Recompute the missing-scope list from the last granted set, notify on change. */
+  async function updateMissingScopes() {
+    if (!grantedScopeList) {
+      return;
+    }
+    const granted = grantedScopeList;
+    const missing = requestedScopes(getConfig()).filter(
+      (requested) => !granted.includes(requested),
+    );
     if (missing.join(' ') === missingScopeList.join(' ')) {
       return;
     }
@@ -283,7 +299,7 @@ export function createNetatmoOAuth({
       client_secret: config.client_secret,
       code,
       redirect_uri: redirectUri,
-      scope: OAUTH_SCOPES.join(' '),
+      scope: requestedScopes(config).join(' '),
     });
     await persistTokens(data);
     retryAttempt = 0;
@@ -427,6 +443,11 @@ export function createNetatmoOAuth({
     missingScopes() {
       return [...missingScopeList];
     },
+    /**
+     * The requested scopes may have changed (BTicino toggle, issue #59):
+     * recompute the missing list from the last granted set.
+     */
+    recheckScopes: updateMissingScopes,
     /** Register the callback invoked when the missing-scope list changes. */
     onMissingScopes(callback) {
       missingScopesCallback = callback;

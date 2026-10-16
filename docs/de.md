@@ -536,11 +536,12 @@ meldet. Ein Modul, das Netatmo als offline meldet, erhält das Badge **nicht
 erreichbar**. Noch lässt sich nichts steuern: Die Befehle kommen mit dem
 nächsten Schritt, sobald die echten Daten bekannt sind.
 
-> ⚠️ **Neue Netatmo-Berechtigungen — klicke erneut auf Verbinden.** Die
-> Türsprechanlage braucht vier neue Berechtigungen: `read_bfi` / `write_bfi`
-> (BTicino IP, Classe 300X) und `read_mx` / `write_mx` (Classe 300 EOS). Klicke
-> im Konfigurationsbildschirm erneut auf **Verbinden** und akzeptiere sie —
-> deine Geräte und Einstellungen bleiben erhalten. Bis dahin zeigt der
+> ⚠️ **Neue Netatmo-Berechtigungen — klicke erneut auf Verbinden.** Der
+> Schalter fordert vier zusätzliche Berechtigungen an, nur solange er
+> eingeschaltet ist: `read_bfi` / `write_bfi` (BTicino IP, Classe 300X) und
+> `read_mx` / `write_mx` (Classe 300 EOS). Klicke im Konfigurationsbildschirm
+> erneut auf **Verbinden** und akzeptiere sie — deine Geräte und Einstellungen
+> bleiben erhalten. Bis dahin zeigt der
 > Verbindungsstatus einen Hinweis „klicke erneut auf Verbinden“, und Netatmo
 > lässt die BTicino-Module eventuell weg. Die Schreibberechtigungen werden
 > schon jetzt angefordert, damit der nächste Schritt keine erneute Verbindung

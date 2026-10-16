@@ -503,10 +503,11 @@ module Netatmo reports offline gets the **unreachable** badge. Nothing can be
 controlled yet: the commands come with the next step, once the real data is
 known.
 
-> ⚠️ **New Netatmo permissions — click Connect again.** The door entry needs
-> four new permissions: `read_bfi` / `write_bfi` (BTicino IP, Classe 300X) and
-> `read_mx` / `write_mx` (Classe 300 EOS). Click **Connect** again on the
-> Configuration screen and accept them — your devices and settings are kept.
+> ⚠️ **New Netatmo permissions — click Connect again.** Turning the toggle on
+> asks for four extra permissions, requested only while it is on:
+> `read_bfi` / `write_bfi` (BTicino IP, Classe 300X) and `read_mx` /
+> `write_mx` (Classe 300 EOS). Click **Connect** again on the Configuration
+> screen and accept them — your devices and settings are kept.
 > Until then the connection status shows a "click Connect again" hint, and
 > Netatmo may leave the BTicino modules out. The write permissions are
 > requested now so that the next step needs no new reconnection.

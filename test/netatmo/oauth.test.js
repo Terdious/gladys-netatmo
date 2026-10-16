@@ -157,6 +157,54 @@ test('a token predating the Indoor Camera Advance reports the camerapro scopes m
   ]);
 });
 
+test('the BTicino scopes are requested and tracked only while its toggle is on (issue #59)', async () => {
+  const bticinoScopes = ['read_bfi', 'write_bfi', 'read_mx', 'write_mx'];
+  // Toggle off (default): neither asked nor reported missing.
+  const off = new URL(oauth.buildAuthorizeUrl(REDIRECT_URI)).searchParams.get('scope');
+  assert.ok(bticinoScopes.every((scope) => !off.split(' ').includes(scope)));
+  await connectAccount();
+  netatmo.state.grantedScopes = [...OAUTH_SCOPES];
+  await oauth.refreshTokens();
+  assert.deepEqual(oauth.missingScopes(), []);
+  oauth.stop();
+
+  // Toggle on with a token granted before: the authorize URL asks for them
+  // and the re-check reports them missing without waiting for a refresh.
+  let config = normalizeConfig({
+    client_id: FAKE_CLIENT_ID,
+    client_secret: FAKE_CLIENT_SECRET,
+    bticino_api: 'true',
+  });
+  const notified = [];
+  oauth = createNetatmoOAuth({
+    gladys: {
+      async setConfig(partial) {
+        Object.assign(configStore, partial);
+      },
+    },
+    getConfig: () => config,
+    baseUrl: netatmo.url,
+    now: () => clock,
+  });
+  oauth.onMissingScopes((missing) => notified.push(missing));
+  const on = new URL(oauth.buildAuthorizeUrl(REDIRECT_URI)).searchParams.get('scope');
+  assert.ok(bticinoScopes.every((scope) => on.split(' ').includes(scope)));
+  await connectAccount();
+  netatmo.state.grantedScopes = [...OAUTH_SCOPES]; // the old grant
+  await oauth.refreshTokens();
+  assert.deepEqual(oauth.missingScopes(), bticinoScopes);
+
+  // Toggle back off: the re-check clears the hint.
+  config = normalizeConfig({
+    client_id: FAKE_CLIENT_ID,
+    client_secret: FAKE_CLIENT_SECRET,
+    bticino_api: 'false',
+  });
+  await oauth.recheckScopes();
+  assert.deepEqual(oauth.missingScopes(), []);
+  assert.deepEqual(notified.at(-1), []);
+});
+
 test('handleCallback rejects a state mismatch', async () => {
   oauth.buildAuthorizeUrl(REDIRECT_URI);
   await assert.rejects(

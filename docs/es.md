@@ -538,10 +538,11 @@ Todavía no se puede controlar nada: las órdenes llegarán con el siguiente pas
 una vez conocidos los datos reales.
 
 > ⚠️ **Nuevos permisos de Netatmo — vuelva a hacer clic en Conectar.** El
-> portero necesita cuatro permisos nuevos: `read_bfi` / `write_bfi` (BTicino
-> IP, Classe 300X) y `read_mx` / `write_mx` (Classe 300 EOS). Vuelva a hacer
-> clic en **Conectar** en la pantalla Configuración y acéptelos — sus
-> dispositivos y ajustes se conservan. Mientras tanto, el estado de la conexión
+> interruptor solicita cuatro permisos adicionales, solo mientras está
+> activado: `read_bfi` / `write_bfi` (BTicino IP, Classe 300X) y `read_mx` /
+> `write_mx` (Classe 300 EOS). Vuelva a hacer clic en **Conectar** en la
+> pantalla Configuración y acéptelos — sus dispositivos y ajustes se
+> conservan. Mientras tanto, el estado de la conexión
 > muestra un aviso "vuelva a hacer clic en Conectar", y Netatmo puede omitir los
 > módulos BTicino. Los permisos de escritura se solicitan ya para que el
 > siguiente paso no requiera una nueva reconexión.

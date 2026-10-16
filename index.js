@@ -368,6 +368,11 @@ export function setupIntegration(
       // BTicino toggle (re-)enabled: log every BTicino entry again.
       bticinoDiagnostic.reset();
     }
+    if (config.bticino_api !== previous.bticino_api) {
+      // The BTicino scopes are only requested while the toggle is on: the
+      // "click Connect again" hint follows the toggle.
+      await oauth.recheckScopes();
+    }
     await syncConnection();
     // Saving the configuration re-runs the discovery automatically: enabling
     // a toggle (e.g. security_api) must surface its devices without a manual

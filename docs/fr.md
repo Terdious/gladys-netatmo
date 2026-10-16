@@ -539,9 +539,10 @@ n'est encore pilotable : les commandes arrivent avec l'étape suivante, une fois
 les données réelles connues.
 
 > ⚠️ **Nouvelles autorisations Netatmo — recliquez sur Connecter.**
-> L'interphone demande quatre nouvelles autorisations : `read_bfi` /
-> `write_bfi` (BTicino IP, Classe 300X) et `read_mx` / `write_mx` (Classe 300
-> EOS). Cliquez à nouveau sur **Connecter** dans l'écran Configuration et
+> Activer l'interrupteur demande quatre autorisations supplémentaires,
+> demandées uniquement tant qu'il est activé : `read_bfi` / `write_bfi`
+> (BTicino IP, Classe 300X) et `read_mx` / `write_mx` (Classe 300 EOS).
+> Cliquez à nouveau sur **Connecter** dans l'écran Configuration et
 > acceptez-les — vos appareils et réglages sont conservés. D'ici là, le statut
 > de connexion affiche « cliquez à nouveau sur Connecter », et Netatmo peut
 > omettre les modules BTicino. Les autorisations d'écriture sont demandées dès

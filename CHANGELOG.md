@@ -22,9 +22,10 @@ the notes of the version's GitHub Release.
   then on change only) and every webhook event about them, with tokens, keys,
   URLs and e-mail addresses redacted and each line bounded to 8 KB, so the
   real formats can be collected for the ring, door lock and staircase light
-  commands. It needs the new `read_bfi` / `write_bfi` / `read_mx` /
-  `write_mx` scopes: **an account connected before must click Connect
-  again** (the Configuration screen says so until then)
+  commands. Its `read_bfi` / `write_bfi` / `read_mx` / `write_mx` scopes
+  are requested **only while the toggle is on**: turning it on asks to click
+  **Connect** again (the Configuration screen says so until then); accounts
+  without a door entry are not affected
   ([#59](https://github.com/Terdious/gladys-netatmo/issues/59)).
 
 ## [2.1.0] - 2026-10-16

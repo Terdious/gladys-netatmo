@@ -104,8 +104,9 @@ capabilities land (Home + Security cameras, webhooks, …).
   carries (WiFi / RF quality, the read-only `on` of `BNSL` / `BNCS`) and the
   unreachable badge, and a `[bticino-diagnostic]` log writes their raw
   homesdata / homestatus entries (on change) and webhook events, secrets
-  redacted, to collect the real formats. No command yet. New `read_bfi` /
-  `write_bfi` / `read_mx` / `write_mx` scopes — existing users reconnect once.
+  redacted, to collect the real formats. No command yet. Its `read_bfi` /
+  `write_bfi` / `read_mx` / `write_mx` scopes are requested only while the
+  toggle is on (turning it on asks to click Connect again).
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required), plus the
   **degraded state**: an API family failing 3 cycles in a row is named under

@@ -508,16 +508,25 @@ export const OAUTH_SCOPES = [
   // an account connected before must click Connect again to grant them.
   'read_smarther',
   'write_smarther',
-  // BTicino door entry (issue #59): BTicino IP (Classe 300X) and Classe 300
-  // EOS, the names pyatmo requests (ALL_SCOPES) — added after 2.1.0: an
-  // account connected before must click Connect again to grant them. The
-  // write scopes are requested now so the step 2 commands (door lock,
-  // staircase light) need no second reconnection.
-  'read_bfi',
-  'write_bfi',
-  'read_mx',
-  'write_mx',
 ];
+
+// BTicino door entry (issue #59): BTicino IP (Classe 300X) and Classe 300 EOS,
+// the names pyatmo requests (ALL_SCOPES). Requested ONLY while the opt-in
+// `bticino_api` toggle is on: an account without a BTicino door entry never
+// sees them (no "click Connect again" hint, no consent for scopes it does
+// not need). The write scopes are requested together, so the step 2
+// commands (door lock, staircase light) need no second reconnection.
+export const BTICINO_OAUTH_SCOPES = ['read_bfi', 'write_bfi', 'read_mx', 'write_mx'];
+
+/**
+ * Scopes to request for a configuration: the base set, plus the BTicino door
+ * entry ones while its toggle is on.
+ * @param {object} [config] normalized configuration
+ * @returns {string[]} the scopes to request
+ */
+export function requestedScopes(config) {
+  return config?.bticino_api ? [...OAUTH_SCOPES, ...BTICINO_OAUTH_SCOPES] : OAUTH_SCOPES;
+}
 
 // Refresh the access token at 80% of its lifetime (core PR #2618 hardening),
 // never sooner than 30 seconds from now.
