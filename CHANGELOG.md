@@ -12,6 +12,9 @@ the notes of the version's GitHub Release.
 
 ### Added
 
+- **Cloud** tag in the Gladys catalog: the manifest declares the `cloud`
+  transport (catalog card badge on Gladys 4.85+, Cloud filter on 4.86+)
+  ([#23](https://github.com/Terdious/gladys-netatmo/issues/23)).
 - German and Spanish: the configuration screen (labels, descriptions, select
   options, links), the catalog description, the connection status messages
   and the user documentation (`docs/de.md`, `docs/es.md`) now ship in the
