@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-16
+
 ### Added
 
 - Netatmo Smart Indoor Air Quality Monitor (Home Coach, `NHC`): new opt-in
@@ -218,7 +220,8 @@ the notes of the version's GitHub Release.
 - First stable release: OAuth2 connection, Weather and Energy devices,
   thermostat setpoint, cameras (image, monitoring, live stream).
 
-[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/Terdious/gladys-netatmo/compare/v1.3.0...v2.0.0
 [1.3.0]: https://github.com/Terdious/gladys-netatmo/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Terdious/gladys-netatmo/compare/v1.1.3...v1.2.0
 [1.1.3]: https://github.com/Terdious/gladys-netatmo/compare/v1.1.2...v1.1.3
