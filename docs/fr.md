@@ -1,8 +1,8 @@
 # Intégration Netatmo pour Gladys Assistant
 
 Connectez vos appareils **Netatmo** — station météo, thermostats et vannes de
-radiateur, caméras intérieure/extérieure et leurs accessoires — à Gladys
-Assistant.
+radiateur, caméras intérieure/extérieure et leurs accessoires, capteurs de
+qualité de l'air — à Gladys Assistant.
 
 Cette intégration communique avec le cloud Netatmo pour vous : vous créez une
 fois votre propre application Netatmo Connect, connectez votre compte, et Gladys
@@ -65,11 +65,12 @@ vous invite à vous reconnecter.
 
 Sous **Appareils à découvrir**, activez les familles que vous possédez :
 
-| Interrupteur | Découvre                                                                      |
-| ------------ | ----------------------------------------------------------------------------- |
-| **Énergie**  | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`)       |
-| **Météo**    | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs             |
-| **Sécurité** | Caméras intérieure (`NACamera`) et extérieure (`NOC`), plus leurs accessoires |
+| Interrupteur         | Découvre                                                                         |
+| -------------------- | -------------------------------------------------------------------------------- |
+| **Énergie**          | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`)          |
+| **Météo**            | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                |
+| **Sécurité**         | Caméras intérieure (`NACamera`) et extérieure (`NOC`), plus leurs accessoires    |
+| **Qualité de l'air** | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -182,6 +183,40 @@ Quand la famille Sécurité est activée, les accessoires liés à vos caméras 
 - **Détecteur de fumée** (`NSD`) — découvert avec sa batterie et son signal,
   plus la fonctionnalité **Fumée** alimentée par les webhooks (voir la section
   ci-dessus) : le polling seul ne peut pas remonter cet état.
+
+---
+
+## Capteur de qualité de l'air (Home Coach)
+
+Quand la famille **Appareils Qualité de l'air (Home Coach)** est activée, chaque
+capteur de qualité de l'air intérieur Netatmo (Home Coach, `NHC`) est découvert
+avec sa température (plus le minimum et le maximum du jour), son humidité, son
+CO2, son bruit, sa pression et sa pression absolue, la qualité de son WiFi, et
+une fonctionnalité **Qualité de l'air**. Il porte le nom que vous lui avez donné
+dans l'application Netatmo.
+
+Le Home Coach ne mesure pas un indice de qualité de l'air : il note la pièce sur
+cinq niveaux, à partir de son CO2, de son humidité, de son bruit et de sa
+température. Gladys lit une fonctionnalité de qualité de l'air comme un indice
+AQI (de 0 à 500) pour la colorer sur le tableau de bord et la transmettre à
+HomeKit : chaque niveau est donc publié au milieu de la tranche AQI
+correspondante :
+
+| Niveau Home Coach | Valeur dans Gladys | Couleur du tableau de bord | HomeKit   |
+| ----------------- | ------------------ | -------------------------- | --------- |
+| Sain              | 25                 | vert                       | Excellent |
+| Bon               | 75                 | jaune                      | Bon       |
+| Moyen             | 125                | orange                     | Moyen     |
+| Mauvais           | 175                | rose                       | Médiocre  |
+| Malsain           | 250                | violet                     | Mauvais   |
+
+Dans une scène, comparez avec ces valeurs : par exemple « Qualité de l'air
+supérieure à 150 » signifie mauvais ou malsain.
+
+Un Home Coach hors ligne reçoit le badge **injoignable** et ses dernières
+valeurs connues ne sont pas publiées. Aucune reconnexion n'est nécessaire : la
+permission Home Coach (`read_homecoach`) fait partie de la connexion depuis la
+première version.
 
 ---
 

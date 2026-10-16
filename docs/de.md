@@ -1,7 +1,8 @@
 # Netatmo-Integration für Gladys Assistant
 
 Verbinde deine **Netatmo**-Geräte — Wetterstation, Thermostate und
-Heizkörperventile, Innen- und Außenkameras samt Zubehör — mit Gladys Assistant.
+Heizkörperventile, Innen- und Außenkameras samt Zubehör, Raumluftsensoren — mit
+Gladys Assistant.
 
 Diese Integration kommuniziert in deinem Namen mit der Netatmo-Cloud: Du
 erstellst einmalig deine eigene Netatmo-Connect-Anwendung, verbindest dein
@@ -68,11 +69,12 @@ Konfiguration auf, dich erneut zu verbinden.
 
 Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 
-| Schalter       | Erkennt                                                                |
-| -------------- | ---------------------------------------------------------------------- |
-| **Energie**    | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)  |
-| **Wetter**     | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule |
-| **Sicherheit** | Innen- (`NACamera`) und Außenkameras (`NOC`) sowie deren Zubehör       |
+| Schalter         | Erkennt                                                                |
+| ---------------- | ---------------------------------------------------------------------- |
+| **Energie**      | Thermostat (`NATherm1`), Relais (`NAPlug`), Heizkörperventile (`NRV`)  |
+| **Wetter**       | Station (`NAMain`) + Außen-, Wind-, Regen- und zusätzliche Innenmodule |
+| **Sicherheit**   | Innen- (`NACamera`) und Außenkameras (`NOC`) sowie deren Zubehör       |
+| **Luftqualität** | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert         |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -183,6 +185,38 @@ verknüpfte Zubehör erkannt:
 - **Rauchmelder** (`NSD`) — erkannt mit Batterie und Signal, dazu eine Funktion
   **Rauch**, die von den Webhooks gespeist wird (siehe Abschnitt oben): Die
   Abfrage allein kann diesen Zustand nicht melden.
+
+---
+
+## Raumluftsensor (Home Coach)
+
+Wenn die Familie **Luftqualitäts-Geräte (Home Coach)** aktiviert ist, wird jeder
+Netatmo-Raumluftsensor (Home Coach, `NHC`) mit seiner Temperatur (dazu Minimum
+und Maximum des Tages), Luftfeuchtigkeit, CO2, Lärm, Luftdruck und absolutem
+Luftdruck, seiner WLAN-Qualität und einer Funktion **Luftqualität** erkannt. Er
+trägt den Namen, den du ihm in der Netatmo-App gegeben hast.
+
+Der Home Coach misst keinen Luftqualitätsindex: Er bewertet den Raum in fünf
+Stufen, anhand von CO2, Luftfeuchtigkeit, Lärm und Temperatur. Gladys liest eine
+Luftqualitäts-Funktion als AQI (0 bis 500), um sie im Dashboard einzufärben und
+an HomeKit weiterzugeben. Jede Stufe wird daher als Mitte des passenden
+AQI-Bereichs veröffentlicht:
+
+| Home-Coach-Stufe | Wert in Gladys | Farbe im Dashboard | HomeKit       |
+| ---------------- | -------------- | ------------------ | ------------- |
+| Gesund           | 25             | grün               | Ausgezeichnet |
+| Gut              | 75             | gelb               | Gut           |
+| Mittel           | 125            | orange             | Mittel        |
+| Schlecht         | 175            | rosa               | Minderwertig  |
+| Ungesund         | 250            | lila               | Schlecht      |
+
+Vergleiche in einer Szene mit diesen Werten: „Luftqualität über 150“ bedeutet
+zum Beispiel schlecht oder ungesund.
+
+Ein Home Coach, der offline ist, erhält das Badge **nicht erreichbar**, und
+seine zuletzt bekannten Werte werden nicht veröffentlicht. Eine erneute
+Verbindung ist nicht nötig: Die Home-Coach-Berechtigung (`read_homecoach`) ist
+seit der ersten Version Teil der Verbindung.
 
 ---
 

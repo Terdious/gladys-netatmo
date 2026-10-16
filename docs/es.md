@@ -1,8 +1,8 @@
 # Integración Netatmo para Gladys Assistant
 
 Conecte sus dispositivos **Netatmo** — estación meteorológica, termostatos y
-válvulas de radiador, cámaras de interior/exterior y sus accesorios — a Gladys
-Assistant.
+válvulas de radiador, cámaras de interior/exterior y sus accesorios, monitores
+de calidad del aire — a Gladys Assistant.
 
 Esta integración se comunica con la nube de Netatmo en su nombre: usted crea una
 sola vez su propia aplicación Netatmo Connect, conecta su cuenta, y Gladys
@@ -66,11 +66,12 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor      | Descubre                                                                        |
-| ---------------- | ------------------------------------------------------------------------------- |
-| **Energía**      | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)          |
-| **Meteorología** | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales |
-| **Seguridad**    | Cámaras de interior (`NACamera`) y de exterior (`NOC`), más sus accesorios      |
+| Interruptor          | Descubre                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------- |
+| **Energía**          | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`)             |
+| **Meteorología**     | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales    |
+| **Seguridad**        | Cámaras de interior (`NACamera`) y de exterior (`NOC`), más sus accesorios         |
+| **Calidad del aire** | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -183,6 +184,39 @@ vinculados a sus cámaras:
 - **Detector de humo** (`NSD`) — descubierto con su batería y su señal, más una
   funcionalidad **Humo** alimentada por los webhooks (ver la sección anterior):
   la consulta periódica por sí sola no puede reportar ese estado.
+
+---
+
+## Monitor de calidad del aire (Home Coach)
+
+Cuando la familia **Dispositivos de Calidad del aire (Home Coach)** está
+activada, cada monitor de calidad del aire interior Netatmo (Home Coach, `NHC`)
+se descubre con su temperatura (más el mínimo y el máximo del día), su humedad,
+su CO2, su ruido, su presión y su presión absoluta, la calidad de su WiFi y una
+funcionalidad **Calidad del aire**. Lleva el nombre que usted le dio en la
+aplicación Netatmo.
+
+El Home Coach no mide un índice de calidad del aire: califica la habitación en
+cinco niveles, a partir de su CO2, su humedad, su ruido y su temperatura. Gladys
+lee una funcionalidad de calidad del aire como un índice AQI (de 0 a 500) para
+colorearla en el panel y transmitirla a HomeKit, así que cada nivel se publica
+en el centro del tramo AQI correspondiente:
+
+| Nivel Home Coach | Valor en Gladys | Color en el panel | HomeKit    |
+| ---------------- | --------------- | ----------------- | ---------- |
+| Saludable        | 25              | verde             | Excelente  |
+| Bueno            | 75              | amarillo          | Buena      |
+| Regular          | 125             | naranja           | Regular    |
+| Malo             | 175             | rosa              | Deficiente |
+| Insalubre        | 250             | morado            | Mala       |
+
+En una escena, compare con estos valores: por ejemplo "Calidad del aire superior
+a 150" significa malo o insalubre.
+
+Un Home Coach sin conexión recibe la insignia **inaccesible** y sus últimos
+valores conocidos no se publican. No hace falta volver a conectarse: el permiso
+Home Coach (`read_homecoach`) forma parte de la conexión desde la primera
+versión.
 
 ---
 

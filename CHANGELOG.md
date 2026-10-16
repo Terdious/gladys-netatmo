@@ -10,6 +10,23 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Netatmo Smart Indoor Air Quality Monitor (Home Coach, `NHC`): new opt-in
+  **Air quality devices (Home Coach)** toggle (`aircare_api`, off by default)
+  loading `gethomecoachsdata` as its own API family — its failure keeps the
+  previous discovery list but never blocks the other families. Each Home
+  Coach brings temperature (with the day's minimum and maximum), humidity,
+  CO2, noise, pressure, absolute pressure and WiFi quality, with the same
+  feature suffixes as the weather indoor modules, plus an **Air quality**
+  feature (`airquality-sensor` / `aqi`, suffix `health_idx`). The Home Coach
+  rates the room on five levels (healthy, fine, fair, poor, unhealthy): as
+  Gladys reads an AQI (0-500) for its dashboard colours and HomeKit, each
+  level is published as the middle of the matching AQI band (25, 75, 125,
+  175, 250). An offline Home Coach is badged unreachable and publishes no
+  stale value. No reconnection needed (`read_homecoach` was already
+  requested) ([#37](https://github.com/Terdious/gladys-netatmo/issues/37)).
+
 ### Changed
 
 - GitHub Release notes, like gladys-tuya: the version's changelog section,

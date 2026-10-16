@@ -185,6 +185,24 @@
       "default": false
     },
     {
+      "key": "aircare_api",
+      "type": "boolean",
+      "label": {
+        "en": "Air quality devices (Home Coach)",
+        "fr": "Appareils Qualité de l'air (Home Coach)",
+        "de": "Luftqualitäts-Geräte (Home Coach)",
+        "es": "Dispositivos de Calidad del aire (Home Coach)"
+      },
+      "description": {
+        "en": "Discover the Netatmo Smart Indoor Air Quality Monitors (Home Coach): temperature, humidity, CO2, noise, pressure and air quality.",
+        "fr": "Découvrir les capteurs de qualité de l'air intérieur Netatmo (Home Coach) : température, humidité, CO2, bruit, pression et qualité de l'air.",
+        "de": "Netatmo-Raumluftsensoren (Home Coach) erkennen: Temperatur, Luftfeuchtigkeit, CO2, Lärm, Luftdruck und Luftqualität.",
+        "es": "Descubrir los monitores de calidad del aire interior Netatmo (Home Coach): temperatura, humedad, CO2, ruido, presión y calidad del aire."
+      },
+      "required": false,
+      "default": false
+    },
+    {
       "key": "camera_quality",
       "type": "select",
       "label": {

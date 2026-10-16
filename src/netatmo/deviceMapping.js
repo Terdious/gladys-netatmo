@@ -21,6 +21,27 @@ const BATTERY_LEVELS = {
   'very low': 10,
 };
 
+// Home Coach `health_idx` (0 healthy, 1 fine, 2 fair, 3 poor, 4 unhealthy) →
+// middle of the matching US EPA AQI band, the scale Gladys reads an
+// `airquality-sensor`/`aqi` feature on (dashboard badge: <50 green, <100
+// yellow, <150 orange, <200 pink, <300 purple; HomeKit: excellent, good,
+// fair, inferior, poor — the same five levels). Publishing the raw 0-4 would
+// show an "unhealthy" room as green / excellent.
+export const HEALTH_INDEX_TO_AQI = [25, 75, 125, 175, 250];
+
+/**
+ * Convert a Home Coach health index to its AQI-band value.
+ * @param {unknown} healthIndex raw `health_idx` (0-4)
+ * @returns {number|undefined} AQI-band value, undefined when unknown
+ */
+export function healthIndexToAqi(healthIndex) {
+  if (healthIndex === undefined || healthIndex === null || healthIndex === '') {
+    return undefined;
+  }
+  const level = Number(healthIndex);
+  return Number.isInteger(level) ? HEALTH_INDEX_TO_AQI[level] : undefined;
+}
+
 export const writeValues = {
   [DEVICE_FEATURE_CATEGORIES.THERMOSTAT]: {
     [DEVICE_FEATURE_TYPES.THERMOSTAT.TARGET_TEMPERATURE]: identity,

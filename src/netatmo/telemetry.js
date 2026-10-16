@@ -107,7 +107,7 @@ export function createTelemetry({
   let loadCache = null; // {key, at, promise}
 
   function loadCacheKey(config) {
-    return `${config.energy_api}|${config.weather_api}|${config.security_api}`;
+    return `${config.energy_api}|${config.weather_api}|${config.security_api}|${config.aircare_api}`;
   }
 
   /**
