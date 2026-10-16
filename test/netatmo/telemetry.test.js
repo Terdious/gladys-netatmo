@@ -67,7 +67,7 @@ afterEach(async () => {
 function stateOf(featureExternalId) {
   return gladys.published
     .filter((s) => s.device_feature_external_id === featureExternalId)
-    .map((s) => s.state);
+    .map((s) => s.state ?? s.text);
 }
 
 test('syncDiscovery publishes the supported devices and the transport badges', async () => {
@@ -742,4 +742,47 @@ test('the heating mode command surfaces the missing-scope error', async () => {
     setDeviceValue({ gladys, client }, { device, feature, value: 2 }),
     /setthermmode answered 500/,
   );
+});
+
+test('the Home Coach publishes its dashboard_data, never stale values (issue #37)', async () => {
+  const configAircare = normalizeConfig({ aircare_api: 'true' });
+  const devices = await telemetry.syncDiscovery(configAircare);
+  // 7 default devices + the two Home Coach.
+  assert.equal(devices.length, 9);
+  gladys.devices = devices;
+  await telemetry.refreshValues(configAircare);
+
+  const coach = 'ext:netatmo:12:34:56:3e:c5:46';
+  assert.deepEqual(stateOf(`${coach}:temperature`), [20.3]);
+  assert.deepEqual(stateOf(`${coach}:min_temp`), [20.3]);
+  assert.deepEqual(stateOf(`${coach}:max_temp`), [21.6]);
+  assert.deepEqual(stateOf(`${coach}:co2`), [494]);
+  assert.deepEqual(stateOf(`${coach}:humidity`), [63]);
+  assert.deepEqual(stateOf(`${coach}:noise`), [42]);
+  // Integer pressure features, like the station.
+  assert.deepEqual(stateOf(`${coach}:pressure`), [1014]);
+  assert.deepEqual(stateOf(`${coach}:absolute_pressure`), [1004]);
+  // health_idx 1 ("fine") → 75, the middle of the "moderate" AQI band.
+  assert.deepEqual(stateOf(`${coach}:health_idx`), [75]);
+  // The same level as text: published with `text`, not `state`.
+  assert.deepEqual(stateOf(`${coach}:health_level`), ['fine']);
+  assert.ok(
+    gladys.published.some(
+      (s) => s.device_feature_external_id === `${coach}:health_level` && s.state === undefined,
+    ),
+  );
+  assert.deepEqual(stateOf(`${coach}:wifi_strength`), [67]);
+
+  // The unreachable Home Coach publishes nothing and is badged unreachable.
+  const dead = 'ext:netatmo:12:34:56:26:69:0c';
+  assert.ok(!gladys.published.some((s) => s.device_feature_external_id.startsWith(`${dead}:`)));
+  const badge = Object.fromEntries(gladys.transports.map((t) => [t.external_id, t.transport]));
+  assert.equal(badge[dead], 'unreachable');
+  assert.equal(badge[coach], 'cloud');
+
+  // A worse air quality goes out on the next cycle.
+  netatmo.state.homeCoachDevices[1].dashboard_data.health_idx = 4;
+  await telemetry.refreshValues(configAircare);
+  assert.deepEqual(stateOf(`${coach}:health_idx`), [75, 250]);
+  assert.deepEqual(stateOf(`${coach}:health_level`), ['fine', 'unhealthy']);
 });

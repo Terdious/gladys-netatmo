@@ -8,12 +8,14 @@
 // are rebuilt from homesdata with `reachable: false` so they can still be
 // discovered and saved).
 //
-// Three API families, gated by the manifest toggles:
+// Four API families, gated by the manifest toggles:
 //   - Home topology: homesdata + per-home homestatus (concurrency 2) — the
 //     Energy modules, the cameras, and the current Weather measures too;
 //   - Energy legacy: getthermostatsdata, merged by id/_id (adds
 //     `modules_bridged` on plugs and richer thermostat data);
-//   - Weather: getstationsdata, merged the same way (dashboard_data etc.).
+//   - Weather: getstationsdata, merged the same way (dashboard_data etc.);
+//   - Aircare: gethomecoachsdata (Home Coach air quality monitors, issue #37),
+//     merged the same way.
 // The legacy APIs use `_id` while homesdata/homestatus use `id`: every lookup
 // goes through `id || _id`, like the core.
 // -----------------------------------------------------------------------------
@@ -27,6 +29,7 @@ import {
   WEATHER_MODULE_TYPES,
   SECURITY_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
+  AIRCARE_MODULE_TYPES,
   HOMES_CONCURRENCY,
 } from './constants.js';
 
@@ -64,6 +67,13 @@ export function getModuleCategory(model, config) {
       moduleSupported: true,
       categoryAPI: SUPPORTED_CATEGORY_TYPE.SECURITY,
       apiNotConfigured: !config.security_api,
+    };
+  }
+  if (AIRCARE_MODULE_TYPES.includes(model)) {
+    return {
+      moduleSupported: true,
+      categoryAPI: SUPPORTED_CATEGORY_TYPE.AIRCARE,
+      apiNotConfigured: !config.aircare_api,
     };
   }
   if (SHUTTER_MODULE_TYPES.includes(model)) {
@@ -229,6 +239,27 @@ export async function loadWeatherStationDetails(client, config) {
 }
 
 /**
+ * Home Coach / Smart Indoor Air Quality Monitors (issue #37). Standalone wifi
+ * devices: no modules, no home_id in this legacy payload.
+ * @param {object} client Netatmo API client
+ * @param {object} config normalized integration config
+ * @returns {Promise<Array>} Home Coach devices
+ */
+export async function loadHomeCoachDetails(client, config) {
+  const homeCoachs = await client.getHomeCoachsData();
+  for (const homeCoach of homeCoachs) {
+    homeCoach.apiNotConfigured = !config.aircare_api;
+    homeCoach.categoryAPI = SUPPORTED_CATEGORY_TYPE.AIRCARE;
+  }
+  return homeCoachs;
+}
+
+/** Netatmo 403 "scope rights" refusal (error code 13), see client.js. */
+function isScopeRefusal(err) {
+  return err?.status === 403 && err?.body?.error?.code === 13;
+}
+
+/**
  * Summary of one homesdata home for the features that are not device states
  * (issue #39 scene triggers and actions, issue #40 widgets): its name, its
  * known persons (face recognition, homesdata `persons`), its modules, its
@@ -279,7 +310,7 @@ export function summarizeHome(homeData, devices = []) {
 }
 
 /**
- * Load every raw Netatmo device, merging the three API families
+ * Load every raw Netatmo device, merging the API families
  * (port of the core `loadDevices`).
  * @param {object} client Netatmo API client
  * @param {object} config normalized integration config
@@ -296,7 +327,7 @@ export async function loadDevices(client, config) {
  * published discovery list — devices would vanish from the Discovery screen
  * for the duration of a Netatmo hiccup. `failed` names the families that
  * failed: `homes` (homesdata/homestatus), `energy` (getthermostatsdata),
- * `weather` (getstationsdata).
+ * `weather` (getstationsdata), `aircare` (gethomecoachsdata).
  * @param {object} client Netatmo API client
  * @param {object} config normalized integration config
  * @returns {Promise<{devices: Array, partial: boolean, failed: string[], homes: Array}>}
@@ -423,6 +454,36 @@ export async function loadAccount(client, config) {
     } catch (err) {
       failed.push('weather');
       logger.error(`getstationsdata load failed: ${err.message}`);
+    }
+  }
+
+  if (config.aircare_api) {
+    try {
+      const homeCoachs = await loadHomeCoachDetails(client, config);
+      // Merged by id like the Weather family, should a Home Coach ever ride in
+      // the homesdata topology too; otherwise appended.
+      listDevices = listDevices.map((device) => {
+        const homeCoach = homeCoachs.find((coach) => coach._id === netatmoId(device));
+        return homeCoach ? { ...device, ...homeCoach } : device;
+      });
+      listDevices = [
+        ...listDevices,
+        ...homeCoachs.filter(
+          (coach) => !listDevices.some((device) => netatmoId(device) === coach._id),
+        ),
+      ];
+    } catch (err) {
+      if (isScopeRefusal(err)) {
+        // A missing read_homecoach right is durable, not a hiccup: flagging
+        // the load partial would freeze the discovery list of EVERY family
+        // until the user reconnects. Report it and go on without Home Coach.
+        logger.warn(
+          'gethomecoachsdata refused (missing read_homecoach scope rights) — reconnect your Netatmo account to discover the Home Coach devices',
+        );
+      } else {
+        failed.push('aircare');
+        logger.error(`gethomecoachsdata load failed: ${err.message}`);
+      }
     }
   }
 

@@ -7,9 +7,10 @@
 //
 // Endpoints mirror the core service: homesdata/homestatus (Energy topology +
 // live status), getthermostatsdata (legacy Energy details), getstationsdata
-// (Weather stations), setroomthermpoint (thermostat setpoint) and
-// setthermmode (heating mode of a home), setpersonsaway / setpersonshome
-// (presence of the persons known to the cameras).
+// (Weather stations), gethomecoachsdata (Home Coach air quality monitors,
+// issue #37), setroomthermpoint (thermostat setpoint), setthermmode (heating
+// mode of a home) and setpersonsaway / setpersonshome (presence of the
+// persons known to the cameras).
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
@@ -126,6 +127,17 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
   }
 
   /**
+   * Fetch the Home Coach / Smart Indoor Air Quality Monitors (NHC devices,
+   * legacy API shaped like getstationsdata: `_id`, `station_name`,
+   * `dashboard_data`, no modules).
+   * @returns {Promise<Array>} the Home Coach devices array
+   */
+  async function getHomeCoachsData() {
+    const body = await request(API_PATHS.GET_HOME_COACHS);
+    return body?.status === 'ok' ? (body?.body?.devices ?? []) : [];
+  }
+
+  /**
    * Set a room thermostat setpoint (mode `manual`, like the core).
    * @param {{homeId: string, roomId: string, temp: number}} setpoint target
    * @returns {Promise<object>} parsed response body
@@ -222,6 +234,7 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     getHomeStatus,
     getThermostatsData,
     getStationsData,
+    getHomeCoachsData,
     setRoomThermpoint,
     setThermMode,
     setPersonsAway,

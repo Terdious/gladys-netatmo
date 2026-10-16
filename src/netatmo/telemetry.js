@@ -27,7 +27,11 @@
 //     message) — until the first complete load (issue #33).
 // -----------------------------------------------------------------------------
 
-import { createLogger, DEVICE_TRANSPORTS } from '@gladysassistant/integration-sdk';
+import {
+  createLogger,
+  DEVICE_TRANSPORTS,
+  DEVICE_FEATURE_CATEGORIES,
+} from '@gladysassistant/integration-sdk';
 
 import {
   REFRESH_VALUES_INTERVAL_MS,
@@ -132,7 +136,7 @@ export function createTelemetry({
   // outage, the devices a partial load misses still get a degraded badge.
   const knownDevices = new Map();
   // Consecutive loads in which each API family failed (`homes`, `energy`,
-  // `weather`), and the degraded message currently reported (null when ok).
+  // `weather`, `aircare`), and the degraded message currently reported (null when ok).
   const failedLoads = new Map();
   let degradedMessage = null;
 
@@ -141,9 +145,13 @@ export function createTelemetry({
   let lastLoadKey = null;
 
   function loadCacheKey(config) {
-    return [config.energy_api, config.weather_api, config.security_api, config.shutter_api].join(
-      '|',
-    );
+    return [
+      config.energy_api,
+      config.weather_api,
+      config.security_api,
+      config.shutter_api,
+      config.aircare_api,
+    ].join('|');
   }
 
   /**
@@ -423,7 +431,13 @@ export function createTelemetry({
         continue; // unchanged and fresh: dedup
       }
       published.set(featureExternalId, { state, at: now() });
-      states.push({ device_feature_external_id: featureExternalId, state });
+      // Text features (e.g. the Home Coach air quality level) carry a string
+      // state, published as `text`.
+      states.push(
+        feature.category === DEVICE_FEATURE_CATEGORIES.TEXT
+          ? { device_feature_external_id: featureExternalId, text: String(state) }
+          : { device_feature_external_id: featureExternalId, state },
+      );
     }
     return states;
   }

@@ -51,6 +51,7 @@ const CAPABILITY_FIELDS = ['scene_triggers', 'scene_actions', 'widgets'];
 const CAPABILITY_MIN_GLADYS_VERSION = [5, 1, 0];
 const FEATURE_TYPE_MIN_GLADYS_VERSION = {
   'thermostat/preset': [5, 2, 0],
+  'text/select': [5, 1, 1],
 };
 // The languages of the Gladys interface: every text the user reads ships in
 // all of them (Gladys falls back to English for a missing one).
@@ -182,10 +183,12 @@ test('every feature type the code publishes is known to the minimum Gladys versi
   // Every builder of src/netatmo/features.js, called with placeholder
   // arguments: the category/type pair does not depend on them.
   const published = new Set(
-    Object.values(featureBuilders).map((build) => {
-      const feature = build('name', 'ext:netatmo:id', 'suffix');
-      return `${feature.category}/${feature.type}`;
-    }),
+    Object.values(featureBuilders)
+      .filter((build) => typeof build === 'function')
+      .map((build) => {
+        const feature = build('name', 'ext:netatmo:id', 'suffix');
+        return `${feature.category}/${feature.type}`;
+      }),
   );
   assert.ok(published.has('thermostat/preset'), 'the heating mode is a thermostat preset');
   for (const [featureType, minVersion] of Object.entries(FEATURE_TYPE_MIN_GLADYS_VERSION)) {

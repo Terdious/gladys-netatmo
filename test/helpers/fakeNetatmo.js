@@ -4,7 +4,7 @@
 //     with rotating refresh tokens (like the real Netatmo);
 //   - Bearer-protected API: homesdata, homestatus, getthermostatsdata,
 //     getstationsdata, setroomthermpoint, setthermmode, setpersonsaway and
-//     setpersonshome (form), setstate (JSON);
+//     setpersonshome (form), gethomecoachsdata, setstate (JSON);
 //   - two fake cameras (/vpn/<id> and /local/<id>: command/ping + snapshot).
 // Behaviour toggles (`failTokenWith`, `rejectAccessToken`, `failSetpointWith`,
 // `failLocalSnapshot`) let the tests exercise the failure paths.
@@ -261,6 +261,52 @@ export function addShutterFixtures(state, homeId = 'home-1') {
   status.errors.push({ code: 6, id: '0009999994' });
 }
 
+// Home Coach / Smart Indoor Air Quality Monitors (issue #37), shaped like the
+// pyatmo fixture gethomecoachsdata.json: one UNREACHABLE device without
+// dashboard_data, one reachable device whose generic `module_name` ("Indoor")
+// must not win over its `station_name`.
+function buildDefaultHomeCoachDevices() {
+  return [
+    {
+      _id: '12:34:56:26:69:0c',
+      type: 'NHC',
+      station_name: 'Bedroom',
+      wifi_status: 58,
+      reachable: false,
+      co2_calibrating: false,
+      firmware: 45,
+      data_type: ['Temperature', 'CO2', 'Humidity', 'Noise', 'Pressure', 'health_idx'],
+      place: { city: 'Frankfurt', country: 'DE', timezone: 'Europe/Berlin' },
+    },
+    {
+      _id: '12:34:56:3e:c5:46',
+      type: 'NHC',
+      station_name: 'Parents Bedroom',
+      module_name: 'Indoor',
+      wifi_status: 67,
+      reachable: true,
+      co2_calibrating: false,
+      firmware: 45,
+      data_type: ['Temperature', 'CO2', 'Humidity', 'Noise', 'Pressure', 'health_idx'],
+      place: { city: 'Frankfurt', country: 'DE', timezone: 'Europe/Berlin' },
+      dashboard_data: {
+        time_utc: 1572073816,
+        Temperature: 20.3,
+        CO2: 494,
+        Humidity: 63,
+        Noise: 42,
+        Pressure: 1014.5,
+        AbsolutePressure: 1004.1,
+        health_idx: 1,
+        min_temp: 20.3,
+        max_temp: 21.6,
+        date_max_temp: 1572059333,
+        date_min_temp: 1572073816,
+      },
+    },
+  ];
+}
+
 export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
   const state = {
     tokenRequests: [], // every parsed form POSTed to /oauth2/token
@@ -282,6 +328,7 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     dropWebhookRequests: [], // every parsed form POSTed to /api/dropwebhook
     failAddWebhookWith: null, // set to an HTTP status to make addwebhook fail
     failStationsWith: null, // set to an HTTP status to make getstationsdata fail
+    failHomeCoachsWith: null, // set to {status, body} to make gethomecoachsdata fail
     cameraRequests: [], // every hit on the fake camera endpoints ({side, camId, path})
     snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
     failLocalSnapshot: false, // make the LOCAL snapshot fail (stale-cache fallback test)
@@ -295,6 +342,7 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     homeStatuses: buildDefaultHomeStatuses(),
     thermostatDevices: buildDefaultThermostatDevices(),
     stationDevices: buildDefaultStationDevices(),
+    homeCoachDevices: buildDefaultHomeCoachDevices(),
   };
   let tokenCounter = 0;
 
@@ -415,6 +463,14 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
             return;
           }
           respond({ status: 'ok', body: { devices: state.stationDevices } });
+          return;
+        }
+        if (req.url.startsWith('/api/gethomecoachsdata')) {
+          if (state.failHomeCoachsWith) {
+            respond(state.failHomeCoachsWith.body, state.failHomeCoachsWith.status);
+            return;
+          }
+          respond({ status: 'ok', body: { devices: state.homeCoachDevices } });
           return;
         }
         if (req.method === 'POST' && req.url.startsWith('/api/setroomthermpoint')) {

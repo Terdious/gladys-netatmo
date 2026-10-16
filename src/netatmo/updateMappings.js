@@ -9,6 +9,7 @@
 // -----------------------------------------------------------------------------
 
 import { SUPPORTED_MODULE_TYPE, COVER_STATE } from './constants.js';
+import { healthIndexToAqi, healthIndexToLevel } from './deviceMapping.js';
 
 /**
  * Shutter position in percent from homestatus `current_position`. Anything
@@ -202,5 +203,21 @@ export const UPDATE_MAPPINGS = {
     max_temp: (deviceNetatmo) => deviceNetatmo.dashboard_data?.max_temp,
     rf_strength: (deviceNetatmo) =>
       deviceNetatmo.rf_strength ?? deviceNetatmo.dashboard_data?.rf_status,
+  },
+  // Home Coach / Smart Indoor Air Quality Monitor (issue #37): every value
+  // comes from the gethomecoachsdata `dashboard_data`, same suffixes as the
+  // weather indoor modules, plus the health index (AQI-band value).
+  [SUPPORTED_MODULE_TYPE.NHC]: {
+    temperature: (deviceNetatmo) => deviceNetatmo.dashboard_data?.Temperature,
+    min_temp: (deviceNetatmo) => deviceNetatmo.dashboard_data?.min_temp,
+    max_temp: (deviceNetatmo) => deviceNetatmo.dashboard_data?.max_temp,
+    co2: (deviceNetatmo) => deviceNetatmo.dashboard_data?.CO2,
+    humidity: (deviceNetatmo) => deviceNetatmo.dashboard_data?.Humidity,
+    noise: (deviceNetatmo) => deviceNetatmo.dashboard_data?.Noise,
+    pressure: (deviceNetatmo) => deviceNetatmo.dashboard_data?.Pressure,
+    absolute_pressure: (deviceNetatmo) => deviceNetatmo.dashboard_data?.AbsolutePressure,
+    health_idx: (deviceNetatmo) => healthIndexToAqi(deviceNetatmo.dashboard_data?.health_idx),
+    health_level: (deviceNetatmo) => healthIndexToLevel(deviceNetatmo.dashboard_data?.health_idx),
+    wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
 };

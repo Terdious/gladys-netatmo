@@ -6,6 +6,8 @@ import { normalizeConfig, DEFAULT_CONFIG } from '../src/config.js';
 test('normalizeConfig returns the defaults on an empty config', () => {
   const config = normalizeConfig();
   assert.deepEqual(config, DEFAULT_CONFIG);
+  // Home Coach discovery is opt-in (issue #37).
+  assert.equal(config.aircare_api, false);
 });
 
 test('normalizeConfig trims strings and coerces form values', () => {
@@ -16,6 +18,7 @@ test('normalizeConfig trims strings and coerces form values', () => {
     weather_api: '1',
     security_api: 'true',
     shutter_api: 'on',
+    aircare_api: 'on',
     expires_at: '1700000000000',
   });
   assert.equal(config.client_id, 'abc');
@@ -24,6 +27,7 @@ test('normalizeConfig trims strings and coerces form values', () => {
   assert.equal(config.weather_api, true);
   assert.equal(config.security_api, true);
   assert.equal(config.shutter_api, true);
+  assert.equal(config.aircare_api, true);
   assert.equal(config.expires_at, 1700000000000);
 });
 

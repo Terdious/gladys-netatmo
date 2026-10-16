@@ -2,7 +2,7 @@
 
 Connect your **Netatmo** devices — weather station, thermostats and radiator
 valves, indoor/outdoor cameras and their accessories, Bubendorff roller
-shutters — to Gladys Assistant.
+shutters, air quality monitors — to Gladys Assistant.
 
 This integration talks to the Netatmo cloud on your behalf: you create your own
 Netatmo Connect application once, connect your account, and Gladys discovers
@@ -69,6 +69,7 @@ Under **Devices to discover**, enable the families you own:
 | **Weather**         | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                               |
 | **Security**        | Indoor (`NACamera`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories |
 | **Roller shutters** | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                |
+| **Air quality**     | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                           |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -314,6 +315,43 @@ up without waiting for the next 2-minute cycle.
 shutters only open or close fully. An intermediate position may then be
 ignored or rounded by the shutter, and the reported position may only reflect
 the last command — use open / close / stop on those.
+
+---
+
+## Air quality monitor (Home Coach)
+
+When the **Air quality devices (Home Coach)** family is enabled, each Netatmo
+Smart Indoor Air Quality Monitor (Home Coach, `NHC`) is discovered with its
+temperature (plus the day's minimum and maximum), humidity, CO2, noise,
+pressure and absolute pressure, its WiFi quality, and an **Air quality**
+feature. It is named after the name you gave it in the Netatmo app.
+
+The Home Coach does not measure an air quality index: it rates the room on five
+levels, from its CO2, humidity, noise and temperature. Gladys reads an air
+quality feature as an AQI (0 to 500) to colour it on the dashboard and to pass
+it to HomeKit, so each level is published as the middle of the matching AQI
+band:
+
+| Home Coach level | Value in Gladys | Dashboard colour | HomeKit   |
+| ---------------- | --------------- | ---------------- | --------- |
+| Healthy          | 25              | green            | Excellent |
+| Fine             | 75              | yellow           | Good      |
+| Fair             | 125             | orange           | Fair      |
+| Poor             | 175             | pink             | Inferior  |
+| Unhealthy        | 250             | purple           | Poor      |
+
+In a scene, compare with these values: for example "Air quality above 150"
+means poor or unhealthy.
+
+An **Air quality level** feature shows the same rating in words on the
+dashboard. Gladys does not translate option labels yet: they are in French
+(Sain, Correct, Moyen, Mauvais, Malsain — healthy, fine, fair, poor,
+unhealthy). It keeps no history: the numeric **Air quality** feature
+keeps the history, the colours and HomeKit.
+
+An offline Home Coach gets the **unreachable** badge and its last-known values
+are not published. No reconnection is needed: the Home Coach permission
+(`read_homecoach`) has been part of the connection since the first version.
 
 ---
 

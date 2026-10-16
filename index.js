@@ -343,7 +343,8 @@ export function setupIntegration(
       previous.energy_api !== config.energy_api ||
       previous.weather_api !== config.weather_api ||
       previous.security_api !== config.security_api ||
-      previous.shutter_api !== config.shutter_api;
+      previous.shutter_api !== config.shutter_api ||
+      previous.aircare_api !== config.aircare_api;
     if (togglesChanged) {
       telemetry.resetDedup();
     }

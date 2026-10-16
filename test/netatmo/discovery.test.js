@@ -204,3 +204,61 @@ test('the weather_api toggle skips the station load entirely', async () => {
   const paths = netatmo.state.apiRequests.map((r) => r.path);
   assert.ok(!paths.some((p) => p.startsWith('/api/getstationsdata')));
 });
+
+test('the aircare_api toggle loads the Home Coach devices as an Aircare family (issue #37)', async () => {
+  const { devices, partial } = await loadAccount(client, normalizeConfig({ aircare_api: 'true' }));
+  assert.equal(partial, false);
+  const coach = byId(devices, '12:34:56:3e:c5:46');
+  assert.equal(coach.type, 'NHC');
+  assert.equal(coach.categoryAPI, 'Aircare');
+  assert.equal(coach.apiNotConfigured, false);
+  assert.equal(coach.dashboard_data.health_idx, 1);
+  // The unreachable one keeps its flag (no stale values downstream).
+  assert.equal(byId(devices, '12:34:56:26:69:0c').reachable, false);
+  // The other families are still there.
+  assert.ok(byId(devices, 'station-1'));
+  assert.ok(byId(devices, 'therm-1'));
+  const paths = netatmo.state.apiRequests.map((r) => r.path);
+  assert.ok(paths.includes('/api/gethomecoachsdata'));
+});
+
+test('Home Coach is opt-in: gethomecoachsdata is never called by default', async () => {
+  const devices = await loadDevices(client, normalizeConfig());
+  assert.ok(!devices.some((device) => device.type === 'NHC'));
+  const paths = netatmo.state.apiRequests.map((r) => r.path);
+  assert.ok(!paths.some((p) => p.startsWith('/api/gethomecoachsdata')));
+});
+
+test('a failing gethomecoachsdata flags the load partial without blocking the others', async () => {
+  netatmo.state.failHomeCoachsWith = {
+    status: 500,
+    body: { error: { code: 500, message: 'server error' } },
+  };
+  const { devices, partial } = await loadAccount(client, normalizeConfig({ aircare_api: 'true' }));
+  assert.equal(partial, true);
+  assert.ok(!devices.some((device) => device.type === 'NHC'));
+  assert.ok(byId(devices, 'station-1'));
+  assert.ok(byId(devices, 'therm-1'));
+});
+
+test('a missing read_homecoach scope (403 code 13) does not freeze the discovery', async () => {
+  netatmo.state.failHomeCoachsWith = {
+    status: 403,
+    body: { error: { code: 13, message: 'Application does not have the good scope rights' } },
+  };
+  const { devices, partial } = await loadAccount(client, normalizeConfig({ aircare_api: 'true' }));
+  // Durable condition, not a hiccup: the other families keep publishing.
+  assert.equal(partial, false);
+  assert.ok(!devices.some((device) => device.type === 'NHC'));
+  assert.ok(byId(devices, 'station-1'));
+});
+
+test('a Home Coach also listed in homesdata is merged, not duplicated', async () => {
+  netatmo.state.homes[0].modules.push({ id: '12:34:56:3e:c5:46', type: 'NHC', name: 'Coach' });
+  const devices = await loadDevices(client, normalizeConfig({ aircare_api: 'true' }));
+  const coaches = devices.filter((device) => netatmoId(device) === '12:34:56:3e:c5:46');
+  assert.equal(coaches.length, 1);
+  assert.equal(coaches[0].categoryAPI, 'Aircare');
+  assert.equal(coaches[0].home, 'home-1');
+  assert.equal(coaches[0].dashboard_data.CO2, 494);
+});

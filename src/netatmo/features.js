@@ -411,6 +411,52 @@ export function buildFeatureRain(name, externalId, featureName, unit) {
   });
 }
 
+// Home Coach health index (issue #37). Netatmo reports `health_idx` on a
+// 5-level scale (0 healthy, 1 fine, 2 fair, 3 poor, 4 unhealthy), while the
+// Gladys `airquality-sensor`/`aqi` feature is read as a US EPA AQI (0-500) by
+// the dashboard badge colours and the HomeKit bridge: the level is published
+// as the middle of the matching AQI band (see HEALTH_INDEX_TO_AQI), so it is
+// coloured and bridged correctly. It is NOT a measured AQI.
+export function buildFeatureHealthIndex(name, externalId) {
+  return feature({
+    name: `Air quality - ${name}`,
+    external_id: `${externalId}:health_idx`,
+    selector: `${externalId}:health_idx`,
+    category: DEVICE_FEATURE_CATEGORIES.AIRQUALITY_SENSOR,
+    type: DEVICE_FEATURE_TYPES.AIRQUALITY_SENSOR.AQI,
+    unit: DEVICE_FEATURE_UNITS.AQI,
+    min: 0,
+    max: 500,
+  });
+}
+
+// The same health index as a named level (text / select, read-only): the
+// dashboard shows the Netatmo wording ("Fine", "Unhealthy"...) next to the
+// AQI-band value, which keeps the history, the colours and HomeKit. Option
+// labels are plain strings in Gladys (no per-language label yet): French, the
+// language of most Gladys installations. A text state keeps no history.
+export const HEALTH_LEVEL_OPTIONS = [
+  { value: 'healthy', label: 'Sain' },
+  { value: 'fine', label: 'Correct' },
+  { value: 'fair', label: 'Moyen' },
+  { value: 'poor', label: 'Mauvais' },
+  { value: 'unhealthy', label: 'Malsain' },
+];
+
+export function buildFeatureHealthLevel(name, externalId) {
+  return feature({
+    name: `Air quality level - ${name}`,
+    external_id: `${externalId}:health_level`,
+    selector: `${externalId}:health_level`,
+    category: DEVICE_FEATURE_CATEGORIES.TEXT,
+    type: DEVICE_FEATURE_TYPES.TEXT.SELECT,
+    keep_history: false,
+    min: 0,
+    max: 0,
+    supported_options: HEALTH_LEVEL_OPTIONS.map((option) => ({ ...option })),
+  });
+}
+
 // --- Roller shutters (Bubendorff / iDiamant, issue #34) ---------------------
 
 // Open / close / stop command (Gladys COVER_STATE: CLOSE -1, STOP 0, OPEN 1),

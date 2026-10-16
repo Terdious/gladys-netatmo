@@ -19,6 +19,7 @@ export const API_PATHS = {
   HOMESTATUS: '/api/homestatus',
   GET_THERMOSTATS: '/api/getthermostatsdata',
   GET_WEATHER_STATIONS: '/api/getstationsdata?get_favorites=false',
+  GET_HOME_COACHS: '/api/gethomecoachsdata',
   SET_ROOM_THERMPOINT: '/api/setroomthermpoint',
   SET_THERM_MODE: '/api/setthermmode',
   SET_PERSONS_AWAY: '/api/setpersonsaway',
@@ -128,6 +129,9 @@ export const SUPPORTED_MODULE_TYPE = {
   NBR: 'NBR',
   NBO: 'NBO',
   NBS: 'NBS',
+  // Smart Indoor Air Quality Monitor (formerly "Healthy Home Coach"), served
+  // by the legacy /api/gethomecoachsdata endpoint (issue #37).
+  NHC: 'NHC',
 };
 
 export const SUPPORTED_CATEGORY_TYPE = {
@@ -135,6 +139,7 @@ export const SUPPORTED_CATEGORY_TYPE = {
   WEATHER: 'Weather',
   SECURITY: 'Security',
   SHUTTER: 'Shutter',
+  AIRCARE: 'Aircare',
   UNKNOWN: 'unknown',
 };
 
@@ -177,6 +182,9 @@ export const CAMERA_BRIDGED_SECURITY_TYPES = [
   SUPPORTED_MODULE_TYPE.NACAMDOORTAG,
   SUPPORTED_MODULE_TYPE.NIS,
 ];
+
+// Aircare: the Home Coach / Smart Indoor Air Quality Monitor (issue #37).
+export const AIRCARE_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.NHC];
 
 // Every Security-family module the discovery supports (drives getModuleCategory).
 export const SECURITY_MODULE_TYPES = [

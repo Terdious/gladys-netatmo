@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { convertDevice } from '../../src/netatmo/convert.js';
+import { healthIndexToAqi } from '../../src/netatmo/deviceMapping.js';
 
 const gladys = { externalId: (suffix) => `ext:netatmo:${suffix}` };
 
@@ -278,4 +279,81 @@ test('skips not-handled and unknown module types', () => {
     null,
   );
   assert.equal(convertDevice(gladys, { id: 'x-1', type: 'NewThing', name: 'Mystère' }), null);
+});
+
+test('converts a Home Coach (NHC) with the indoor measures and the health index (issue #37)', () => {
+  const device = convertDevice(gladys, {
+    _id: '12:34:56:3e:c5:46',
+    type: 'NHC',
+    station_name: 'Parents Bedroom',
+    module_name: 'Indoor',
+    wifi_status: 67,
+    reachable: true,
+    categoryAPI: 'Aircare',
+    apiNotConfigured: false,
+  });
+  assert.equal(device.external_id, 'ext:netatmo:12:34:56:3e:c5:46');
+  assert.equal(device.model, 'NHC');
+  // The user-given station_name wins over the generic module_name "Indoor".
+  assert.equal(device.name, 'Parents Bedroom');
+  assert.equal(device.should_poll, false);
+  // Same suffixes as the weather indoor modules (NAMain / NAModule4).
+  assert.deepEqual(suffixesOf(device), [
+    'wifi_strength',
+    'temperature',
+    'min_temp',
+    'max_temp',
+    'co2',
+    'humidity',
+    'noise',
+    'pressure',
+    'absolute_pressure',
+    'health_idx',
+    'health_level',
+  ]);
+  const minTemp = device.features.find((f) => f.external_id.endsWith(':min_temp'));
+  assert.equal(minTemp.type, 'min');
+  assert.equal(minTemp.name, 'Temperature - Minimum in Parents Bedroom');
+  const aqi = device.features.find((f) => f.external_id.endsWith(':health_idx'));
+  assert.equal(aqi.category, 'airquality-sensor');
+  assert.equal(aqi.type, 'aqi');
+  assert.equal(aqi.unit, 'aqi');
+  assert.equal(aqi.min, 0);
+  assert.equal(aqi.max, 500);
+  assert.equal(aqi.read_only, true);
+  // The same index as a named level, shown with the Netatmo wording.
+  const level = device.features.find((f) => f.external_id.endsWith(':health_level'));
+  assert.equal(level.category, 'text');
+  assert.equal(level.type, 'select');
+  assert.equal(level.read_only, true);
+  assert.equal(level.keep_history, false);
+  assert.deepEqual(
+    level.supported_options.map((option) => option.value),
+    ['healthy', 'fine', 'fair', 'poor', 'unhealthy'],
+  );
+  assert.equal(level.supported_options[4].label, 'Malsain');
+  // Standalone device: no home in the legacy payload, so no params at all.
+  assert.deepEqual(device.params, []);
+});
+
+test('skips a Home Coach while the aircare_api toggle is off', () => {
+  assert.equal(
+    convertDevice(gladys, {
+      _id: 'nhc-1',
+      type: 'NHC',
+      station_name: 'Bedroom',
+      apiNotConfigured: true,
+    }),
+    null,
+  );
+});
+
+test('the Home Coach health index maps to the middle of its AQI band', () => {
+  // 0 healthy, 1 fine, 2 fair, 3 poor, 4 unhealthy → EPA bands good,
+  // moderate, sensitive groups, unhealthy, very unhealthy.
+  assert.deepEqual([0, 1, 2, 3, 4].map(healthIndexToAqi), [25, 75, 125, 175, 250]);
+  assert.equal(healthIndexToAqi('2'), 125);
+  for (const unknown of [undefined, null, '', 5, -1, 1.5, 'bad']) {
+    assert.equal(healthIndexToAqi(unknown), undefined, `${unknown}`);
+  }
 });

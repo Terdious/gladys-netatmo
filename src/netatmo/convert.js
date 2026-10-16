@@ -56,6 +56,8 @@ import {
   buildFeatureRain,
   buildFeatureShutterState,
   buildFeatureShutterPosition,
+  buildFeatureHealthIndex,
+  buildFeatureHealthLevel,
 } from './features.js';
 
 const logger = createLogger({ name: 'netatmo-convert' });
@@ -130,7 +132,12 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
   const homeId = home || netatmoDevice.home_id;
   // A module present in homestatus but missing from homesdata has no name:
   // fall back to its id rather than shipping the string "undefined".
-  const nameDevice = name || netatmoDevice.module_name || netatmoDevice.station_name || id;
+  // A Home Coach carries a generic `module_name` ("Indoor") next to the name
+  // the user gave it (`station_name`, e.g. "Bedroom"): the latter wins.
+  const homeCoachName =
+    model === SUPPORTED_MODULE_TYPE.NHC ? netatmoDevice.station_name : undefined;
+  const nameDevice =
+    name || homeCoachName || netatmoDevice.module_name || netatmoDevice.station_name || id;
   if (netatmoDevice.not_handled || !id) {
     logger.debug(`Skipping unsupported Netatmo device "${nameDevice ?? id}" (${model})`);
     return null;
@@ -362,6 +369,25 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments) {
       features.push(
         buildFeatureCo2(nameDevice, externalId),
         buildFeatureHumidity(nameDevice, externalId),
+      );
+      break;
+    case SUPPORTED_MODULE_TYPE.NHC:
+      // Home Coach / Smart Indoor Air Quality Monitor (issue #37): standalone
+      // wifi device, same measures (and suffixes) as the weather indoor
+      // modules, plus the health index.
+      features.push(
+        buildFeatureWifiStrength(nameDevice, externalId),
+        buildFeatureTemperature(nameDevice, externalId, 'temperature'),
+      );
+      pushMinMaxTemp(features, nameDevice, externalId);
+      features.push(
+        buildFeatureCo2(nameDevice, externalId),
+        buildFeatureHumidity(nameDevice, externalId),
+        buildFeatureNoise(nameDevice, externalId),
+        buildFeaturePressure(`Pressure - ${nameDevice}`, externalId, 'pressure'),
+        buildFeaturePressure(`Absolute pressure - ${nameDevice}`, externalId, 'absolute_pressure'),
+        buildFeatureHealthIndex(nameDevice, externalId),
+        buildFeatureHealthLevel(nameDevice, externalId),
       );
       break;
     default:
