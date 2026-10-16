@@ -28,6 +28,12 @@ the notes of the version's GitHub Release.
   (4.84.1+), which keeps the history, scenes and dashboards of the devices of
   the built-in Netatmo service.
 
+### Fixed
+
+- The "smoke cleared" webhook event (`sub_type` 0) no longer raises a smoke
+  detection: it returns the Smoke feature to No at once, so a scene triggered
+  by smoke does not fire a second time when the smoke clears.
+
 ## [1.3.0] - 2026-10-16
 
 ### Added
