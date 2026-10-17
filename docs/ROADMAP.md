@@ -47,14 +47,23 @@
     scopes requested only with its toggle (#59 step 1, PR #72);
   - WebRTC live view of the doorbell and the Indoor Camera Advance, inert
     until Gladys#3215 and SDK#43 ship (#70, PR #71).
+- **v2.3.0**: BTicino door entry step 2 — one device per door entry,
+  staircase / outdoor light command, ring as a doorbell feature (#59, PR #74);
+  Device diagnostic action on the Configuration screen, for any module (PR
+  #74).
+- **v2.3.1**: every received webhook logged, and the diagnostic shows the
+  webhook URL Netatmo holds (PR #75).
+- **v2.4.0**: detections read from `getevents` every cycle, so they arrive
+  even when the webhooks do not (PR #76); "new Open API key" troubleshooting.
 - **Unreleased** (next release):
-  - BTicino door entry step 2: one device per door entry, staircase /
-    outdoor light command, ring as a doorbell feature (#59);
-  - Device diagnostic action on the Configuration screen, for any module
-    (#59).
-  - Legrand Home + Control, first three groups (#60): the `legrand_api`
-    toggle and its `read_magellan` / `write_magellan` scopes, lighting
-    (on / off, dimmers), plugs and relays — built on the pyatmo fixtures.
+  - Legrand Home + Control, first three groups (#60, PR #78): the
+    `legrand_api` toggle and its `read_magellan` / `write_magellan` scopes,
+    lighting (on / off, dimmers), plugs and relays — built on the pyatmo
+    fixtures;
+  - Netatmo rooms ready for the Gladys Thermostat widget (#77, PR #79):
+    heating state and off / heating mode per room;
+  - `open_window` and the door tag `opening` follow the Gladys convention
+    (0 open, 1 closed) — breaking for scenes that tested `= 1` (PR #79).
 - Upstream, shipped in Gladys: live-stream latency (GladysAssistant/Gladys#2698,
   4.84.1, see #11), device migration with history
   (GladysAssistant/Gladys#2737, 4.84.1, hardened in #2778).
