@@ -127,6 +127,11 @@ test('discovery: OTM like a thermostat, OTH with WiFi, outdoor temperature and b
     'therm_setpoint_temperature',
     'boiler_status',
     'therm_preset',
+    // The room's thermostat features (issue #77): the OTM is the only
+    // thermostat of its room.
+    'room_operating_state',
+    'room_mode',
+    'room_window',
   ]);
   const setpoint = featureOf(otm, 'therm_setpoint_temperature');
   assert.equal(setpoint.read_only, false);

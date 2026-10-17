@@ -140,11 +140,13 @@ test('unchanged values are deduped, then re-published after the 30-minute keep-a
   clock += 2 * 60 * 1000;
   assert.equal(await telemetry.refreshValues(config), 0);
 
-  // A changed value goes out immediately.
+  // A changed value goes out immediately — with the room heating state it
+  // drives (issue #77).
   netatmo.state.homeStatuses['home-1'].home.modules.find((m) => m.id === 'therm-1').boiler_status =
     false;
-  assert.equal(await telemetry.refreshValues(config), 1);
+  assert.equal(await telemetry.refreshValues(config), 2);
   assert.deepEqual(stateOf('ext:netatmo:therm-1:boiler_status'), [1, 0]);
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:room_operating_state'), [1, 0]);
 
   // Past the keep-alive, everything goes out again.
   clock += 31 * 60 * 1000;

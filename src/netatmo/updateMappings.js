@@ -18,6 +18,13 @@ import {
   VIRTUAL_DEVICE_TYPE,
   PERSON_PRESENCE_SUFFIX_PREFIX,
   BTICINO_LIGHT_SUFFIX,
+  NETATMO_SETPOINT_MODES,
+  THERMOSTAT_MODE,
+  THERMOSTAT_OPERATING_STATE,
+  OPENING_SENSOR_STATE,
+  ROOM_OPERATING_STATE_SUFFIX,
+  ROOM_MODE_SUFFIX,
+  ROOM_WINDOW_SUFFIX,
 } from './constants.js';
 import { healthIndexToAqi, healthIndexToLevel } from './deviceMapping.js';
 
@@ -121,6 +128,77 @@ const BTICINO_SWITCH_MAPPING = {
   ...BTICINO_MAPPING,
 };
 
+/**
+ * Room setpoint (homestatus `rooms[].therm_setpoint_temperature`). Nothing
+ * while the room is off (issue #77): an off room aims at no temperature, and
+ * whatever Netatmo reports then must not overwrite the setpoint Gladys holds —
+ * the Gladys Thermostat service would take it for a change made on the
+ * thermostat.
+ */
+function roomSetpoint(deviceNetatmo) {
+  const room = deviceNetatmo.room;
+  return room?.therm_setpoint_mode === NETATMO_SETPOINT_MODES.OFF
+    ? undefined
+    : room?.therm_setpoint_temperature;
+}
+
+/**
+ * Whether the room is heating (issue #77), THERMOSTAT_OPERATING_STATE: HEATING
+ * while the room requests heat (`heating_power_request` > 0) or, for a boiler
+ * thermostat, while the boiler runs (`boiler_status`); COOLING while a
+ * Smarther's air conditioning runs (`cooler_status`); IDLE otherwise. The
+ * module's own states are ignored when it is unreachable (Netatmo then
+ * replays its last-known values). Nothing when no value is known.
+ */
+function roomOperatingState(deviceNetatmo) {
+  const request = deviceNetatmo.room?.heating_power_request;
+  const reachable = deviceNetatmo.reachable !== false;
+  const boiler = reachable ? deviceNetatmo.boiler_status : undefined;
+  const cooler = reachable ? deviceNetatmo.cooler_status : undefined;
+  if ((typeof request === 'number' && request > 0) || boiler === true) {
+    return THERMOSTAT_OPERATING_STATE.HEATING;
+  }
+  if (cooler === true) {
+    return THERMOSTAT_OPERATING_STATE.COOLING;
+  }
+  const known =
+    typeof request === 'number' || typeof boiler === 'boolean' || typeof cooler === 'boolean';
+  return known ? THERMOSTAT_OPERATING_STATE.IDLE : undefined;
+}
+
+/**
+ * What the room does (issue #77), THERMOSTAT_MODE: OFF when its setpoint mode
+ * is `off`, HEATING for any other one (schedule, manual, boost, away, frost
+ * guard). Nothing when homestatus reports no setpoint mode.
+ */
+function roomMode(deviceNetatmo) {
+  const mode = deviceNetatmo.room?.therm_setpoint_mode;
+  if (typeof mode !== 'string' || mode === '') {
+    return undefined;
+  }
+  return mode === NETATMO_SETPOINT_MODES.OFF ? THERMOSTAT_MODE.OFF : THERMOSTAT_MODE.HEATING;
+}
+
+/**
+ * Open window detected in the room (issue #77), OPENING_SENSOR_STATE: 0 open,
+ * 1 closed. Nothing when homestatus does not report it.
+ */
+function roomWindow(deviceNetatmo) {
+  const open = deviceNetatmo.room?.open_window;
+  if (typeof open !== 'boolean') {
+    return undefined;
+  }
+  return open ? OPENING_SENSOR_STATE.OPEN : OPENING_SENSOR_STATE.CLOSE;
+}
+
+// The room thermostat features (issue #77): only published on the device that
+// carries them (one per room), like any feature the device does not have.
+const ROOM_THERMOSTAT_MAPPING = {
+  [ROOM_OPERATING_STATE_SUFFIX]: roomOperatingState,
+  [ROOM_MODE_SUFFIX]: roomMode,
+  [ROOM_WINDOW_SUFFIX]: roomWindow,
+};
+
 export const UPDATE_MAPPINGS = {
   [SUPPORTED_MODULE_TYPE.PLUG]: {
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
@@ -136,18 +214,19 @@ export const UPDATE_MAPPINGS = {
       deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
     temperature: (deviceNetatmo) => deviceNetatmo.measured?.temperature,
     therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
-    therm_setpoint_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_setpoint_temperature,
+    therm_setpoint_temperature: roomSetpoint,
     open_window: (deviceNetatmo) => deviceNetatmo.room?.open_window,
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
     boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
     // Heating mode of the home (issue #38), carried on every device of the
     // home by the discovery (homestatus `home.therm_mode`).
     therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
+    ...ROOM_THERMOSTAT_MAPPING,
   },
   [SUPPORTED_MODULE_TYPE.NRV]: {
     battery_percent: (deviceNetatmo) => deviceNetatmo.battery_state,
     therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
-    therm_setpoint_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_setpoint_temperature,
+    therm_setpoint_temperature: roomSetpoint,
     open_window: (deviceNetatmo) => deviceNetatmo.room?.open_window,
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
     heating_power_request: (deviceNetatmo) => {
@@ -157,6 +236,7 @@ export const UPDATE_MAPPINGS = {
         : heatingPowerRequest > 0;
     },
     therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
+    ...ROOM_THERMOSTAT_MAPPING,
   },
   // Modulating / OpenTherm thermostat (issue #53), modelled on the NATherm1:
   // battery as a percent or the `battery_state` string (`battery_level` is in
@@ -165,10 +245,11 @@ export const UPDATE_MAPPINGS = {
     battery_percent: (deviceNetatmo) =>
       deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
     therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
-    therm_setpoint_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_setpoint_temperature,
+    therm_setpoint_temperature: roomSetpoint,
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
     boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
     therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
+    ...ROOM_THERMOSTAT_MAPPING,
   },
   // OpenTherm relay (issue #53): WiFi, outdoor temperature, boiler fault.
   [SUPPORTED_MODULE_TYPE.OTH]: {
@@ -181,11 +262,12 @@ export const UPDATE_MAPPINGS = {
   [SUPPORTED_MODULE_TYPE.BNS]: {
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength,
     therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
-    therm_setpoint_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_setpoint_temperature,
+    therm_setpoint_temperature: roomSetpoint,
     boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
     cooler_status: (deviceNetatmo) => deviceNetatmo.cooler_status,
     boiler_valve_comfort_boost: (deviceNetatmo) => deviceNetatmo.boiler_valve_comfort_boost,
     therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
+    ...ROOM_THERMOSTAT_MAPPING,
   },
   [SUPPORTED_MODULE_TYPE.NAMAIN]: {
     temperature: (deviceNetatmo) =>

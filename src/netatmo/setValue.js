@@ -16,6 +16,10 @@
 //     target_position (100 open, 0 closed, -1 stop, or a percentage) and the
 //     iDiamant bridge id (plug_id param), then one delayed refresh so the
 //     new position lands without waiting for the next cycle;
+//   - room thermostat mode (issue #77): POST /api/setroomthermpoint mode
+//     `off` (OFF) or `home` (HEATING, back to the room's schedule), skipped
+//     when the room is already in that mode; a setpoint reaching a room that
+//     is off is not sent (a `manual` setpoint would switch the room back on);
 //   - BTicino staircase / outdoor light (BNSL, issue #59): POST /api/setstate
 //     `on` through its bridge (the BNCX door entry). Netatmo never reports
 //     the light state back: the commanded value is published once Netatmo
@@ -41,6 +45,7 @@ import {
   BTICINO_GATEWAY_TYPES,
   BTICINO_LIGHT_SUFFIX,
   CONNECTION_MESSAGES,
+  NETATMO_SETPOINT_MODES,
 } from './constants.js';
 import { writeValues } from './deviceMapping.js';
 
@@ -223,16 +228,47 @@ async function setBticinoLight({ gladys, client }, { device, feature, value }, h
 }
 
 /**
+ * Switch a room off or back on (issue #77, the `thermostat/mode` feature of
+ * the room): setroomthermpoint `off`, or `home` — the room follows its
+ * schedule again, and the Gladys Thermostat service then writes its own
+ * setpoint (a `manual` one). Nothing is sent when the room is already in the
+ * requested mode (any mode but `off` is "heating"): the Thermostat service may
+ * write the mode on every pass. No refresh: the setpoint the room's schedule
+ * gives could be read before the setpoint Gladys sends right after, and look
+ * like a change made on the thermostat; the next cycle reports the new mode.
+ */
+async function setRoomMode(
+  { client, patchRoom },
+  { homeId, roomId, room, setpointMode, externalId },
+) {
+  const current = room?.therm_setpoint_mode;
+  const isOff = (mode) => mode === NETATMO_SETPOINT_MODES.OFF;
+  if (typeof current === 'string' && current !== '' && isOff(current) === isOff(setpointMode)) {
+    logger.debug(`Room ${roomId} already "${current}": nothing to send for ${externalId}`);
+    return;
+  }
+  try {
+    await client.setRoomThermpoint({ homeId, roomId, mode: setpointMode });
+  } catch (err) {
+    rethrowScopeError(err);
+  }
+  // Netatmo acked: the commands that follow (the setpoint the Thermostat
+  // service writes right after) must see the new mode before the next load.
+  patchRoom?.(homeId, roomId, { therm_setpoint_mode: setpointMode });
+}
+
+/**
  * Apply a user command on a Netatmo device.
  * @param {object} deps `{gladys, client, refresh?, scheduleRefresh?,
- * getRawDevice?}` SDK instance, Netatmo API client, the immediate refresh
- * after a heating mode or floodlight change, the delayed refresh to arm after
- * a shutter command and the last raw Netatmo payload of a module (by id)
+ * getRawDevice?, patchRoom?}` SDK instance, Netatmo API client, the immediate
+ * refresh after a heating mode or floodlight change, the delayed refresh to
+ * arm after a shutter command, the last raw Netatmo payload of a module (by
+ * id) and the patch of a room's last payload after a room mode command
  * @param {object} command `{device, feature, value}` from the SDK
  * @returns {Promise<void>} resolves when Netatmo acknowledged the command
  */
 export async function setDeviceValue(
-  { gladys, client, refresh, scheduleRefresh, getRawDevice },
+  { gladys, client, refresh, scheduleRefresh, getRawDevice, patchRoom },
   { device, feature, value },
 ) {
   const transform = writeValues[feature.category]?.[feature.type];
@@ -342,6 +378,31 @@ export async function setDeviceValue(
   const roomId = getDeviceParam(device, PARAMS.ROOM_ID);
   if (!roomId) {
     throw new Error(`Missing ${PARAMS.ROOM_ID} param on ${device.external_id}`);
+  }
+  const room = getRawDevice
+    ? getRawDevice(device.external_id.replace(gladys.externalId(''), ''))?.room
+    : undefined;
+
+  // Room thermostat mode (issue #77): off, or back to the room's schedule.
+  if (feature.type === DEVICE_FEATURE_TYPES.THERMOSTAT.MODE) {
+    const setpointMode = transform(value);
+    await setRoomMode(
+      { client, patchRoom },
+      { homeId, roomId, room, setpointMode, externalId: feature.external_id },
+    );
+    return;
+  }
+
+  // A `manual` setpoint switches an off room back on. The Gladys Thermostat
+  // service stops a room with OFF then its frost protection setpoint, and
+  // starts it with HEATING before the setpoint (Gladys spec thermostat.md
+  // C.0): the setpoint reaching an off room is the one of a stop, and must
+  // leave the room off. Like a Matter or Zigbee thermostat, the mode decides.
+  if (room?.therm_setpoint_mode === NETATMO_SETPOINT_MODES.OFF) {
+    logger.info(
+      `Room ${roomId} is off: setpoint ${value} not sent (switch the room back on with its thermostat mode)`,
+    );
+    return;
   }
   try {
     await client.setRoomThermpoint({ homeId, roomId, temp: transform(value) });

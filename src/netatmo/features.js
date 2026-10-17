@@ -16,6 +16,12 @@ import {
 import {
   THERM_MODE_PRESETS,
   THERM_MODE_LABELS,
+  THERMOSTAT_MODE,
+  THERMOSTAT_MODE_LABELS,
+  THERMOSTAT_OPERATING_STATE,
+  ROOM_OPERATING_STATE_SUFFIX,
+  ROOM_MODE_SUFFIX,
+  ROOM_WINDOW_SUFFIX,
   PERSON_PRESENCE_SUFFIX_PREFIX,
   BTICINO_LIGHT_SUFFIX,
 } from './constants.js';
@@ -121,6 +127,64 @@ export function buildFeatureThermPreset(name, externalId) {
       label: THERM_MODE_LABELS[mode].en,
       sort_order: index,
     })),
+  });
+}
+
+// Heated room thermostat features (issue #77), for the Gladys Thermostat
+// service and its dashboard widget: ONE device per room carries them (the
+// room's thermostat, or one valve of a room without thermostat), named after
+// the room. Their values come from the ROOM (homestatus `rooms`).
+
+// Whether the room is heating (`thermostat/operating-state`, read-only):
+// THERMOSTAT_OPERATING_STATE, IDLE / HEATING (COOLING for an air-conditioned
+// BTicino Smarther).
+export function buildFeatureRoomOperatingState(roomName, externalId) {
+  return feature({
+    name: `Heating state - ${roomName}`,
+    external_id: `${externalId}:${ROOM_OPERATING_STATE_SUFFIX}`,
+    selector: `${externalId}:${ROOM_OPERATING_STATE_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.THERMOSTAT,
+    type: DEVICE_FEATURE_TYPES.THERMOSTAT.OPERATING_STATE,
+    min: THERMOSTAT_OPERATING_STATE.IDLE,
+    max: THERMOSTAT_OPERATING_STATE.COOLING,
+  });
+}
+
+// What the room does (`thermostat/mode`, writable): off or heating — written
+// with setroomthermpoint `off` / `home`. `max` = HEATING tells the Gladys
+// Thermostat service that this thermostat does not cool.
+export function buildFeatureRoomMode(roomName, externalId) {
+  const modes = [THERMOSTAT_MODE.OFF, THERMOSTAT_MODE.HEATING];
+  return feature({
+    name: `Thermostat mode - ${roomName}`,
+    external_id: `${externalId}:${ROOM_MODE_SUFFIX}`,
+    selector: `${externalId}:${ROOM_MODE_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.THERMOSTAT,
+    type: DEVICE_FEATURE_TYPES.THERMOSTAT.MODE,
+    read_only: false,
+    min: THERMOSTAT_MODE.OFF,
+    max: THERMOSTAT_MODE.HEATING,
+    supported_options: modes.map((value, index) => ({
+      value,
+      label: THERMOSTAT_MODE_LABELS[value],
+      sort_order: index,
+    })),
+  });
+}
+
+// Open window detected in the room (`opening-sensor/binary`, read-only),
+// with the Gladys convention OPENING_SENSOR_STATE: 0 open, 1 closed — unlike
+// the older `open_window` feature, kept as is (1 when open) not to break the
+// scenes built on it.
+export function buildFeatureRoomWindow(roomName, externalId) {
+  return feature({
+    name: `Window open - ${roomName}`,
+    external_id: `${externalId}:${ROOM_WINDOW_SUFFIX}`,
+    selector: `${externalId}:${ROOM_WINDOW_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.OPENING_SENSOR,
+    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
+    min: 0,
+    max: 1,
   });
 }
 

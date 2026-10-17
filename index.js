@@ -296,9 +296,14 @@ export function setupIntegration(
         refresh: () => telemetry.refreshNow(config),
         scheduleRefresh: () => telemetry.scheduleRefresh(config),
         getRawDevice: (id) => telemetry.getRawDevice(id),
+        patchRoom: (homeId, roomId, patch) => telemetry.patchRoom(homeId, roomId, patch),
       },
       { device, feature, value },
     );
+    // Gladys saved the commanded value: the next load re-publishes what
+    // Netatmo reports, even if it is what was published before the command
+    // (issue #77: a mode or setpoint Netatmo did not apply must show again).
+    telemetry.forgetPublished(feature.external_id);
   });
 
   // --- Scene actions: operations a scene author placed in a scene -----------

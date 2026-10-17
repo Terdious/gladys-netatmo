@@ -62,6 +62,12 @@ const DEVICES_SOURCE_MIN_GLADYS_VERSION = [4, 86, 1];
 const FEATURE_TYPE_MIN_GLADYS_VERSION = {
   'thermostat/preset': [5, 2, 0],
   'text/select': [5, 1, 1],
+  // Room thermostat features (issue #77): both types appeared in 4.85.0
+  // (checked in the Gladys history, server/utils/constants.js), with
+  // supported_options since 4.82.0; the Thermostat widget reading them ships
+  // in 5.2.0 (core PR #3178), already the minimum.
+  'thermostat/mode': [4, 85, 0],
+  'thermostat/operating-state': [4, 85, 0],
 };
 // The languages of the Gladys interface: every text the user reads ships in
 // all of them (Gladys falls back to English for a missing one).
@@ -201,6 +207,8 @@ test('every feature type the code publishes is known to the minimum Gladys versi
       }),
   );
   assert.ok(published.has('thermostat/preset'), 'the heating mode is a thermostat preset');
+  assert.ok(published.has('thermostat/mode'), 'the room mode is a thermostat mode');
+  assert.ok(published.has('thermostat/operating-state'), 'the room heating state');
   for (const [featureType, minVersion] of Object.entries(FEATURE_TYPE_MIN_GLADYS_VERSION)) {
     if (published.has(featureType)) {
       assert.ok(

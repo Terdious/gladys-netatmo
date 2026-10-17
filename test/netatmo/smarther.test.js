@@ -111,6 +111,9 @@ test('discovery: WiFi, room temperature, setpoint, heating / cooling, heating mo
       'cooler_status',
       'boiler_valve_comfort_boost',
       'therm_preset',
+      'room_operating_state',
+      'room_mode',
+      'room_window',
     ],
   );
   assert.equal(featureOf(bns, 'therm_setpoint_temperature').read_only, false);

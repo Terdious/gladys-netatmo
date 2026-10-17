@@ -441,6 +441,12 @@ export const ROOM_DERIVED_SUFFIXES = [
   // The heating mode belongs to the HOME (homestatus `home.therm_mode`): it
   // stays true whatever the state of the module carrying the feature.
   'therm_preset',
+  // The room thermostat features (issue #77): the room's heating request,
+  // setpoint mode and open window (an unreachable module's own boiler status
+  // is left out by the mapping itself).
+  'room_operating_state',
+  'room_mode',
+  'room_window',
 ];
 
 // Heating mode of a Netatmo home (homestatus `home.therm_mode`, written with
@@ -462,6 +468,9 @@ export const NETATMO_SETPOINT_MODES = {
   MANUAL: 'manual',
   MAX: 'max',
   HOME: 'home',
+  // The room is switched off (issue #77): written by the room's thermostat
+  // mode feature, and reported as is by homestatus.
+  OFF: 'off',
 };
 
 // Netatmo accepts a room setpoint between these temperatures (°C), by steps
@@ -481,6 +490,45 @@ export const THERMOSTAT_PRESET = {
   FROST: 1,
   AWAY: 2,
 };
+
+// Gladys THERMOSTAT_MODE values (server/utils/constants.js), the enum of the
+// `thermostat/mode` feature type: what the machine does. A Netatmo room only
+// heats or is off (issue #77), so only these two are mirrored.
+export const THERMOSTAT_MODE = {
+  OFF: 0,
+  HEATING: 1,
+};
+
+// Gladys THERMOSTAT_OPERATING_STATE values, the enum of the
+// `thermostat/operating-state` feature type: whether the equipment runs.
+export const THERMOSTAT_OPERATING_STATE = {
+  IDLE: 0,
+  HEATING: 1,
+  COOLING: 2,
+};
+
+// Gladys OPENING_SENSOR_STATE values: an opening sensor reads 0 when open and
+// 1 when closed (the Gladys UI shows "Opened" / "Closed").
+export const OPENING_SENSOR_STATE = {
+  OPEN: 0,
+  CLOSE: 1,
+};
+
+// Names of the room thermostat modes, with the Gladys UI wording
+// (deviceFeatureValue.category.thermostat.mode in the front i18n files).
+// The supported_options label is a plain string (English): the Gladys UI
+// translates the mode values itself.
+export const THERMOSTAT_MODE_LABELS = {
+  [THERMOSTAT_MODE.OFF]: 'Off',
+  [THERMOSTAT_MODE.HEATING]: 'Heating',
+};
+
+// Feature suffixes of the heated room (issue #77), carried by ONE device per
+// room (see discovery markRoomThermostats): the Gladys Thermostat widget
+// reads the heating state, drives the mode and watches the window.
+export const ROOM_OPERATING_STATE_SUFFIX = 'room_operating_state';
+export const ROOM_MODE_SUFFIX = 'room_mode';
+export const ROOM_WINDOW_SUFFIX = 'room_window';
 
 // Netatmo heating mode <-> Gladys preset, in display order.
 export const THERM_MODE_PRESETS = [

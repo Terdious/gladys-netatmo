@@ -38,6 +38,9 @@ import {
   buildFeatureTemperature,
   buildFeatureThermSetpointTemperature,
   buildFeatureThermPreset,
+  buildFeatureRoomOperatingState,
+  buildFeatureRoomMode,
+  buildFeatureRoomWindow,
   buildFeatureBoilerStatus,
   buildFeatureBoilerFault,
   buildFeatureCoolerStatus,
@@ -196,6 +199,22 @@ function pushThermPreset(features, homeId, nameDevice, externalId) {
 }
 
 /**
+ * Append the room thermostat features (issue #77) — heating state, mode
+ * (off / heating) and open window, named after the room — on the ONE device
+ * elected to carry them for its room (discovery markRoomThermostats), when
+ * the room can be commanded (home and room ids).
+ */
+function pushRoomThermostat(features, netatmoDevice, { roomName, externalId, writable }) {
+  if (netatmoDevice.room_thermostat && writable) {
+    features.push(
+      buildFeatureRoomOperatingState(roomName, externalId),
+      buildFeatureRoomMode(roomName, externalId),
+      buildFeatureRoomWindow(roomName, externalId),
+    );
+  }
+}
+
+/**
  * Convert one raw Netatmo device to a Gladys discovery payload.
  * @param {object} gladys SDK instance (external_id builder)
  * @param {object} netatmoDevice raw device from loadDevices()
@@ -294,6 +313,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
     );
   }
 
+  const roomThermostat = { roomName, externalId, writable: setpointWritable };
   switch (model) {
     case SUPPORTED_MODULE_TYPE.THERMOSTAT:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));
@@ -310,6 +330,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
         buildFeatureBoilerStatus(nameDevice, externalId),
       );
       pushThermPreset(features, homeId, nameDevice, externalId);
+      pushRoomThermostat(features, netatmoDevice, roomThermostat);
       break;
     case SUPPORTED_MODULE_TYPE.PLUG:
       features.push(buildFeaturePlugConnectedBoiler(nameDevice, externalId));
@@ -330,6 +351,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
         buildFeatureBoilerStatus(nameDevice, externalId),
       );
       pushThermPreset(features, homeId, nameDevice, externalId);
+      pushRoomThermostat(features, netatmoDevice, roomThermostat);
       break;
     case SUPPORTED_MODULE_TYPE.BNS:
       // BTicino Smarther with Netatmo (issue #54): a wifi thermostat of its
@@ -350,6 +372,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
         buildFeatureComfortBoost(nameDevice, externalId),
       );
       pushThermPreset(features, homeId, nameDevice, externalId);
+      pushRoomThermostat(features, netatmoDevice, roomThermostat);
       break;
     case SUPPORTED_MODULE_TYPE.OTH:
       // OpenTherm relay (issue #53): WiFi quality built above, plus the
@@ -373,6 +396,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
         buildFeatureHeatingPowerRequest(nameDevice, externalId),
       );
       pushThermPreset(features, homeId, nameDevice, externalId);
+      pushRoomThermostat(features, netatmoDevice, roomThermostat);
       break;
     case SUPPORTED_MODULE_TYPE.NAMAIN:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));
