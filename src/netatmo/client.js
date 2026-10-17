@@ -254,6 +254,19 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
   }
 
   /**
+   * The webhook URL(s) Netatmo actually holds for the application (GET
+   * webhooks/v1/, read only: one webhook per application, and writing it
+   * there would mean delete-then-post). Proves the registration, not the
+   * delivery (pyatmo docs/home-assistant-webhook-integration.md §9).
+   * @returns {Promise<string[]>} the registered URLs (usually 0 or 1)
+   */
+  async function listWebhooks() {
+    const body = await request(API_PATHS.WEBHOOKS_V1);
+    const entries = Array.isArray(body?.body) ? body.body : [];
+    return entries.map((entry) => entry?.url).filter((url) => typeof url === 'string');
+  }
+
+  /**
    * Drop the registered webhook at Netatmo (on disconnect / key cleared).
    * @returns {Promise<object>} parsed response body
    */
@@ -309,6 +322,7 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     setPersonsHome,
     setState,
     addWebhook,
+    listWebhooks,
     dropWebhook,
     webRtcOffer,
     webRtcTerminate,

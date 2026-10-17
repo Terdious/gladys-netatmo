@@ -17,6 +17,9 @@ import { redactForDiagnostic as sharedRedact } from '../../src/netatmo/redact.js
 import { redactForDiagnostic } from '../../src/netatmo/bticino.js';
 import {
   createWebhookHistory,
+  describeWebhookBody,
+  describeWebhookCheck,
+  describeWebhookUrl,
   integrationVersion,
   normalizeName,
   redactedJson,
@@ -406,4 +409,71 @@ test('unmappedFieldsOf: a legacy-only device is read from its raw payload', () =
     },
   });
   assert.deepEqual(unmapped, ['firmware']);
+});
+
+// --- Webhook delivery checks --------------------------------------------------
+
+test('webhook URLs are shown without their key, and the held URL is compared with ours', () => {
+  const ours =
+    'https://api.gladysgateway.com/v1/api/external-integration/SECRETKEY/ext-netatmo/events';
+  const legacy = 'https://api.gladysgateway.com/v1/api/netatmo/SECRETKEY';
+  assert.equal(
+    describeWebhookUrl(ours),
+    'https://api.gladysgateway.com/v1/api/external-integration/<redacted>',
+  );
+  assert.equal(
+    describeWebhookUrl(legacy),
+    'https://api.gladysgateway.com/v1/api/netatmo/<redacted>',
+  );
+  assert.equal(describeWebhookUrl('not a url'), '<redacted url>');
+
+  const same = describeWebhookCheck({ ours, atNetatmo: [ours], matches: true, error: null });
+  assert.match(
+    same,
+    /^the integration's URL \(https:\/\/api\.gladysgateway\.com\/v1\/api\/external-integration\/<redacted>\)$/,
+  );
+  const other = describeWebhookCheck({ ours, atNetatmo: [legacy], matches: false, error: null });
+  assert.match(other, /v1\/api\/netatmo\/<redacted> — NOT the integration's URL/);
+  assert.match(other, /save the Gladys Plus key again/);
+  assert.match(describeWebhookCheck({ ours, atNetatmo: [], matches: false, error: null }), /^none/);
+  assert.match(
+    describeWebhookCheck({ ours, atNetatmo: null, matches: false, error: 'boom' }),
+    /^could not be read \(boom\)$/,
+  );
+  for (const text of [same, other]) {
+    assert.ok(!text.includes('SECRETKEY'));
+  }
+});
+
+test('a received webhook is summarised for the log: type and module ids, never the payload', () => {
+  assert.equal(
+    describeWebhookBody(
+      JSON.stringify({ push_type: 'NACamera-movement', camera_id: 'cam-1', snapshot_key: 'x' }),
+    ),
+    'NACamera-movement (cam-1)',
+  );
+  assert.equal(describeWebhookBody({ event_type: 'webhook_activation' }), 'webhook_activation');
+  assert.equal(describeWebhookBody({}), 'no push_type');
+  assert.equal(describeWebhookBody('a=1&b=2'), 'non-JSON body (7 characters) — ignored');
+});
+
+test('the report says which webhook URL Netatmo holds', async () => {
+  const report = await run(
+    {},
+    {
+      webhooks: {
+        isRegistered: () => true,
+        check: async () => ({
+          ours: 'https://relay.example/v1/api/external-integration/K/ext-netatmo/events',
+          atNetatmo: ['https://relay.example/v1/api/netatmo/K'],
+          matches: false,
+          error: null,
+        }),
+      },
+    },
+  );
+  assert.match(
+    report,
+    /\n {2}Webhook URL held by Netatmo: https:\/\/relay\.example\/v1\/api\/netatmo\/<redacted> — NOT the integration's URL/,
+  );
 });

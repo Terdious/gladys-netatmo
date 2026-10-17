@@ -39,6 +39,8 @@ export function createWebhooks({
 }) {
   let debounceTimer = null;
   let registered = false;
+  // URL handed to Netatmo by the last successful registration.
+  let registeredUrl = null;
 
   /**
    * (Re)register the relay URL at Netatmo. Best effort: called on every
@@ -67,6 +69,7 @@ export function createWebhooks({
     try {
       await client.addWebhook(events.url);
       registered = true;
+      registeredUrl = events.url;
       logger.info('Netatmo webhook registered — events will trigger an immediate refresh');
       return true;
     } catch (err) {
@@ -115,5 +118,25 @@ export function createWebhooks({
     }
   }
 
-  return { register, handleEvent, stop, drop, isRegistered: () => registered };
+  /**
+   * Compare the URL Netatmo holds for the application with ours (Device
+   * diagnostic). Never throws.
+   * @returns {Promise<{ours: string|null, atNetatmo: string[]|null,
+   *   matches: boolean, error: string|null}>} the check
+   */
+  async function check() {
+    try {
+      const atNetatmo = await client.listWebhooks();
+      return {
+        ours: registeredUrl,
+        atNetatmo,
+        matches: Boolean(registeredUrl) && atNetatmo.includes(registeredUrl),
+        error: null,
+      };
+    } catch (err) {
+      return { ours: registeredUrl, atNetatmo: null, matches: false, error: err.message };
+    }
+  }
+
+  return { register, handleEvent, stop, drop, check, isRegistered: () => registered };
 }

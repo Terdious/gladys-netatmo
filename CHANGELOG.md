@@ -10,6 +10,17 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Webhook delivery checks: each event Netatmo delivers through Gladys Plus is
+  now logged at info level, as
+  `Netatmo webhook event received: <push type> (<module ids>)` (never the
+  payload), and the **Device diagnostic** report says which webhook URL
+  Netatmo actually holds for the application (`GET webhooks/v1/`, key
+  redacted): the integration's, none, or another one that overwrote it
+  (developer portal field, former core service). Docs: "registered but
+  nothing arrives" troubleshooting in the four languages.
+
 ## [2.3.0] - 2026-10-17
 
 ### Added

@@ -317,6 +317,19 @@ comprobarlo, abra la pestaña **Registros** de la integración: debería ver
 Netatmo webhook registered — events will trigger an immediate refresh
 ```
 
+Después, cada evento entregado por Netatmo añade una línea como
+`Netatmo webhook event received: NACamera-movement (70:ee:50:…)`.
+
+**¿Registrado pero no llega nada?** Ejecute la acción **Diagnóstico de un
+dispositivo** (pantalla Configuración, ambos campos vacíos): la línea **Webhook
+URL held by Netatmo** indica si Netatmo sigue teniendo la URL de la
+integración. Un solo webhook por aplicación Netatmo: si otro cliente la
+sustituyó (el campo "webhook URI" de dev.netatmo.com, el antiguo servicio
+Netatmo del core), vuelva a guardar la clave de Gladys Plus. Netatmo también
+deja de enviar durante 24 horas a una aplicación cuyo webhook falló 5 veces
+seguidas (solo dev.netatmo.com lo muestra y permite levantarlo). Las
+detecciones solo existen mientras la vigilancia de la cámara está activada.
+
 Sin clave (o sin Gladys Plus), la integración se comporta exactamente como
 antes, consultando cada 2 minutos.
 

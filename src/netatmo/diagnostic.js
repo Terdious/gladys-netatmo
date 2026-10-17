@@ -138,6 +138,23 @@ export function webhookModuleIds(payload) {
 }
 
 /**
+ * One-line summary of a relayed webhook body, for the info log: its push /
+ * event type and the module ids it names — never the payload itself.
+ * @param {unknown} body raw webhook body (object or JSON string)
+ * @returns {string} the summary
+ */
+export function describeWebhookBody(body) {
+  const payload = parseBody(body);
+  if (!payload) {
+    const size = typeof body === 'string' ? `${body.length} characters` : typeof body;
+    return `non-JSON body (${size}) — ignored`;
+  }
+  const type = payload.push_type ?? payload.event_type ?? 'no push_type';
+  const ids = webhookModuleIds(payload);
+  return `${type}${ids.length > 0 ? ` (${ids.join(', ')})` : ''}`;
+}
+
+/**
  * In-memory ring buffer of the recent webhook events (redacted on record):
  * the last ones overall, and the last ones per module id they name, for a
  * bounded number of ids (the least recently seen id goes first).
@@ -470,7 +487,43 @@ function headerLines(ctx) {
   lines.push(
     `  Webhook (Gladys Plus): ${webhook.registered ? 'registered at Netatmo' : 'not registered (poll only)'}, last event received ${timeOf(webhook.history.lastAt())}, ${webhook.history.total()} since start`,
   );
+  if (webhook.check) {
+    lines.push(`  Webhook URL held by Netatmo: ${describeWebhookCheck(webhook.check)}`);
+  }
   return lines;
+}
+
+/**
+ * A webhook URL without its secret: scheme, host and the route segments
+ * before the Open API key (`/v1/api/external-integration/` or the legacy
+ * `/v1/api/netatmo/` of the former core service).
+ * @param {string} url a webhook URL
+ * @returns {string} the URL, key and what follows it redacted
+ */
+export function describeWebhookUrl(url) {
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split('/').filter(Boolean);
+    const route = segments.slice(0, 3).join('/');
+    return `${parsed.protocol}//${parsed.host}/${route}${segments.length > 3 ? '/<redacted>' : ''}`;
+  } catch {
+    return '<redacted url>';
+  }
+}
+
+/** One line on the URL Netatmo holds versus the integration's. */
+export function describeWebhookCheck(check) {
+  if (check.error) {
+    return `could not be read (${check.error})`;
+  }
+  if (!check.atNetatmo || check.atNetatmo.length === 0) {
+    return 'none — Netatmo holds no webhook for this application';
+  }
+  if (check.matches) {
+    return `the integration's URL (${describeWebhookUrl(check.ours)})`;
+  }
+  const held = check.atNetatmo.map(describeWebhookUrl).join(', ');
+  return `${held} — NOT the integration's URL${check.ours ? ` (${describeWebhookUrl(check.ours)})` : ''}: another client (the developer portal field, the former core Netatmo service…) overwrote it; save the Gladys Plus key again to re-register`;
 }
 
 /** The report lines of one module. */
@@ -695,7 +748,11 @@ export async function runDeviceDiagnostic(deps, fields = {}) {
       load,
       loadError,
       health: telemetry.getHealth(),
-      webhook: { registered: Boolean(webhooks?.isRegistered?.()), history: webhookHistory },
+      webhook: {
+        registered: Boolean(webhooks?.isRegistered?.()),
+        history: webhookHistory,
+        check: oauth.hasTokens() && webhooks?.check ? await webhooks.check() : null,
+      },
     },
     fields,
   );
