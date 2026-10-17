@@ -17,6 +17,7 @@ import {
   THERM_MODE_PRESETS,
   THERM_MODE_LABELS,
   PERSON_PRESENCE_SUFFIX_PREFIX,
+  BTICINO_LIGHT_SUFFIX,
 } from './constants.js';
 
 function feature(overrides) {
@@ -181,10 +182,9 @@ export function buildFeatureBoilerFault(name, externalId) {
   });
 }
 
-// BTicino staircase light (BNSL) and controlled socket (BNCS), issue #59:
-// homestatus `on`, as pyatmo models them (`Switch`). Read-only in this
-// discovery preview: the command lands with step 2, once the real payloads
-// are known. The suffix keeps the Netatmo field name.
+// BTicino controlled socket (BNCS), issue #59: homestatus `on`, as pyatmo
+// models it (`Switch`), read-only — no source documents its command for the
+// public API. The suffix keeps the Netatmo field name.
 export function buildFeatureBticinoOn(name, externalId, label) {
   return feature({
     name: `${label} - ${name}`,
@@ -192,6 +192,24 @@ export function buildFeatureBticinoOn(name, externalId, label) {
     selector: `${externalId}:on`,
     category: DEVICE_FEATURE_CATEGORIES.SWITCH,
     type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    min: 0,
+    max: 1,
+  });
+}
+
+// BTicino staircase / outdoor light (BNSL), issue #59: a standard light, so
+// the dashboard toggle and the light scene actions work. Switched through
+// /api/setstate `on`; Netatmo does not report its state back, so the value
+// shown is the last command (see setValue). Named after the module ("Outdoor
+// lighting"): on the door entry device, it is THE light.
+export function buildFeatureBticinoLight(name, externalId) {
+  return feature({
+    name,
+    external_id: `${externalId}:${BTICINO_LIGHT_SUFFIX}`,
+    selector: `${externalId}:${BTICINO_LIGHT_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.LIGHT,
+    type: DEVICE_FEATURE_TYPES.LIGHT.BINARY,
+    read_only: false,
     min: 0,
     max: 1,
   });

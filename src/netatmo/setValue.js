@@ -15,7 +15,12 @@
 //   - roller shutter state / position (issue #34): POST /api/setstate with a
 //     target_position (100 open, 0 closed, -1 stop, or a percentage) and the
 //     iDiamant bridge id (plug_id param), then one delayed refresh so the
-//     new position lands without waiting for the next cycle.
+//     new position lands without waiting for the next cycle;
+//   - BTicino staircase / outdoor light (BNSL, issue #59): POST /api/setstate
+//     `on` through its bridge (the BNCX door entry). Netatmo never reports
+//     the light state back: the commanded value is published once Netatmo
+//     acknowledged it (optimistic), a module error in the answer fails the
+//     command instead.
 // A 403 with the Netatmo error code 13 means the token lacks the write scope
 // — surfaced as a clear "reconnect" message.
 // -----------------------------------------------------------------------------
@@ -32,6 +37,9 @@ import {
   FLOODLIGHT_MODES,
   MONITORING_CAMERA_MODULE_TYPES,
   SHUTTER_MODULE_TYPES,
+  BTICINO_MODULE_TYPES,
+  BTICINO_GATEWAY_TYPES,
+  BTICINO_LIGHT_SUFFIX,
   CONNECTION_MESSAGES,
 } from './constants.js';
 import { writeValues } from './deviceMapping.js';
@@ -115,20 +123,103 @@ export async function setHomeThermMode(client, homeId, mode, endtime) {
 }
 
 /**
- * Shutter scope refusal: the token predates the Bubendorff scopes. Besides
- * the failed command, say it on the Configuration screen (in the user's
- * language) — the account stays connected for every other device.
+ * Scope refusal of a family added after the first connection (shutters,
+ * BTicino door entry): the token predates its scopes. Besides the failed
+ * command, say it on the Configuration screen (in the user's language) — the
+ * account stays connected for every other device.
+ * @param {object} gladys SDK instance
+ * @param {Error} err the Netatmo error
+ * @param {object} message multi-language message (CONNECTION_MESSAGES)
  */
-async function rethrowShutterScopeError(gladys, err) {
+async function rethrowFamilyScopeError(gladys, err, message) {
   if (!isScopeError(err)) {
     throw err;
   }
   try {
-    await gladys.setConnectionStatus(true, CONNECTION_MESSAGES.SHUTTER_SCOPE_MISSING);
+    await gladys.setConnectionStatus(true, message);
   } catch (statusErr) {
     logger.debug(`setConnectionStatus skipped (older Gladys core?): ${statusErr.message}`);
   }
-  throw new Error(CONNECTION_MESSAGES.SHUTTER_SCOPE_MISSING.en, { cause: err });
+  throw new Error(message.en, { cause: err });
+}
+
+/**
+ * Netatmo id of the module a feature belongs to: `ext:<selector>:<id>:<suffix>`
+ * → `<id>` (a MAC keeps its colons). The features of a BTicino door entry
+ * carry the id of their own module, not the device's (issue #59).
+ */
+function moduleIdOfFeature(gladys, feature, suffix) {
+  const prefix = gladys.externalId('');
+  const end = feature.external_id.length - suffix.length - 1;
+  return feature.external_id.startsWith(prefix) && end > prefix.length
+    ? feature.external_id.slice(prefix.length, end)
+    : undefined;
+}
+
+/**
+ * Module errors of a /api/setstate answer that Netatmo acknowledged with
+ * HTTP 200 (`body.errors: [{code, id}]`, e.g. code 6 for a bridge that did
+ * not relay the command): the command did not happen.
+ */
+function setStateErrorsOf(answer) {
+  const errors = answer?.body?.errors ?? answer?.errors;
+  return Array.isArray(errors) ? errors.filter(Boolean) : [];
+}
+
+/**
+ * Switch the BTicino staircase / outdoor light (issue #59): /api/setstate
+ * `{id, on, bridge}` (pyatmo SwitchMixin), then publish the commanded value —
+ * Netatmo never reports this state back.
+ */
+async function setBticinoLight({ gladys, client }, { device, feature, value }, homeId) {
+  const moduleId = moduleIdOfFeature(gladys, feature, BTICINO_LIGHT_SUFFIX);
+  if (!moduleId) {
+    throw new Error(`Cannot read the module of ${feature.external_id}`);
+  }
+  const deviceId = device.external_id.replace(gladys.externalId(''), '');
+  let bridge;
+  if (BTICINO_GATEWAY_TYPES.includes(device.model)) {
+    // One device per door entry: the light rides on its gateway's device,
+    // and must be one of the modules it bridges.
+    bridge = deviceId;
+    const bridged = getDeviceParam(device, PARAMS.MODULES_BRIDGE_ID);
+    let bridgedIds;
+    try {
+      bridgedIds = bridged ? JSON.parse(bridged) : null;
+    } catch {
+      bridgedIds = null;
+    }
+    if (Array.isArray(bridgedIds) && !bridgedIds.includes(moduleId)) {
+      throw new Error(`Module ${moduleId} is not bridged by ${device.external_id}`);
+    }
+  } else {
+    bridge = getDeviceParam(device, PARAMS.PLUG_ID);
+  }
+  if (!bridge) {
+    throw new Error(`Missing ${PARAMS.PLUG_ID} param on ${device.external_id}`);
+  }
+  const on = value === true || Number(value) === 1;
+  let answer;
+  try {
+    answer = await client.setState({ homeId, moduleId, on, bridge });
+  } catch (err) {
+    await rethrowFamilyScopeError(gladys, err, CONNECTION_MESSAGES.BTICINO_SCOPE_MISSING);
+  }
+  const errors = setStateErrorsOf(answer);
+  if (errors.length > 0) {
+    throw new Error(
+      `Netatmo did not switch the light ${moduleId}: ${errors
+        .map((error) => `error ${error.code} on ${error.id}`)
+        .join(', ')}`,
+    );
+  }
+  try {
+    await gladys.publishStates([
+      { device_feature_external_id: feature.external_id, state: on ? 1 : 0 },
+    ]);
+  } catch (err) {
+    logger.warn(`Publishing the light state of ${moduleId} failed: ${err.message}`);
+  }
 }
 
 /**
@@ -155,7 +246,14 @@ export async function setDeviceValue(
   const isShutter =
     SHUTTER_MODULE_TYPES.includes(device.model) &&
     feature.category === DEVICE_FEATURE_CATEGORIES.SHUTTER;
-  if (!transform || (!isCameraMonitoring && !isThermostatSetpoint && !isShutter && !isFloodlight)) {
+  const isBticinoLight =
+    BTICINO_MODULE_TYPES.includes(device.model) &&
+    feature.category === DEVICE_FEATURE_CATEGORIES.LIGHT &&
+    feature.external_id.endsWith(`:${BTICINO_LIGHT_SUFFIX}`);
+  if (
+    !transform ||
+    (!isCameraMonitoring && !isThermostatSetpoint && !isShutter && !isFloodlight && !isBticinoLight)
+  ) {
     // Every other feature (boiler status, open window...) is read-only: a
     // command reaching it is a routing error, never something to forward.
     throw new Error(`Feature ${feature.external_id} is not writable`);
@@ -182,9 +280,15 @@ export async function setDeviceValue(
         bridge: bridgeId,
       });
     } catch (err) {
-      await rethrowShutterScopeError(gladys, err);
+      await rethrowFamilyScopeError(gladys, err, CONNECTION_MESSAGES.SHUTTER_SCOPE_MISSING);
     }
     scheduleRefresh?.();
+    return;
+  }
+
+  // BTicino staircase / outdoor light: setstate through the door entry bridge.
+  if (isBticinoLight) {
+    await setBticinoLight({ gladys, client }, { device, feature, value }, homeId);
     return;
   }
 

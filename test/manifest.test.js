@@ -12,7 +12,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 import { DEFAULT_CONFIG } from '../src/config.js';
-import { WEBHOOK_KEY, CONNECTION_MESSAGES, DEGRADED_MESSAGES } from '../src/netatmo/constants.js';
+import {
+  WEBHOOK_KEY,
+  CONNECTION_MESSAGES,
+  DEGRADED_MESSAGES,
+  DEVICE_DIAGNOSTIC_ACTION_KEY,
+} from '../src/netatmo/constants.js';
 import * as featureBuilders from '../src/netatmo/features.js';
 import { SCENE_ACTIONS } from '../src/netatmo/scenes.js';
 import { SCENE_TRIGGER_KEYS } from '../src/netatmo/events.js';
@@ -49,6 +54,11 @@ const CATEGORIES_MIN_GLADYS_VERSION = [4, 86, 0];
 // them as unknown manifest fields.
 const CAPABILITY_FIELDS = ['scene_triggers', 'scene_actions', 'widgets'];
 const CAPABILITY_MIN_GLADYS_VERSION = [5, 1, 0];
+// Manifest `actions` (Configuration screen buttons): validated by the core
+// since 4.85.0; a `source: "devices"` select in their fields since 4.86.1
+// (checked in the Gladys history: externalIntegration.validateManifest.js).
+const ACTIONS_MIN_GLADYS_VERSION = [4, 85, 0];
+const DEVICES_SOURCE_MIN_GLADYS_VERSION = [4, 86, 1];
 const FEATURE_TYPE_MIN_GLADYS_VERSION = {
   'thermostat/preset': [5, 2, 0],
   'text/select': [5, 1, 1],
@@ -278,4 +288,39 @@ test('widget declarations: key, label and description bounds, allowed setting ty
       assert.ok(['string', 'number', 'boolean', 'select', 'multi_select'].includes(setting.type));
     }
   }
+});
+
+test('the declared actions are the ones index.js handles, within the contract bounds', () => {
+  assert.deepEqual(keysOf(manifest.actions), [DEVICE_DIAGNOSTIC_ACTION_KEY]);
+  assert.ok(
+    isAtLeast(minGladysVersion(), ACTIONS_MIN_GLADYS_VERSION),
+    `actions requires gladys_version >= 4.85.0, got "${manifest.gladys_version}"`,
+  );
+  assert.ok(manifest.actions.length <= 10);
+  for (const action of manifest.actions) {
+    assert.match(action.key, /^[a-z0-9_]+$/);
+    assert.ok(action.timeout_seconds >= 5 && action.timeout_seconds <= 120);
+    for (const field of action.fields ?? []) {
+      assert.ok(['string', 'select'].includes(field.type), `${action.key}.${field.key} type`);
+      if (field.source !== undefined) {
+        assert.equal(field.source, 'devices');
+        assert.equal(field.type, 'select', 'a source is only allowed on a select');
+        assert.equal(field.options, undefined, 'source and options are exclusive');
+        assert.equal(field.default, undefined, 'no default with a dynamic source');
+        assert.ok(
+          isAtLeast(minGladysVersion(), DEVICES_SOURCE_MIN_GLADYS_VERSION),
+          `source "devices" requires gladys_version >= 4.86.1, got "${manifest.gladys_version}"`,
+        );
+      }
+    }
+  }
+  // Both diagnostic fields are optional: empty means the account summary.
+  const diagnostic = manifest.actions.find((a) => a.key === DEVICE_DIAGNOSTIC_ACTION_KEY);
+  assert.deepEqual(
+    diagnostic.fields.map((field) => [field.key, field.required]),
+    [
+      ['device', false],
+      ['device_ref', false],
+    ],
+  );
 });

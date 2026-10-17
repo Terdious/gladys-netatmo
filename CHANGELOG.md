@@ -10,6 +10,50 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- BTicino door entry, step 2: the **staircase / outdoor light** (`BNSL`) is a
+  standard writable light, switched through `/api/setstate` `on` with its
+  `BNCX` bridge (Netatmo Home + Security documentation: "Modifying the
+  staircase light status (on/off)", pyatmo `SwitchMixin`). Netatmo does not
+  report its state ("not retrievable"): the commanded value is published once
+  Netatmo acknowledged it, a module error in the answer fails the command,
+  and a homestatus `on` would win. A missing BTicino scope says "click
+  Connect again" on the Configuration screen. The **ring**
+  (`incoming_call`, documented by Netatmo for the BNCX webhooks) is a
+  doorbell feature of the door entry device, usable as a scene trigger, like
+  the video doorbell; it lands there whichever bridged module the event
+  names. Opening the door (`BNDL`) is **not** offered: Netatmo blocks it for
+  third-party applications
+  ([#59](https://github.com/Terdious/gladys-netatmo/issues/59)).
+- **Device diagnostic** action on the Configuration screen, for any Netatmo
+  module (like gladys-tuya): pick a device created in Gladys, or type the
+  name / Netatmo id of a module not created, or leave both empty for the
+  account summary. The plain-text report gives the version, enabled
+  families, granted / missing scopes, the health of each API family (last
+  success, consecutive failures, degraded state) and of the Gladys Plus
+  webhook, then for the module its type, home, bridge, support status, the
+  Gladys device and features it maps to, its raw homesdata / homestatus
+  entries, the Netatmo fields the integration does not use yet and its last
+  webhook events (a redacted in-memory history: last 20, last 10 per
+  module). Redaction is shared with the `[bticino-diagnostic]` log; the
+  report is also logged at info level
+  ([#59](https://github.com/Terdious/gladys-netatmo/issues/59)).
+
+### Changed
+
+- BTicino door entry: **one Gladys device per door entry** — the `BNCX`
+  gateway — instead of one per module. The modules it bridges (`BNEU`,
+  `BNDL`, `BNSL`, `BNCS`, `BNXM`) add their features to it, keyed by their
+  own ids (`ext:netatmo:<module id>:<suffix>`) and named after them; a
+  bridged module whose gateway is missing is published alone only if it has
+  a feature, never as an empty device. The unreachable badge follows the
+  gateway; a bridged module reported offline (or behind an offline gateway)
+  publishes no value. The 2.2.0 preview devices are regrouped: delete any
+  you created and create the door entry device again. Test fixtures are now
+  the real payloads of a Classe 300 EOS
+  ([#59](https://github.com/Terdious/gladys-netatmo/issues/59)).
+
 ## [2.2.0] - 2026-10-16
 
 ### Added

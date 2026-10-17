@@ -32,6 +32,8 @@ import {
   SHUTTER_MODULE_TYPES,
   AIRCARE_MODULE_TYPES,
   BTICINO_MODULE_TYPES,
+  BTICINO_GATEWAY_TYPES,
+  BTICINO_BRIDGED_MODULE_TYPES,
   HOMES_CONCURRENCY,
   HEATING_SCHEDULE_TYPE,
   VIRTUAL_DEVICE_TYPE,
@@ -131,9 +133,12 @@ async function mapWithConcurrency(items, concurrency, fn) {
  * @param {Array} [bticinoDiagnostics] when given (BTicino toggle on), receives
  *   the raw homesdata / homestatus entries of the home's BTicino modules
  *   (issue #59 diagnostic log)
+ * @param {Array} [rawHomes] when given, receives the raw homesdata /
+ *   homestatus entries of EVERY module of the home, as Netatmo sent them (the
+ *   "Device diagnostic" action)
  * @returns {Promise<Array>} raw devices of the home
  */
-export async function loadDeviceDetails(client, config, homeData, bticinoDiagnostics) {
+export async function loadDeviceDetails(client, config, homeData, bticinoDiagnostics, rawHomes) {
   const { rooms: roomsHomeData = [], modules: modulesHomeData = [], id: homeId } = homeData;
   const { home, errors } = await client.getHomeStatus(homeId);
   if (!home) {
@@ -143,6 +148,15 @@ export async function loadDeviceDetails(client, config, homeData, bticinoDiagnos
     return null;
   }
   const { rooms: roomsHomestatus = [], modules: modulesHomestatus = [] } = home;
+  if (rawHomes) {
+    rawHomes.push({
+      id: homeId,
+      name: homeData.name || homeId,
+      homesdata: modulesHomeData,
+      homestatus: modulesHomestatus,
+      errors: Array.isArray(errors) ? errors : [],
+    });
+  }
   if (bticinoDiagnostics) {
     // Raw entries, BEFORE any merge: the diagnostic log must show exactly
     // what Netatmo sent for each source.
@@ -212,7 +226,49 @@ export async function loadDeviceDetails(client, config, homeData, bticinoDiagnos
     });
 
   const knownPersons = buildKnownPersonsDevice(config, homeData, home);
-  return [...reachableDevices, ...unreachableDevices, ...(knownPersons ? [knownPersons] : [])];
+  return [
+    ...groupBticinoModules([...reachableDevices, ...unreachableDevices]),
+    ...(knownPersons ? [knownPersons] : []),
+  ];
+}
+
+/**
+ * One Gladys device per BTicino door entry (issue #59): every module bridged
+ * by a BNCX of the same home (street panel, door lock, staircase light,
+ * controlled socket, X module) leaves the device list and rides on its
+ * gateway, in `grouped_modules` — the gateway's conversion adds their
+ * features, keyed by their own ids. A bridged module whose gateway is not in
+ * the list stays a device of its own (published only if it has features).
+ * @param {Array} devices raw devices of one home
+ * @returns {Array} the devices, bridged BTicino modules grouped
+ */
+export function groupBticinoModules(devices) {
+  const gateways = new Map(
+    devices
+      .filter((device) => BTICINO_GATEWAY_TYPES.includes(device.type) && netatmoId(device))
+      .map((device) => [netatmoId(device), device]),
+  );
+  if (gateways.size === 0) {
+    return devices;
+  }
+  const grouped = new Map();
+  const kept = [];
+  for (const device of devices) {
+    const gateway =
+      BTICINO_BRIDGED_MODULE_TYPES.includes(device.type) && typeof device.bridge === 'string'
+        ? gateways.get(device.bridge)
+        : undefined;
+    if (gateway) {
+      const modules = grouped.get(gateway) ?? [];
+      modules.push(device);
+      grouped.set(gateway, modules);
+    } else {
+      kept.push(device);
+    }
+  }
+  return kept.map((device) =>
+    grouped.has(device) ? { ...device, grouped_modules: grouped.get(device) } : device,
+  );
 }
 
 /**
@@ -363,7 +419,8 @@ export function heatingSchedulesOf(homeData) {
  * @param {object} homeData one entry of the homesdata `homes` array
  * @param {Array} devices raw devices loaded for this home
  * @returns {{id: string, name: string, persons: Array<{id: string, pseudo: string}>,
- *   modules: Array<{id: string, name: string, type: string}>, rooms: Array<object>,
+ *   modules: Array<{id: string, name: string, type: string, bridge?: string}>,
+ *   rooms: Array<object>,
  *   schedules: Array<{id: string, name: string, selected: boolean}>,
  *   therm_mode: string|undefined, therm_mode_endtime: number|undefined}} the home summary
  */
@@ -401,6 +458,7 @@ export function summarizeHome(homeData, devices = []) {
       id: module.id,
       name: module.name,
       type: module.type,
+      bridge: module.bridge,
     })),
     rooms: [...rooms.values()],
     schedules: heatingSchedulesOf(homeData),
@@ -430,17 +488,21 @@ export async function loadDevices(client, config) {
  * `weather` (getstationsdata), `aircare` (gethomecoachsdata).
  * With the BTicino toggle on, `bticino` carries the raw BTicino module
  * entries of every home whose homestatus loaded (issue #59 diagnostic log).
+ * `rawHomes` carries the raw homesdata / homestatus entries of every home
+ * whose homestatus loaded (the "Device diagnostic" action).
  * @param {object} client Netatmo API client
  * @param {object} config normalized integration config
  * @returns {Promise<{devices: Array, partial: boolean, failed: string[], homes: Array,
- *   bticino?: Array}>} raw devices + flags + the homesdata homes summaries
- *   (see summarizeHome) + the BTicino diagnostic entries
+ *   rawHomes: Array, bticino?: Array}>} raw devices + flags + the homesdata
+ *   homes summaries (see summarizeHome) + the raw entries per home + the
+ *   BTicino diagnostic entries
  */
 export async function loadAccount(client, config) {
   let listDevices = [];
   const failed = [];
   let homeSummaries = [];
   const bticinoDiagnostics = config.bticino_api ? [] : undefined;
+  const rawHomes = [];
 
   // Cameras and roller shutters ride in the same homesdata/homestatus payloads
   // as the Energy modules (no dedicated API call), and homestatus carries the
@@ -461,7 +523,7 @@ export async function loadAccount(client, config) {
       const homes = await client.getHomesData();
       const results = await mapWithConcurrency(homes, HOMES_CONCURRENCY, async (home) =>
         home.modules && home.modules.length > 0
-          ? loadDeviceDetails(client, config, home, bticinoDiagnostics)
+          ? loadDeviceDetails(client, config, home, bticinoDiagnostics, rawHomes)
           : [],
       );
       if (results.includes(null)) {
@@ -611,6 +673,7 @@ export async function loadAccount(client, config) {
     partial: failed.length > 0,
     failed,
     homes: homeSummaries,
+    rawHomes,
     ...(bticinoDiagnostics ? { bticino: bticinoDiagnostics } : {}),
   };
 }

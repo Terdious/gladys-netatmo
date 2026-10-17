@@ -13,6 +13,11 @@
 // the EVENT part, so every module type goes through one table and unknown
 // events are ignored rather than guessed.
 //
+// The event goes to the first module id of the payload (module, camera,
+// device, then their bridge) whose feature the user created: the BTicino
+// door entry (issue #59) is ONE device, its gateway's, so a ring naming the
+// street panel lands on the gateway's ring.
+//
 // Each detection is published as 1, then automatically back to 0 after
 // EVENT_RESET_MS: most events have no "cleared" counterpart, and a feature
 // stuck at 1 would make a scene trigger fire once and never again. The few
@@ -219,6 +224,44 @@ export function createEvents({
     }
   }
 
+  /**
+   * The Netatmo ids a payload may be about, most specific first: the module,
+   * the camera, the device, then the bridge of each of them (homes summaries)
+   * — a module grouped on its BTicino gateway's device (issue #59) carries
+   * no device of its own: the door entry ring is the gateway's feature.
+   */
+  function candidateIdsOf(payload) {
+    const ids = [payload?.module_id, payload?.camera_id, payload?.device_id].filter(
+      (id) => typeof id === 'string' && id.length > 0,
+    );
+    const modules = getHomes().flatMap((home) => home.modules ?? []);
+    for (const id of [...ids]) {
+      const bridge = modules.find((module) => module.id === id)?.bridge;
+      if (typeof bridge === 'string' && bridge.length > 0) {
+        ids.push(bridge);
+      }
+    }
+    return [...new Set(ids)];
+  }
+
+  /**
+   * The created feature a momentary event goes to: `<id>:<suffix>` for the
+   * first candidate id one of the devices the user created carries.
+   * @returns {{featureExternalId: string, deviceExternalId: string}|undefined} the target
+   */
+  function findEventFeature(payload, suffix) {
+    for (const id of candidateIdsOf(payload)) {
+      const featureExternalId = `${gladys.externalId(id)}:${suffix}`;
+      const device = (gladys.devices ?? []).find((d) =>
+        (d.features ?? []).some((f) => f.external_id === featureExternalId),
+      );
+      if (device) {
+        return { featureExternalId, deviceExternalId: device.external_id };
+      }
+    }
+    return undefined;
+  }
+
   /** External ids of the features the user created on a device. */
   function createdFeatureIds(deviceExternalId) {
     const device = (gladys.devices ?? []).find((d) => d.external_id === deviceExternalId);
@@ -304,18 +347,16 @@ export function createEvents({
       logger.debug(`Webhook event "${eventName}" without a module id — ignored`);
       return undefined;
     }
-    const deviceExternalId = gladys.externalId(deviceId);
-    const featureExternalId = `${deviceExternalId}:${suffix}`;
     // The user may not have created this device (or created it before the
     // feature existed): publishing an unknown feature would just be rejected.
-    const device = (gladys.devices ?? []).find((d) => d.external_id === deviceExternalId);
-    const hasFeature = (device?.features ?? []).some((f) => f.external_id === featureExternalId);
-    if (!hasFeature) {
+    const target = findEventFeature(payload, suffix);
+    if (!target) {
       logger.debug(
-        `Webhook event "${eventName}" for ${deviceExternalId}: feature not created in Gladys — ignored`,
+        `Webhook event "${eventName}" for ${gladys.externalId(deviceId)}: feature not created in Gladys — ignored`,
       );
       return undefined;
     }
+    const { featureExternalId, deviceExternalId } = target;
     const subType = payload.sub_type === undefined ? undefined : String(payload.sub_type);
     if (subType !== undefined && (EVENT_CLEARED_SUB_TYPES[eventName] ?? []).includes(subType)) {
       logger.info(`Netatmo event: ${eventName} cleared on ${deviceExternalId}`);

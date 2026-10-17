@@ -146,6 +146,11 @@ export function createTelemetry({
   // `weather`, `aircare`), and the degraded message currently reported (null when ok).
   const failedLoads = new Map();
   let degradedMessage = null;
+  // Health of each API family for the "Device diagnostic" report: time of its
+  // last successful load (epoch ms) — the consecutive failures are in
+  // failedLoads. And the last load itself (raw devices and raw entries).
+  const lastSuccessAt = new Map();
+  let lastLoad = null;
 
   // --- Account load (single-flight + short TTL) ------------------------------
   let loadCache = null; // {key, at, promise}
@@ -175,13 +180,14 @@ export function createTelemetry({
       // longer applies (a disabled family must not keep degraded badges).
       knownDevices.clear();
       failedLoads.clear();
+      lastSuccessAt.clear();
     }
     lastLoadKey = key;
     if (loadCache && loadCache.key === key && now() - loadCache.at < loadTtlMs) {
       return loadCache.promise;
     }
     const promise = loadAccount(client, config).then((result) => {
-      afterLoad(result);
+      afterLoad(result, config);
       notifyOnChange('heating', heatingSignature());
       notifyOnChange('weather', weatherSignature());
       notifyOnChange('cameras', camerasSignature());
@@ -243,9 +249,41 @@ export function createTelemetry({
     }
   }
 
+  /** The API families a load runs for a configuration (see loadAccount). */
+  function familiesOf(config) {
+    const families = [];
+    if (
+      config.energy_api ||
+      config.security_api ||
+      config.weather_api ||
+      config.shutter_api ||
+      config.bticino_api
+    ) {
+      families.push('homes');
+    }
+    for (const [family, enabled] of [
+      ['energy', config.energy_api],
+      ['weather', config.weather_api],
+      ['aircare', config.aircare_api],
+    ]) {
+      if (enabled) {
+        families.push(family);
+      }
+    }
+    return families;
+  }
+
   /** Post-load bookkeeping: camera cache upkeep + stale-entry pruning. */
-  function afterLoad({ devices: rawDevices, partial, failed, homes = [], bticino }) {
+  function afterLoad(result, config = {}) {
+    const { devices: rawDevices, partial, failed = [], homes = [], bticino } = result;
     trackFailures(failed);
+    const at = now();
+    for (const family of familiesOf(config)) {
+      if (!failed.includes(family)) {
+        lastSuccessAt.set(family, at);
+      }
+    }
+    lastLoad = { ...result, at };
     if (bticino) {
       // BTicino diagnostic log (issue #59): only present with the toggle on,
       // logged on change. Never allowed to break a load.
@@ -274,6 +312,12 @@ export function createTelemetry({
       const id = netatmoId(rawDevice);
       if (id && !rawDevice.not_handled) {
         rawDevicesById.set(id, rawDevice);
+        // The modules grouped on their BTicino gateway (issue #59).
+        for (const module of rawDevice.grouped_modules ?? []) {
+          if (netatmoId(module)) {
+            rawDevicesById.set(netatmoId(module), module);
+          }
+        }
       }
     }
 
@@ -309,8 +353,10 @@ export function createTelemetry({
       }
     }
     // Devices removed from the account must not pin dedup entries forever.
+    // The modules grouped on a BTicino gateway key their own features.
     const devicePrefixes = new Set(
       rawDevices
+        .flatMap((rawDevice) => [rawDevice, ...(rawDevice.grouped_modules ?? [])])
         .map((rawDevice) => netatmoId(rawDevice))
         .filter(Boolean)
         .map((id) => `${gladys.externalId(id)}:`),
@@ -412,9 +458,11 @@ export function createTelemetry({
    * Build the states of one device from the declarative mapping.
    * @param {object} gladysDevice the device as known by Gladys (features)
    * @param {object} rawDevice the raw Netatmo device of this cycle
+   * @param {string} [featurePrefix] external id prefix of the features: the
+   *   device's, or a module grouped on it (BTicino door entry, issue #59)
    * @returns {Array<{device_feature_external_id: string, state: number}>} states
    */
-  function buildDeviceStates(gladysDevice, rawDevice) {
+  function buildDeviceStates(gladysDevice, rawDevice, featurePrefix = gladysDevice.external_id) {
     const entry = UPDATE_MAPPINGS[rawDevice.type];
     // A function builds the table from the device itself (per-person
     // features of the known-persons device, issue #57).
@@ -432,7 +480,7 @@ export function createTelemetry({
       if (unreachable && !ROOM_DERIVED_SUFFIXES.includes(suffix)) {
         continue;
       }
-      const featureExternalId = `${gladysDevice.external_id}:${suffix}`;
+      const featureExternalId = `${featurePrefix}:${suffix}`;
       const feature = (gladysDevice.features ?? []).find(
         (f) => f.external_id === featureExternalId,
       );
@@ -722,6 +770,21 @@ export function createTelemetry({
           continue; // not created by the user (yet)
         }
         states.push(...buildDeviceStates(gladysDevice, rawDevice));
+        // Modules grouped on a BTicino gateway (issue #59): their own table,
+        // id and reachability — nothing from behind an unreachable gateway.
+        for (const module of rawDevice.grouped_modules ?? []) {
+          const moduleId = netatmoId(module);
+          if (moduleId) {
+            const reachable = rawDevice.reachable === false ? false : module.reachable;
+            states.push(
+              ...buildDeviceStates(
+                gladysDevice,
+                { ...module, reachable },
+                gladys.externalId(moduleId),
+              ),
+            );
+          }
+        }
       }
       if (states.length > 0) {
         await publishChunked((chunk) => gladys.publishStates(chunk), states);
@@ -830,6 +893,40 @@ export function createTelemetry({
   }
 
   /**
+   * The account as the last load saw it, for the "Device diagnostic" report:
+   * a load sharing the burst cache (fresh enough, cheap when one just ran).
+   * @param {object} config normalized integration config
+   * @returns {Promise<object>} loadAccount result
+   */
+  function getAccount(config) {
+    return loadAccountCached(config);
+  }
+
+  /** The last account load (with its time `at`), null before the first one. */
+  function getLastLoad() {
+    return lastLoad;
+  }
+
+  /**
+   * Health of the API families and of the last load (diagnostic report).
+   * @returns {{lastLoadAt: number|null, partial: boolean|null, degraded: string|null,
+   *   families: Array<{family: string, lastSuccessAt: number|null, failures: number}>}}
+   */
+  function getHealth() {
+    const families = new Set([...lastSuccessAt.keys(), ...failedLoads.keys()]);
+    return {
+      lastLoadAt: lastLoad?.at ?? null,
+      partial: lastLoad ? lastLoad.partial : null,
+      degraded: degradedMessage?.en ?? null,
+      families: [...families].map((family) => ({
+        family,
+        lastSuccessAt: lastSuccessAt.get(family) ?? null,
+        failures: failedLoads.get(family) ?? 0,
+      })),
+    };
+  }
+
+  /**
    * Last image published (or served on demand) for a camera.
    * @param {string} id Netatmo camera id
    * @returns {string|undefined} `image/jpg;base64,...` string
@@ -844,6 +941,9 @@ export function createTelemetry({
     refreshNow,
     getHomes,
     getRawDevice,
+    getAccount,
+    getLastLoad,
+    getHealth,
     getCameraImage,
     onUpdate,
     scheduleRefresh,
