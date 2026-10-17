@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-17
+
 ### Added
 
 - Detections without webhooks: every refresh cycle (and every
@@ -435,7 +437,8 @@ the notes of the version's GitHub Release.
 - First stable release: OAuth2 connection, Weather and Energy devices,
   thermostat setpoint, cameras (image, monitoring, live stream).
 
-[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.3.1...HEAD
+[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/Terdious/gladys-netatmo/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.1.0...v2.2.0
