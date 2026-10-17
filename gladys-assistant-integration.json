@@ -934,6 +934,61 @@
       "action_timeout_seconds": 30
     }
   ],
+  "actions": [
+    {
+      "key": "device_diagnostic",
+      "label": {
+        "en": "Device diagnostic",
+        "fr": "Diagnostic d'un appareil",
+        "de": "Gerätediagnose",
+        "es": "Diagnóstico de un dispositivo"
+      },
+      "description": {
+        "en": "Shows what Netatmo reports for a module and what the integration does with it; leave both fields empty for a summary of the whole account. Copy the result into a GitHub issue — read it first: tokens and URLs are removed, ids and names are kept.",
+        "fr": "Affiche ce que Netatmo remonte pour un module et ce que l'intégration en fait ; laissez les deux champs vides pour un résumé de tout le compte. Copiez le résultat dans une issue GitHub — relisez-le avant : jetons et URL sont retirés, identifiants et noms sont conservés.",
+        "de": "Zeigt, was Netatmo für ein Modul meldet und was die Integration daraus macht; lass beide Felder leer für eine Übersicht des ganzen Kontos. Kopiere das Ergebnis in ein GitHub-Issue — lies es vorher: Tokens und URLs werden entfernt, IDs und Namen bleiben erhalten.",
+        "es": "Muestra lo que Netatmo informa de un módulo y lo que la integración hace con ello; deje ambos campos vacíos para un resumen de toda la cuenta. Copie el resultado en una issue de GitHub — reléalo antes: los tokens y las URL se eliminan, los ID y los nombres se conservan."
+      },
+      "timeout_seconds": 30,
+      "fields": [
+        {
+          "key": "device",
+          "type": "select",
+          "source": "devices",
+          "label": {
+            "en": "Device",
+            "fr": "Appareil",
+            "de": "Gerät",
+            "es": "Dispositivo"
+          },
+          "description": {
+            "en": "Pick the device in the list of devices created in Gladys.",
+            "fr": "Choisissez l’appareil dans la liste des appareils créés dans Gladys.",
+            "de": "Wähle das Gerät aus der Liste der in Gladys angelegten Geräte.",
+            "es": "Elija el dispositivo en la lista de dispositivos creados en Gladys."
+          },
+          "required": false
+        },
+        {
+          "key": "device_ref",
+          "type": "string",
+          "label": {
+            "en": "…or a device not created in Gladys (name or Netatmo ID)",
+            "fr": "…ou un appareil non créé dans Gladys (nom ou identifiant Netatmo)",
+            "de": "…oder ein nicht in Gladys angelegtes Gerät (Name oder Netatmo-ID)",
+            "es": "…o un dispositivo no creado en Gladys (nombre o ID de Netatmo)"
+          },
+          "description": {
+            "en": "A module discovered but not created (not supported yet, for example), by its Netatmo name or ID. Ignored when a device is picked above.",
+            "fr": "Un module découvert mais non créé (pas encore pris en charge, par exemple), par son nom Netatmo ou son identifiant. Ignoré si un appareil est choisi au-dessus.",
+            "de": "Ein erkanntes, aber nicht angelegtes Modul (zum Beispiel noch nicht unterstützt), über seinen Netatmo-Namen oder seine ID. Wird ignoriert, wenn oben ein Gerät gewählt ist.",
+            "es": "Un módulo descubierto pero no creado (aún no compatible, por ejemplo), por su nombre de Netatmo o su ID. Se ignora si se elige un dispositivo arriba."
+          },
+          "required": false
+        }
+      ]
+    }
+  ],
   "transports": ["cloud"],
   "config_schema": [
     {
@@ -1139,10 +1194,10 @@
         "es": "Portero BTicino (Classe 300) — vista previa"
       },
       "description": {
-        "en": "Discover the BTicino Classe 300X / Classe 300 EOS modules (signal, reachability) and write their raw Netatmo data to the logs to prepare the full support. Already connected? Click Connect again to grant the BTicino permissions.",
-        "fr": "Découvrir les modules BTicino Classe 300X / Classe 300 EOS (signal, joignabilité) et écrire leurs données Netatmo brutes dans les journaux pour préparer la prise en charge complète. Déjà connecté ? Cliquez à nouveau sur Connecter pour accorder les autorisations BTicino.",
-        "de": "BTicino-Module Classe 300X / Classe 300 EOS erkennen (Signal, Erreichbarkeit) und ihre Netatmo-Rohdaten in die Protokolle schreiben, um die vollständige Unterstützung vorzubereiten. Schon verbunden? Klicke erneut auf Verbinden, um die BTicino-Berechtigungen zu erteilen.",
-        "es": "Descubrir los módulos BTicino Classe 300X / Classe 300 EOS (señal, accesibilidad) y escribir sus datos brutos de Netatmo en los registros para preparar la compatibilidad completa. ¿Ya está conectado? Vuelva a hacer clic en Conectar para conceder los permisos de BTicino."
+        "en": "Discover the BTicino Classe 300X / Classe 300 EOS door entry as one device (signal, doorbell ring through the webhooks, staircase or outdoor light) and write its raw Netatmo data to the logs. Opening the door is not available through the Netatmo API. Already connected? Click Connect again to grant the BTicino permissions.",
+        "fr": "Découvrir l'interphone BTicino Classe 300X / Classe 300 EOS comme un seul appareil (signal, sonnerie via les webhooks, éclairage d'escalier ou extérieur) et écrire ses données Netatmo brutes dans les journaux. L'ouverture de la porte n'est pas disponible via l'API Netatmo. Déjà connecté ? Cliquez à nouveau sur Connecter pour accorder les autorisations BTicino.",
+        "de": "Die BTicino-Türsprechanlage Classe 300X / Classe 300 EOS als ein Gerät erkennen (Signal, Klingeln über die Webhooks, Treppenhaus- oder Außenbeleuchtung) und ihre Netatmo-Rohdaten in die Protokolle schreiben. Das Öffnen der Tür ist über die Netatmo-API nicht verfügbar. Schon verbunden? Klicke erneut auf Verbinden, um die BTicino-Berechtigungen zu erteilen.",
+        "es": "Descubrir el portero BTicino Classe 300X / Classe 300 EOS como un solo dispositivo (señal, timbre a través de los webhooks, luz de escalera o exterior) y escribir sus datos brutos de Netatmo en los registros. La apertura de la puerta no está disponible a través de la API de Netatmo. ¿Ya está conectado? Vuelva a hacer clic en Conectar para conceder los permisos de BTicino."
       },
       "required": false,
       "default": false

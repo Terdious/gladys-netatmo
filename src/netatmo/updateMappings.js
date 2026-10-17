@@ -17,6 +17,7 @@ import {
   FLOODLIGHT_MODES,
   VIRTUAL_DEVICE_TYPE,
   PERSON_PRESENCE_SUFFIX_PREFIX,
+  BTICINO_LIGHT_SUFFIX,
 } from './constants.js';
 import { healthIndexToAqi, healthIndexToLevel } from './deviceMapping.js';
 
@@ -92,17 +93,31 @@ function knownPersonsMapping(deviceNetatmo) {
   );
 }
 
-// BTicino door entry modules (issue #59, discovery preview): the signal
-// quality, emitted only when homestatus carries it.
+// BTicino door entry modules (issue #59): the signal quality, emitted only
+// when homestatus carries it. The modules a BNCX bridges ride on its device
+// (discovery groupBticinoModules): telemetry applies THEIR table with their
+// own id and reachability (a module unreachable, or behind an unreachable
+// gateway, publishes nothing).
 const BTICINO_MAPPING = {
   wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength,
   rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
 };
 
-// Staircase light / controlled socket (pyatmo `Switch`): homestatus `on`, a
-// boolean — anything else is no value.
+/** Homestatus `on` when it is a boolean — anything else is no value. */
+const homestatusOn = (deviceNetatmo) =>
+  typeof deviceNetatmo.on === 'boolean' ? deviceNetatmo.on : undefined;
+
+// Staircase / outdoor light (BNSL): Netatmo does not report its state ("ON/OFF
+// light status is not retrievable"), the command publishes it (setValue);
+// should homestatus ever carry `on`, it wins.
+const BTICINO_LIGHT_MAPPING = {
+  ...BTICINO_MAPPING,
+  [BTICINO_LIGHT_SUFFIX]: homestatusOn,
+};
+
+// Controlled socket (pyatmo `Switch`): homestatus `on`, read-only.
 const BTICINO_SWITCH_MAPPING = {
-  on: (deviceNetatmo) => (typeof deviceNetatmo.on === 'boolean' ? deviceNetatmo.on : undefined),
+  on: homestatusOn,
   ...BTICINO_MAPPING,
 };
 
@@ -299,7 +314,7 @@ export const UPDATE_MAPPINGS = {
   [SUPPORTED_MODULE_TYPE.BNCX]: BTICINO_MAPPING,
   [SUPPORTED_MODULE_TYPE.BNEU]: BTICINO_MAPPING,
   [SUPPORTED_MODULE_TYPE.BNDL]: BTICINO_MAPPING,
-  [SUPPORTED_MODULE_TYPE.BNSL]: BTICINO_SWITCH_MAPPING,
+  [SUPPORTED_MODULE_TYPE.BNSL]: BTICINO_LIGHT_MAPPING,
   [SUPPORTED_MODULE_TYPE.BNCS]: BTICINO_SWITCH_MAPPING,
   [SUPPORTED_MODULE_TYPE.BNXM]: BTICINO_MAPPING,
   [SUPPORTED_MODULE_TYPE.NAMODULE4]: {

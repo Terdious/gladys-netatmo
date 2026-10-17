@@ -24,7 +24,9 @@ import {
   addShutterFixtures,
   SHUTTER_BRIDGE_ID,
   addBticinoFixtures,
+  BNCX_ID,
   BNEU_ID,
+  BNSL_ID,
 } from './helpers/fakeNetatmo.js';
 
 const { EXTERNAL_INTEGRATION } = WEBSOCKET_MESSAGE_TYPES;
@@ -319,12 +321,17 @@ test('the BTicino toggle surfaces the door entry modules and logs their webhooks
         bticino_api: 'true',
       },
     });
-    const bneu = await waitFor(() =>
+    // ONE device per door entry: the gateway, carrying the outdoor light.
+    const bncx = await waitFor(() =>
       core.state.discovered
         .at(-1)
-        ?.find((device) => device.external_id === `ext:netatmo:${BNEU_ID}`),
+        ?.find((device) => device.external_id === `ext:netatmo:${BNCX_ID}`),
     );
-    assert.equal(bneu.model, 'BNEU');
+    assert.equal(bncx.model, 'BNCX');
+    assert.ok(bncx.features.some((f) => f.external_id === `ext:netatmo:${BNSL_ID}:light`));
+    assert.ok(
+      !core.state.discovered.at(-1).some((d) => d.external_id === `ext:netatmo:${BNEU_ID}`),
+    );
 
     sendWebhook();
     await waitFor(() => webhookCalls.length === 2);
@@ -333,4 +340,31 @@ test('the BTicino toggle surfaces the door entry modules and logs their webhooks
     events.handleWebhook = handleWebhook;
     bticinoDiagnostic.logWebhook = logWebhook;
   }
+});
+
+test('the Device diagnostic action answers a plain-text report (Configuration screen)', async () => {
+  const summary = await sendAndWaitResult(EXTERNAL_INTEGRATION.ACTION_RUN, {
+    key: 'device_diagnostic',
+    fields: {},
+  });
+  assert.equal(summary.success, true);
+  const report = summary.data.message;
+  assert.equal(typeof report, 'string');
+  assert.match(
+    report,
+    /^Netatmo integration — device diagnostic\nIntegration version: \d+\.\d+\.\d+/,
+  );
+  assert.match(report, /Modules:/);
+  assert.match(
+    report,
+    /How to report: open an issue at https:\/\/github\.com\/Terdious\/gladys-netatmo\/issues\/new/,
+  );
+
+  // A module typed by name (accents and case ignored).
+  const one = await sendAndWaitResult(EXTERNAL_INTEGRATION.ACTION_RUN, {
+    key: 'device_diagnostic',
+    fields: { device_ref: 'ECLAIRAGE exterieur' },
+  });
+  assert.equal(one.success, true);
+  assert.match(one.data.message, new RegExp(`Module ${BNSL_ID}\n  Type: BNSL`));
 });

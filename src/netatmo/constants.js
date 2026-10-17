@@ -64,6 +64,8 @@ export const EVENT_FEATURE_SUFFIXES = {
   // `accepted_call` / `missed_call` events describe the SAME ring (answered or
   // not in the Netatmo app): they are deliberately not mapped, so one ring
   // fires a scene once instead of twice.
+  // The BTicino door entry (issue #59) sends the same event: Netatmo lists
+  // incoming_call for the BNCX in its Home + Security webhook documentation.
   incoming_call: 'ring',
 };
 
@@ -295,9 +297,7 @@ export const SHUTTER_MODULE_TYPES = [
 ];
 
 // BTicino door entry modules (issue #59), gated by their own `bticino_api`
-// toggle. Discovery preview only: signal quality and reachability, plus the
-// read-only `on` of the modules pyatmo models as switches. The door lock
-// command and the ring land once the real payloads are known (step 2).
+// toggle: the indoor unit (BNCX, the gateway) and the modules it bridges.
 export const BTICINO_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.BNCX,
   SUPPORTED_MODULE_TYPE.BNEU,
@@ -307,14 +307,51 @@ export const BTICINO_MODULE_TYPES = [
   SUPPORTED_MODULE_TYPE.BNXM,
 ];
 
-// BTicino modules pyatmo models as a `Switch` (homestatus `on`): staircase
-// light and controlled socket. Read-only for now (step 2 of issue #59).
-export const BTICINO_SWITCH_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.BNSL, SUPPORTED_MODULE_TYPE.BNCS];
+// ONE Gladys device per door entry: the modules bridged by a BNCX (street
+// panel, door lock, staircase light, controlled socket, X module) publish no
+// device of their own, they add features to the BNCX device — with feature
+// external ids built from THEIR id (`ext:netatmo:<module id>:<suffix>`).
+export const BTICINO_GATEWAY_TYPES = [SUPPORTED_MODULE_TYPE.BNCX];
+export const BTICINO_BRIDGED_MODULE_TYPES = [
+  SUPPORTED_MODULE_TYPE.BNEU,
+  SUPPORTED_MODULE_TYPE.BNDL,
+  SUPPORTED_MODULE_TYPE.BNSL,
+  SUPPORTED_MODULE_TYPE.BNCS,
+  SUPPORTED_MODULE_TYPE.BNXM,
+];
+
+// Controlled socket (pyatmo `Switch`): homestatus `on`, read-only — no source
+// documents its command for the public API.
+export const BTICINO_SWITCH_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.BNCS];
+
+// Staircase / outdoor light (BNSL): switched through /api/setstate `on`
+// (Netatmo Home + Security documentation: "Modifying the staircase light
+// status (on/off) | BNSL | /setstate", "ON/OFF light status is not
+// retrievable"; pyatmo `SwitchMixin` module entry `{id, on, bridge}`).
+// Netatmo does not report the state back: the commanded value is published
+// (optimistic) unless homestatus ever carries `on`. Its own suffix — not the
+// read-only `on` switch of the 2.2.0 preview: a light is another category.
+export const BTICINO_LIGHT_SUFFIX = 'light';
 
 // Diagnostic log of the BTicino payloads (issue #59): every line carries this
 // tag (easy to grep in the Gladys logs) and is cut at this many characters.
 export const BTICINO_DIAGNOSTIC_TAG = '[bticino-diagnostic]';
 export const BTICINO_DIAGNOSTIC_MAX_LINE = 8 * 1024;
+
+// "Device diagnostic" action of the Configuration screen (manifest `actions`):
+// a plain-text report on one module (or the whole account), also logged at
+// info level under this tag for a user who cannot copy from the screen.
+export const DEVICE_DIAGNOSTIC_ACTION_KEY = 'device_diagnostic';
+export const DEVICE_DIAGNOSTIC_TAG = '[netatmo-diagnostic]';
+// One raw JSON entry of the report is cut at this many characters.
+export const DEVICE_DIAGNOSTIC_MAX_ENTRY = 4 * 1024;
+// At most this many modules are detailed by one report (a name shared by many).
+export const DEVICE_DIAGNOSTIC_MAX_MODULES = 5;
+// Recent webhook events kept in memory (redacted) for the report: the last
+// ones overall, and the last ones per module id, for a bounded number of ids.
+export const WEBHOOK_HISTORY_SIZE = 20;
+export const WEBHOOK_HISTORY_PER_MODULE = 10;
+export const WEBHOOK_HISTORY_MAX_MODULES = 50;
 
 // Gladys cover states (server/utils/constants.js COVER_STATE — not exported
 // by the SDK).
@@ -603,5 +640,13 @@ export const CONNECTION_MESSAGES = {
     fr: 'Netatmo a refusé la commande du volet roulant : reconnectez votre compte Netatmo (bouton Connecter) pour accorder les autorisations des volets.',
     de: 'Netatmo hat den Rollladenbefehl abgelehnt: Verbinde dein Netatmo-Konto erneut (Schaltfläche Verbinden), um die Rollladen-Berechtigungen zu erteilen.',
     es: 'Netatmo rechazó la orden de la persiana: vuelva a conectar su cuenta Netatmo (botón Conectar) para conceder los permisos de las persianas.',
+  },
+  // Same for the BTicino door entry command (issue #59): the token predates
+  // the BTicino scopes (requested only while the toggle is on).
+  BTICINO_SCOPE_MISSING: {
+    en: 'Netatmo refused the door entry command: reconnect your Netatmo account (Connect button) to grant the BTicino permissions.',
+    fr: "Netatmo a refusé la commande de l'interphone : reconnectez votre compte Netatmo (bouton Connecter) pour accorder les autorisations BTicino.",
+    de: 'Netatmo hat den Befehl der Türsprechanlage abgelehnt: Verbinde dein Netatmo-Konto erneut (Schaltfläche Verbinden), um die BTicino-Berechtigungen zu erteilen.',
+    es: 'Netatmo rechazó la orden del portero: vuelva a conectar su cuenta Netatmo (botón Conectar) para conceder los permisos de BTicino.',
   },
 };

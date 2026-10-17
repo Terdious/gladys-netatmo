@@ -439,6 +439,10 @@ export function createNetatmoOAuth({
     refreshTokens,
     ensureFreshAccessToken,
     scheduleTokenRefresh,
+    /** Scopes granted by the last token response (null while unknown). */
+    grantedScopes() {
+      return grantedScopeList ? [...grantedScopeList] : null;
+    },
     /** Requested scopes the current token was not granted (empty when unknown). */
     missingScopes() {
       return [...missingScopeList];

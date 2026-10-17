@@ -120,6 +120,7 @@ test('scopes missing from the token are tracked until Connect grants them (issue
   const notified = [];
   oauth.onMissingScopes((missing) => notified.push(missing));
   assert.deepEqual(oauth.missingScopes(), []); // unknown before any token response
+  assert.equal(oauth.grantedScopes(), null); // shown as unknown by the diagnostic
 
   // Full grant on the authorization exchange: nothing missing, nothing notified.
   await connectAccount();
@@ -132,6 +133,7 @@ test('scopes missing from the token are tracked until Connect grants them (issue
   await oauth.refreshTokens();
   assert.deepEqual(oauth.missingScopes(), ['read_doorbell', 'access_doorbell']);
   assert.deepEqual(notified, [['read_doorbell', 'access_doorbell']]);
+  assert.ok(!oauth.grantedScopes().includes('read_doorbell'));
 
   // Same set on the next refresh: no duplicate notification.
   await oauth.refreshTokens();

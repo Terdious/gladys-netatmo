@@ -40,7 +40,12 @@ import {
   requestRefresh,
 } from './src/netatmo/widgets.js';
 import { createBticinoDiagnostic } from './src/netatmo/bticino.js';
-import { CONNECTION_MESSAGES, WEBHOOK_KEY } from './src/netatmo/constants.js';
+import { createWebhookHistory, runDeviceDiagnostic } from './src/netatmo/diagnostic.js';
+import {
+  CONNECTION_MESSAGES,
+  DEVICE_DIAGNOSTIC_ACTION_KEY,
+  WEBHOOK_KEY,
+} from './src/netatmo/constants.js';
 
 /**
  * Report the application-level connection status of the integration.
@@ -105,6 +110,8 @@ export function setupIntegration(
   // BTicino door entry diagnostic log (issue #59): raw payloads of the BN*
   // modules (fed by every load) and of their webhook events.
   const bticinoDiagnostic = createBticinoDiagnostic();
+  // Recent webhook events (redacted), shown by the Device diagnostic action.
+  const webhookHistory = createWebhookHistory();
 
   // WebRTC live view of the doorbell and the Indoor Camera Advance (issue
   // #70): inert with an SDK or a Gladys core that cannot relay it yet.
@@ -344,6 +351,11 @@ export function setupIntegration(
   // else), and every event debounces a refresh of the pollable state.
   gladys.onWebhook(WEBHOOK_KEY, async (request) => {
     logger.debug('Netatmo webhook event received');
+    try {
+      webhookHistory.record(request?.body);
+    } catch (err) {
+      logger.debug(`Webhook history failed: ${err.message}`);
+    }
     if (config.bticino_api) {
       try {
         bticinoDiagnostic.logWebhook(request?.body);
@@ -359,6 +371,18 @@ export function setupIntegration(
   gladys.onWebhookUpdated(async () => {
     logger.info('Gladys Plus webhook availability changed -> re-registering');
     await webhooks.register();
+  });
+
+  // --- Action: Device diagnostic (Configuration screen) ----------------------
+  // A plain-text report on one module (picked among the created devices, or
+  // typed: name / Netatmo id) or on the whole account, to paste in an issue
+  // (see src/netatmo/diagnostic.js). Also logged at info level.
+  gladys.onAction(DEVICE_DIAGNOSTIC_ACTION_KEY, (fields) => {
+    logger.info(`onAction ${DEVICE_DIAGNOSTIC_ACTION_KEY}`);
+    return runDeviceDiagnostic(
+      { gladys, oauth, telemetry, webhooks, webhookHistory, getConfig: () => config },
+      fields,
+    );
   });
 
   // --- Configuration updated by the user -------------------------------------
@@ -427,6 +451,7 @@ export function setupIntegration(
     webhooks,
     events,
     bticinoDiagnostic,
+    webhookHistory,
     webRtc,
     getConfig: () => config,
   };

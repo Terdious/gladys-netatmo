@@ -26,6 +26,7 @@ import {
   SHUTTER_MODULE_TYPES,
   BTICINO_MODULE_TYPES,
   BTICINO_SWITCH_MODULE_TYPES,
+  BTICINO_GATEWAY_TYPES,
   VIRTUAL_DEVICE_TYPE,
   PARAMS,
 } from './constants.js';
@@ -70,6 +71,7 @@ import {
   buildFeatureHealthLevel,
   buildFeaturePersonPresence,
   buildFeatureBticinoOn,
+  buildFeatureBticinoLight,
 } from './features.js';
 
 const logger = createLogger({ name: 'netatmo-convert' });
@@ -108,34 +110,58 @@ function bridgeParams(plug) {
   ];
 }
 
-// Name of the read-only `on` feature of the BTicino switches (issue #59).
+// Name of the read-only `on` feature of the BTicino controlled socket.
 const BTICINO_ON_LABELS = {
-  [SUPPORTED_MODULE_TYPE.BNSL]: 'Staircase light',
   [SUPPORTED_MODULE_TYPE.BNCS]: 'Socket',
 };
 
 /**
- * Features of a BTicino door entry module (issue #59, discovery preview):
- * no public payload exists, so only what THIS payload carries is declared —
- * WiFi / RF quality when homestatus reports them, and the `on` of the
- * staircase light / controlled socket (read-only) when homestatus reports
- * it. Reachability rides on the transport badge, like every module.
+ * Features of ONE BTicino door entry module (issue #59), keyed by its own id
+ * and named after it, from what its payload carries: WiFi / RF quality when
+ * homestatus reports them, the light of the staircase light module (BNSL,
+ * command through its bridge), the read-only `on` of the controlled socket
+ * when homestatus reports it. The street panel (BNEU) and the door lock
+ * (BNDL) report nothing usable: no feature (opening the door is not part of
+ * the public API, see the documentation).
+ * @param {object} gladys SDK instance (external_id builder)
+ * @param {object} module raw BTicino module
+ * @returns {Array<object>} its features
  */
-function bticinoFeatures(netatmoDevice, nameDevice, externalId) {
+function bticinoModuleFeatures(gladys, module) {
+  const id = netatmoId(module);
+  const externalId = gladys.externalId(id);
+  const name = module.name || id;
   const features = [];
-  if (typeof netatmoDevice.wifi_strength === 'number') {
-    features.push(buildFeatureWifiStrength(nameDevice, externalId));
+  if (typeof module.wifi_strength === 'number') {
+    features.push(buildFeatureWifiStrength(name, externalId));
   }
-  if (typeof netatmoDevice.rf_strength === 'number') {
-    features.push(buildFeatureRfStrength(nameDevice, externalId));
+  if (typeof module.rf_strength === 'number') {
+    features.push(buildFeatureRfStrength(name, externalId));
   }
-  if (
-    BTICINO_SWITCH_MODULE_TYPES.includes(netatmoDevice.type) &&
-    typeof netatmoDevice.on === 'boolean'
-  ) {
-    features.push(
-      buildFeatureBticinoOn(nameDevice, externalId, BTICINO_ON_LABELS[netatmoDevice.type]),
-    );
+  if (module.type === SUPPORTED_MODULE_TYPE.BNSL && typeof module.bridge === 'string') {
+    features.push(buildFeatureBticinoLight(name, externalId));
+  }
+  if (BTICINO_SWITCH_MODULE_TYPES.includes(module.type) && typeof module.on === 'boolean') {
+    features.push(buildFeatureBticinoOn(name, externalId, BTICINO_ON_LABELS[module.type]));
+  }
+  return features;
+}
+
+/**
+ * Features of a BTicino door entry device (issue #59): the module's own,
+ * the ring of the gateway (BNCX: `incoming_call` webhook event), then those
+ * of every module the gateway bridges (`grouped_modules`, see discovery
+ * groupBticinoModules) — ONE Gladys device per door entry.
+ */
+function bticinoFeatures(gladys, netatmoDevice, nameDevice, externalId) {
+  const features = bticinoModuleFeatures(gladys, { ...netatmoDevice, name: nameDevice });
+  if (BTICINO_GATEWAY_TYPES.includes(netatmoDevice.type)) {
+    features.push(buildFeatureDoorbellRing(nameDevice, externalId));
+  }
+  for (const module of netatmoDevice.grouped_modules ?? []) {
+    if (netatmoId(module)) {
+      features.push(...bticinoModuleFeatures(gladys, module));
+    }
   }
   return features;
 }
@@ -235,8 +261,14 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
   }
   if (BTICINO_MODULE_TYPES.includes(model)) {
     // BTicino door entry (issue #59): the indoor unit (BNCX) bridges the
-    // other modules — kept as params for the step 2 commands.
-    features.push(...bticinoFeatures(netatmoDevice, nameDevice, externalId));
+    // other modules, whose features it carries; a module without its gateway
+    // keeps its bridge as params (the light command goes through it).
+    features.push(...bticinoFeatures(gladys, netatmoDevice, nameDevice, externalId));
+    if (features.length === 0) {
+      // Never publish an empty device (a lone street panel or door lock).
+      logger.debug(`Skipping Netatmo device "${nameDevice}" (${model}): no feature`);
+      return null;
+    }
     params = Array.isArray(netatmoDevice.modules_bridged)
       ? [{ name: PARAMS.MODULES_BRIDGE_ID, value: JSON.stringify(netatmoDevice.modules_bridged) }]
       : bridgeParams(netatmoId(plug ?? {}) ? plug : { id: netatmoDevice.bridge });
@@ -487,7 +519,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
     case SUPPORTED_MODULE_TYPE.BNCS:
     case SUPPORTED_MODULE_TYPE.BNXM:
       // BTicino door entry (issue #59): features built above, from what the
-      // payload carries. The door lock and the ring come with step 2.
+      // payloads carry.
       break;
     case SUPPORTED_MODULE_TYPE.NAMODULE4:
       features.push(buildFeatureTemperature(nameDevice, externalId, 'temperature'));
