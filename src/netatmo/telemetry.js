@@ -24,7 +24,9 @@
 //   - an API family failing for DEGRADED_AFTER_FAILED_LOADS loads in a row
 //     marks the devices it leaves without fresh values as degraded (badge
 //     tooltip) and reports it through `onDegradedChange` (connection status
-//     message) — until the first complete load (issue #33).
+//     message) — until the first complete load (issue #33);
+//   - every cycle ends with the getevents poll (src/netatmo/eventsPoll.js):
+//     the momentary detections when the webhooks deliver nothing.
 // -----------------------------------------------------------------------------
 
 import {
@@ -97,6 +99,8 @@ function withTimeout(promise, ms, message) {
  *   #59), fed with the BTicino entries of every load
  * @param {object} [deps.webRtc] WebRTC relay (src/netatmo/webrtc.js): the
  *   stream-protocol param of the WebRTC cameras in the discovery (issue #70)
+ * @param {object} [deps.eventsPoll] getevents poll (src/netatmo/eventsPoll.js),
+ *   run at the end of every cycle; its `events` family joins the health
  */
 export function createTelemetry({
   gladys,
@@ -108,6 +112,7 @@ export function createTelemetry({
   onDegradedChange = () => {},
   bticinoDiagnostic = createBticinoDiagnostic(),
   webRtc = null,
+  eventsPoll = null,
 }) {
   // Last published value per feature external_id: {state, at}.
   const published = new Map();
@@ -804,6 +809,11 @@ export function createTelemetry({
       } else {
         await publishTransports(rawDevices);
       }
+      // Momentary detections from getevents (the webhook fallback): last, so
+      // the polled states are never delayed by it. Never throws.
+      if (eventsPoll) {
+        await eventsPoll.poll(config, getHomes());
+      }
       logger.debug(`Refresh cycle published ${states.length} state(s)`);
       return states.length;
     })();
@@ -914,15 +924,20 @@ export function createTelemetry({
    */
   function getHealth() {
     const families = new Set([...lastSuccessAt.keys(), ...failedLoads.keys()]);
+    // The getevents poll (once it ran): its own family, never degraded.
+    const events = eventsPoll?.getHealth() ?? null;
     return {
       lastLoadAt: lastLoad?.at ?? null,
       partial: lastLoad ? lastLoad.partial : null,
       degraded: degradedMessage?.en ?? null,
-      families: [...families].map((family) => ({
-        family,
-        lastSuccessAt: lastSuccessAt.get(family) ?? null,
-        failures: failedLoads.get(family) ?? 0,
-      })),
+      families: [
+        ...[...families].map((family) => ({
+          family,
+          lastSuccessAt: lastSuccessAt.get(family) ?? null,
+          failures: failedLoads.get(family) ?? 0,
+        })),
+        ...(events ? [events] : []),
+      ],
     };
   }
 

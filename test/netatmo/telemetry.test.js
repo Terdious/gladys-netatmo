@@ -14,6 +14,7 @@ import { createNetatmoClient } from '../../src/netatmo/client.js';
 import { createTelemetry } from '../../src/netatmo/telemetry.js';
 import { setDeviceValue, floodlightModeFor } from '../../src/netatmo/setValue.js';
 import { createWebhooks } from '../../src/netatmo/webhooks.js';
+import { createEventsPoll } from '../../src/netatmo/eventsPoll.js';
 import { startFakeNetatmo, addIndoorCameraAdvance, NPC_ID } from '../helpers/fakeNetatmo.js';
 import { waitFor } from '../helpers/fakeGladysCore.js';
 import { DEGRADED_AFTER_FAILED_LOADS, DEGRADED_MESSAGES } from '../../src/netatmo/constants.js';
@@ -1159,4 +1160,57 @@ test('a person webhook lands the new presence at once, even right after a cycle 
   await scheduled[0]();
   assert.deepEqual(stateOf(`${PERSONS}:person_person-2`), [0, 1]);
   engine.stop();
+});
+
+test('every refresh cycle ends with the getevents poll, its family in the health', async () => {
+  const securityConfig = normalizeConfig({ security_api: true });
+  const handled = [];
+  const eventsPoll = createEventsPoll({
+    client,
+    events: {
+      handleEvent: async (event) => {
+        handled.push(event);
+        return { outcome: 'published', scenes: 0 };
+      },
+    },
+    now: () => clock,
+    logger: { info() {}, warn() {}, debug() {} },
+  });
+  telemetry = createTelemetry({ gladys, client, now: () => clock, loadTtlMs: 0, eventsPoll });
+
+  await telemetry.refreshValues(securityConfig);
+  assert.deepEqual(netatmo.state.getEventsRequests, [{ home_id: 'home-1', size: '30' }]);
+  assert.deepEqual(
+    telemetry.getHealth().families.find((family) => family.family === 'events'),
+    { family: 'events', lastSuccessAt: clock, failures: 0 },
+  );
+
+  // A webhook-triggered refresh right after: the states reload, the home is
+  // not polled twice within 30 s.
+  netatmo.state.events['home-1'] = [
+    { id: 'evt-1', type: 'movement', time: Math.round(clock / 1000), module_id: 'camera-1' },
+  ];
+  await telemetry.refreshNow(securityConfig);
+  assert.equal(netatmo.state.getEventsRequests.length, 1);
+  clock += 2 * 60 * 1000;
+  await telemetry.refreshValues(securityConfig);
+  assert.equal(netatmo.state.getEventsRequests.length, 2);
+  assert.deepEqual(
+    handled.map((event) => [event.type, event.moduleIds[0], event.eventId]),
+    [['movement', 'camera-1', 'evt-1']],
+  );
+
+  // A failing getevents never breaks the cycle.
+  netatmo.state.failGetEventsWith = { status: 500, body: {} };
+  clock += 2 * 60 * 1000;
+  await telemetry.refreshValues(securityConfig);
+  assert.equal(
+    telemetry.getHealth().families.find((family) => family.family === 'events').failures,
+    1,
+  );
+
+  // Security family off: no camera to poll, no call.
+  clock += 2 * 60 * 1000;
+  await telemetry.refreshValues(config);
+  assert.equal(netatmo.state.getEventsRequests.length, 3);
 });

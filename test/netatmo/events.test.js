@@ -8,7 +8,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createEvents, eventNameOf, eventDeviceIdOf } from '../../src/netatmo/events.js';
+import {
+  createEvents,
+  eventNameOf,
+  eventDeviceIdOf,
+  normalizeWebhookEvent,
+} from '../../src/netatmo/events.js';
 
 // Injectable timers: capture the scheduled reset so the test drives it.
 function fakeTimers() {
@@ -301,4 +306,61 @@ test('a failing publish never throws out of the handler', async () => {
   const events = createEvents({ gladys, timers: fakeTimers() });
 
   await events.handleWebhook({ push_type: 'NACamera-movement', camera_id: 'camera-1' });
+});
+
+test('a webhook payload is normalized into the event the getevents poll shares', () => {
+  const event = normalizeWebhookEvent(
+    {
+      push_type: 'NOC-human',
+      camera_id: 'cam',
+      device_id: 'cam',
+      home_id: 'home-1',
+      event_id: 'evt',
+      subevent_id: 'sub',
+      sub_type: 1,
+    },
+    42,
+  );
+  assert.deepEqual(event, {
+    source: 'webhook',
+    type: 'human',
+    subType: '1',
+    moduleIds: ['cam'],
+    homeId: 'home-1',
+    homeName: null,
+    eventId: 'evt',
+    subeventId: 'sub',
+    time: 42,
+    persons: [],
+  });
+});
+
+test('handleEvent: the outcome of a normalized event (shared with the getevents poll)', async () => {
+  const gladys = fakeGladys();
+  const events = createEvents({ gladys, timers: fakeTimers(), now: () => 1000 });
+  const base = { source: 'poll', moduleIds: ['camera-1'], time: 1000, persons: [] };
+  assert.deepEqual(await events.handleEvent({ ...base, type: 'movement', eventId: 'e1' }), {
+    outcome: 'published',
+    featureExternalId: 'ext:netatmo:camera-1:motion',
+    scenes: 0,
+  });
+  assert.equal((await events.handleEvent({ ...base, type: 'tag_open' })).outcome, 'not_momentary');
+  assert.equal(
+    (await events.handleEvent({ ...base, type: 'movement', moduleIds: [] })).outcome,
+    'no_module',
+  );
+  assert.equal(
+    (await events.handleEvent({ ...base, type: 'movement', moduleIds: ['other'] })).outcome,
+    'not_created',
+  );
+  // The same Netatmo event from the webhook afterwards: already published.
+  assert.equal(
+    await events.handleWebhook({
+      push_type: 'NACamera-movement',
+      event_id: 'e1',
+      camera_id: 'camera-1',
+    }),
+    undefined,
+  );
+  assert.deepEqual(stateOf(gladys, 'ext:netatmo:camera-1:motion'), [1]);
 });

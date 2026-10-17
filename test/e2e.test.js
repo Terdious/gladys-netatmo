@@ -212,6 +212,10 @@ test('saving the configuration re-runs the discovery automatically', async () =>
   assert.equal(republished.length, 14);
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:camera-1'));
   assert.ok(republished.some((device) => device.external_id === 'ext:netatmo:doortag-1'));
+  // The cameras are on: the refresh cycle now reads the home's events too
+  // (getevents, the webhook fallback of the detections).
+  const polled = await waitFor(() => netatmo.state.getEventsRequests[0]);
+  assert.deepEqual(polled, { home_id: 'home-1', size: '30' });
 });
 
 test('a scene action reaches its handler through the real SDK wiring', async () => {
@@ -355,6 +359,8 @@ test('the Device diagnostic action answers a plain-text report (Configuration sc
     /^Netatmo integration — device diagnostic\nIntegration version: \d+\.\d+\.\d+/,
   );
   assert.match(report, /Modules:/);
+  assert.match(report, / {2}Events poll \(getevents\): last poll /);
+  assert.match(report, /Last events seen by getevents \(all modules\):/);
   assert.match(
     report,
     /How to report: open an issue at https:\/\/github\.com\/Terdious\/gladys-netatmo\/issues\/new/,
