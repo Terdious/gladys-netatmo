@@ -52,6 +52,9 @@
     outdoor light command, ring as a doorbell feature (#59);
   - Device diagnostic action on the Configuration screen, for any module
     (#59).
+  - Legrand Home + Control, first three groups (#60): the `legrand_api`
+    toggle and its `read_magellan` / `write_magellan` scopes, lighting
+    (on / off, dimmers), plugs and relays — built on the pyatmo fixtures.
 - Upstream, shipped in Gladys: live-stream latency (GladysAssistant/Gladys#2698,
   4.84.1, see #11), device migration with history
   (GladysAssistant/Gladys#2737, 4.84.1, hardened in #2778).
@@ -106,7 +109,13 @@ forum topic.
   for third-party applications (only the app's private client can, with a
   live session).
 - [#60](https://github.com/Terdious/gladys-netatmo/issues/60) Legrand
-  Home + Control devices, behind a new toggle.
+  Home + Control: base, lighting, plugs and relays done (pyatmo fixtures,
+  no real installation tested yet: on / brightness read back, gang and
+  gateway reachability, the dimmer reaction to a brightness while off). Next
+  groups: shutters `NLV` / `NLLV` / `NLLM` (like the Bubendorff ones),
+  energy (`NLE`, `NLPC`, `NLY`, load shedder `NLPS`, and the contactor
+  `contactor_mode`), wireless switches as scene triggers (`NLT`, `NLD`,
+  `NLDD`, `NLAS`, `NLAO`, `NLDP`), ventilation `NLLF` and garage door `NLJ`.
 
 ## external_id conventions (FROZEN)
 

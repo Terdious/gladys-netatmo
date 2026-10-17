@@ -19,6 +19,19 @@ const toBinary = (valueFromDevice) => (valueFromDevice === true || valueFromDevi
 const toInteger = (valueFromDevice) => parseInt(valueFromDevice, 10);
 const identity = (valueFromDevice) => valueFromDevice;
 
+/**
+ * Gladys brightness → /api/setstate `brightness` (Legrand dimmers, issue
+ * #60): an integer within 0-100, the scale Netatmo uses (pyatmo
+ * DimmableMixin clamps the same way).
+ */
+function toBrightness(valueFromGladys) {
+  const brightness = Math.round(Number(valueFromGladys));
+  if (Number.isNaN(brightness)) {
+    throw new Error(`Invalid brightness ${valueFromGladys}`);
+  }
+  return Math.min(100, Math.max(0, brightness));
+}
+
 // Gladys cover state → /api/setstate target_position (pyatmo ShutterMixin).
 const SHUTTER_TARGET_BY_STATE = {
   [COVER_STATE.OPEN]: SHUTTER_POSITION.OPEN,
@@ -125,6 +138,8 @@ export const writeValues = {
   [DEVICE_FEATURE_CATEGORIES.LIGHT]: {
     /* outdoor camera floodlight (issue #56): see setValue for the mode sent */
     [DEVICE_FEATURE_TYPES.LIGHT.BINARY]: toBinary,
+    /* Legrand dimmer (issue #60): /api/setstate `brightness`, 0-100 */
+    [DEVICE_FEATURE_TYPES.LIGHT.BRIGHTNESS]: toBrightness,
   },
   [DEVICE_FEATURE_CATEGORIES.SHUTTER]: {
     [DEVICE_FEATURE_TYPES.SHUTTER.STATE]: (valueFromGladys) => {
@@ -154,9 +169,13 @@ export const readValues = {
   },
   [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
     [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: toBinary,
+    // Legrand plugs and relays (issue #60): instant power in W.
+    [DEVICE_FEATURE_TYPES.SWITCH.POWER]: identity,
   },
   [DEVICE_FEATURE_CATEGORIES.LIGHT]: {
     [DEVICE_FEATURE_TYPES.LIGHT.BINARY]: toBinary,
+    // Legrand dimmers (issue #60): the Netatmo 0-100 level as is.
+    [DEVICE_FEATURE_TYPES.LIGHT.BRIGHTNESS]: toInteger,
   },
   [DEVICE_FEATURE_CATEGORIES.SHUTTER]: {
     [DEVICE_FEATURE_TYPES.SHUTTER.STATE]: identity,

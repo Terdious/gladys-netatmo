@@ -198,6 +198,32 @@ export const SUPPORTED_MODULE_TYPE = {
   BNSL: 'BNSL',
   BNCS: 'BNCS',
   BNXM: 'BNXM',
+  // Legrand Home + Control (Céliane / dooxie / Mosaic with Netatmo, issue
+  // #60), pyatmo modules/legrand.py: the gateway (NLG, standalone NLGS — not
+  // exposed, the `bridge` of the commands), the lighting modules (on/off:
+  // micro module NLM, Italian switch NLL, double switch NLIS; dimmers: NLF,
+  // NLFN, NLFE, in-wall NLUF, plug-in NLUO) and the plugs / relays (NLP,
+  // mobile NLPM, British NLPBS, cable outlet NLC, power outlet NLUP, in-wall
+  // switch NLUI, contactor NLPO, latching relay NLPT, dry contact NLPD).
+  NLG: 'NLG',
+  NLGS: 'NLGS',
+  NLM: 'NLM',
+  NLL: 'NLL',
+  NLIS: 'NLIS',
+  NLF: 'NLF',
+  NLFN: 'NLFN',
+  NLFE: 'NLFE',
+  NLUF: 'NLUF',
+  NLUO: 'NLUO',
+  NLP: 'NLP',
+  NLPM: 'NLPM',
+  NLPBS: 'NLPBS',
+  NLC: 'NLC',
+  NLUP: 'NLUP',
+  NLUI: 'NLUI',
+  NLPO: 'NLPO',
+  NLPT: 'NLPT',
+  NLPD: 'NLPD',
 };
 
 // Virtual devices (issue #57): built by the integration from home-level data
@@ -229,6 +255,7 @@ export const SUPPORTED_CATEGORY_TYPE = {
   SHUTTER: 'Shutter',
   AIRCARE: 'Aircare',
   BTICINO: 'BTicino',
+  LEGRAND: 'Legrand',
   UNKNOWN: 'unknown',
 };
 
@@ -365,6 +392,70 @@ export const BTICINO_SWITCH_MODULE_TYPES = [SUPPORTED_MODULE_TYPE.BNCS];
 // (optimistic) unless homestatus ever carries `on`. Its own suffix — not the
 // read-only `on` switch of the 2.2.0 preview: a light is another category.
 export const BTICINO_LIGHT_SUFFIX = 'light';
+
+// Legrand Home + Control (issue #60), gated by its own `legrand_api` toggle.
+// The gateway is never a Gladys device: it is the `bridge` every command of
+// the modules it bridges is routed through (pyatmo SwitchMixin /
+// DimmableMixin module entry `{id, on|brightness, bridge}`).
+export const LEGRAND_GATEWAY_TYPES = [SUPPORTED_MODULE_TYPE.NLG, SUPPORTED_MODULE_TYPE.NLGS];
+
+// Lighting modules: a Gladys light (`light` / `binary`). pyatmo maps NLM, NLL
+// and NLIS to `Switch`, the others to `Dimmer`: those get a brightness when
+// homestatus reports one (Home Assistant's rule: a dimmer whose payload
+// carries no brightness is an on/off light).
+export const LEGRAND_DIMMER_TYPES = [
+  SUPPORTED_MODULE_TYPE.NLF,
+  SUPPORTED_MODULE_TYPE.NLFN,
+  SUPPORTED_MODULE_TYPE.NLFE,
+  SUPPORTED_MODULE_TYPE.NLUF,
+  SUPPORTED_MODULE_TYPE.NLUO,
+];
+export const LEGRAND_LIGHT_TYPES = [
+  SUPPORTED_MODULE_TYPE.NLM,
+  SUPPORTED_MODULE_TYPE.NLL,
+  SUPPORTED_MODULE_TYPE.NLIS,
+  ...LEGRAND_DIMMER_TYPES,
+];
+
+// Plugs and relays (pyatmo `Switch` / SwitchMixin): a Gladys switch
+// (`switch` / `binary`).
+export const LEGRAND_SWITCH_TYPES = [
+  SUPPORTED_MODULE_TYPE.NLP,
+  SUPPORTED_MODULE_TYPE.NLPM,
+  SUPPORTED_MODULE_TYPE.NLPBS,
+  SUPPORTED_MODULE_TYPE.NLC,
+  SUPPORTED_MODULE_TYPE.NLUP,
+  SUPPORTED_MODULE_TYPE.NLUI,
+  SUPPORTED_MODULE_TYPE.NLPO,
+  SUPPORTED_MODULE_TYPE.NLPT,
+  SUPPORTED_MODULE_TYPE.NLPD,
+];
+
+export const LEGRAND_MODULE_TYPES = [
+  ...LEGRAND_GATEWAY_TYPES,
+  ...LEGRAND_LIGHT_TYPES,
+  ...LEGRAND_SWITCH_TYPES,
+];
+
+// Multi-gang modules (pyatmo SUB_MODULE_SEPARATOR): the double switch NLIS has
+// one homestatus entry per gang, `<parent id>#<n>`, each with its own `on`.
+// The gangs are the lights; the parent entry carries no state (pyatmo drops
+// its category) and is not exposed. A gang never reports `reachable`: it
+// follows its parent.
+export const SUB_MODULE_SEPARATOR = '#';
+export const LEGRAND_MULTI_GANG_TYPES = [SUPPORTED_MODULE_TYPE.NLIS];
+
+// Feature suffixes of the Legrand modules (homestatus field names): the
+// light or the switch (`on`), the dimmer level (`brightness`, 0-100 as
+// Netatmo reports it) and the instant power (`power`, W) when reported.
+export const LEGRAND_ON_SUFFIX = 'on';
+export const LEGRAND_BRIGHTNESS_SUFFIX = 'brightness';
+export const LEGRAND_POWER_SUFFIX = 'power';
+
+// Netatmo reports the state of the Legrand modules back in homestatus: after
+// a command, ONE refresh lands it after this short delay — a brightness
+// slider sends a burst of commands, they share the same refresh.
+export const LEGRAND_REFRESH_DELAY_MS = 2 * 1000;
 
 // Diagnostic log of the BTicino payloads (issue #59): every line carries this
 // tag (easy to grep in the Gladys logs) and is cut at this many characters.
@@ -645,14 +736,27 @@ export const OAUTH_SCOPES = [
 // commands (door lock, staircase light) need no second reconnection.
 export const BTICINO_OAUTH_SCOPES = ['read_bfi', 'write_bfi', 'read_mx', 'write_mx'];
 
+// Legrand Home + Control (issue #60): "Legrand Wiring device or Electrical
+// panel products", the names pyatmo requests (ALL_SCOPES). Same rule as the
+// BTicino door entry: requested ONLY while the opt-in `legrand_api` toggle is
+// on, read and write together.
+export const LEGRAND_OAUTH_SCOPES = ['read_magellan', 'write_magellan'];
+
 /**
  * Scopes to request for a configuration: the base set, plus the BTicino door
- * entry ones while its toggle is on.
+ * entry ones and the Legrand ones while their toggle is on.
  * @param {object} [config] normalized configuration
  * @returns {string[]} the scopes to request
  */
 export function requestedScopes(config) {
-  return config?.bticino_api ? [...OAUTH_SCOPES, ...BTICINO_OAUTH_SCOPES] : OAUTH_SCOPES;
+  if (!config?.bticino_api && !config?.legrand_api) {
+    return OAUTH_SCOPES;
+  }
+  return [
+    ...OAUTH_SCOPES,
+    ...(config.bticino_api ? BTICINO_OAUTH_SCOPES : []),
+    ...(config.legrand_api ? LEGRAND_OAUTH_SCOPES : []),
+  ];
 }
 
 // Refresh the access token at 80% of its lifetime (core PR #2618 hardening),
@@ -700,13 +804,13 @@ export const CONNECTION_MESSAGES = {
     es: 'La sesión de Netatmo ha caducado, vuelva a conectar su cuenta Netatmo.',
   },
   // Connected, but the token lacks requested scopes (typically scopes added by
-  // a newer release, like the BTicino door entry, Smarther or Indoor Camera
-  // Advance ones): the exact list is logged.
+  // a newer release, like the BTicino door entry, Legrand, Smarther or Indoor
+  // Camera Advance ones): the exact list is logged.
   MISSING_SCOPES: {
-    en: 'Connected, but some Netatmo permissions added in a recent version are missing (e.g. BTicino door entry, Smarther thermostat, Indoor Camera Advance): click Connect again to grant them.',
-    fr: 'Connecté, mais des autorisations Netatmo ajoutées récemment manquent (ex. interphone BTicino, thermostat Smarther, caméra intérieure Advance) : cliquez à nouveau sur Connecter pour les accorder.',
-    de: 'Verbunden, aber neu hinzugekommene Netatmo-Berechtigungen fehlen (z. B. Türsprechanlage BTicino, Thermostat Smarther, Innenkamera Advance): Klicke erneut auf Verbinden, um sie zu erteilen.',
-    es: 'Conectado, pero faltan permisos de Netatmo añadidos recientemente (p. ej. portero BTicino, termostato Smarther, cámara de interior Advance): vuelva a hacer clic en Conectar para concederlos.',
+    en: 'Connected, but some Netatmo permissions added in a recent version are missing (e.g. BTicino door entry, Legrand Home + Control, Smarther thermostat, Indoor Camera Advance): click Connect again to grant them.',
+    fr: 'Connecté, mais des autorisations Netatmo ajoutées récemment manquent (ex. interphone BTicino, Legrand Home + Control, thermostat Smarther, caméra intérieure Advance) : cliquez à nouveau sur Connecter pour les accorder.',
+    de: 'Verbunden, aber neu hinzugekommene Netatmo-Berechtigungen fehlen (z. B. Türsprechanlage BTicino, Legrand Home + Control, Thermostat Smarther, Innenkamera Advance): Klicke erneut auf Verbinden, um sie zu erteilen.',
+    es: 'Conectado, pero faltan permisos de Netatmo añadidos recientemente (p. ej. portero BTicino, Legrand Home + Control, termostato Smarther, cámara de interior Advance): vuelva a hacer clic en Conectar para concederlos.',
   },
   NETATMO_UNREACHABLE: {
     en: 'Netatmo cloud is unreachable, retrying automatically.',
@@ -729,5 +833,13 @@ export const CONNECTION_MESSAGES = {
     fr: "Netatmo a refusé la commande de l'interphone : reconnectez votre compte Netatmo (bouton Connecter) pour accorder les autorisations BTicino.",
     de: 'Netatmo hat den Befehl der Türsprechanlage abgelehnt: Verbinde dein Netatmo-Konto erneut (Schaltfläche Verbinden), um die BTicino-Berechtigungen zu erteilen.',
     es: 'Netatmo rechazó la orden del portero: vuelva a conectar su cuenta Netatmo (botón Conectar) para conceder los permisos de BTicino.',
+  },
+  // Same for a Legrand Home + Control command (issue #60): the token predates
+  // the Legrand scopes (requested only while the toggle is on).
+  LEGRAND_SCOPE_MISSING: {
+    en: 'Netatmo refused the Legrand command: reconnect your Netatmo account (Connect button) to grant the Legrand Home + Control permissions.',
+    fr: 'Netatmo a refusé la commande Legrand : reconnectez votre compte Netatmo (bouton Connecter) pour accorder les autorisations Legrand Home + Control.',
+    de: 'Netatmo hat den Legrand-Befehl abgelehnt: Verbinde dein Netatmo-Konto erneut (Schaltfläche Verbinden), um die Legrand-Home-+-Control-Berechtigungen zu erteilen.',
+    es: 'Netatmo rechazó la orden de Legrand: vuelva a conectar su cuenta Netatmo (botón Conectar) para conceder los permisos de Legrand Home + Control.',
   },
 };

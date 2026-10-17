@@ -40,6 +40,29 @@ the notes of the version's GitHub Release.
   per room, which features to pick, what the widget brings, and the Netatmo
   schedule that keeps running under Gladys's manual setpoints
   ([#77](https://github.com/Terdious/gladys-netatmo/issues/77)).
+- Legrand Home + Control (Céliane / dooxie / Mosaic with Netatmo), first three
+  groups ([#60](https://github.com/Terdious/gladys-netatmo/issues/60)), behind
+  a new opt-in toggle **Legrand Home + Control — preview** (`legrand_api`,
+  off by default). Its `read_magellan` / `write_magellan` scopes are requested
+  only while it is on: turning it on asks to click Connect again, and a
+  refused command says so on the Configuration screen. One device per module
+  of a Home + Control gateway; the gateway (`NLG` / `NLGS`) is not a device,
+  it is the `bridge` of every `/api/setstate` command (plug_id param).
+  Lighting (`NLM`, `NLL`, each gang `<id>#n` of the `NLIS` double switch,
+  dimmers `NLF`, `NLFN`, `NLFE`, `NLUF`, `NLUO`): a writable light, plus a
+  writable brightness (0-100, Netatmo's scale) when the dimmer reports one.
+  Plugs and relays (`NLP`, `NLPM`, `NLPBS`, `NLC`, `NLUP`, `NLUI`, contactor
+  `NLPO`, latching relay `NLPT`, dry contact `NLPD`): a writable switch. A
+  read-only power (W) when homestatus reports it. Netatmo reports the state
+  back: after a command, the commanded value is kept by the dedup and ONE
+  refresh about 2 s later publishes what Netatmo reports (a slider burst
+  shares it). Unreachable badge: a gang follows its switch, a module its
+  gateway; homestatus wins over a homesdata entry carrying a state. The
+  Device diagnostic reports the Legrand family, the modules and their unused
+  fields, and why the gateway and the `NLIS` parent are no device. Built on
+  the pyatmo fixtures: not yet tested on real Legrand hardware. Docs in the
+  four languages (supported modules, reconnection, what is not supported
+  yet).
 
 ### Changed
 
@@ -50,6 +73,8 @@ the notes of the version's GitHub Release.
   `open_window` in the room, a tag `status` other than `open` / `closed`)
   still publish nothing
   ([#77](https://github.com/Terdious/gladys-netatmo/issues/77)).
+- The delayed one-shot refreshes after a command (shutters 30 s, Legrand
+  2 s) keep one timer each and start from a fresh account load.
 
 ## [2.4.0] - 2026-10-17
 

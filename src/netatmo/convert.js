@@ -27,6 +27,7 @@ import {
   BTICINO_MODULE_TYPES,
   BTICINO_SWITCH_MODULE_TYPES,
   BTICINO_GATEWAY_TYPES,
+  LEGRAND_MODULE_TYPES,
   VIRTUAL_DEVICE_TYPE,
   PARAMS,
 } from './constants.js';
@@ -75,6 +76,7 @@ import {
   buildFeatureBticinoOn,
   buildFeatureBticinoLight,
 } from './features.js';
+import { legrandFeatures } from './legrand.js';
 
 const logger = createLogger({ name: 'netatmo-convert' });
 
@@ -289,6 +291,19 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
     params = Array.isArray(netatmoDevice.modules_bridged)
       ? [{ name: PARAMS.MODULES_BRIDGE_ID, value: JSON.stringify(netatmoDevice.modules_bridged) }]
       : bridgeParams(netatmoId(plug ?? {}) ? plug : { id: netatmoDevice.bridge });
+  }
+  if (LEGRAND_MODULE_TYPES.includes(model)) {
+    // Legrand Home + Control (issue #60): one device per lighting module,
+    // plug or relay; its "plug" is the Legrand gateway, the `bridge` of every
+    // /api/setstate command. The gateway itself and the parent entry of a
+    // double switch are not devices.
+    const legrand = legrandFeatures(netatmoDevice, nameDevice, externalId);
+    if (!legrand) {
+      logger.debug(`Skipping Netatmo device "${nameDevice}" (${model}): not a Gladys device`);
+      return null;
+    }
+    features.push(...legrand);
+    params = bridgeParams(netatmoId(plug ?? {}) ? plug : { id: netatmoDevice.bridge });
   }
   if (BRIDGE_MODULE_TYPES.includes(model) || CAMERA_MODULE_TYPES.includes(model)) {
     features.push(buildFeatureWifiStrength(nameDevice, externalId));
@@ -589,6 +604,10 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
       );
       break;
     default:
+      if (LEGRAND_MODULE_TYPES.includes(model)) {
+        // Legrand (issue #60): features built above.
+        break;
+      }
       logger.debug(`Skipping unsupported Netatmo device "${nameDevice}" (${model})`);
       return null;
   }

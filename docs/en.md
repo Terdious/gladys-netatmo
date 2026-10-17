@@ -63,14 +63,15 @@ expires beyond repair, the Configuration screen tells you to reconnect.
 
 Under **Devices to discover**, enable the families you own:
 
-| Toggle                 | Discovers                                                                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Energy**             | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)         |
-| **Weather**            | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                                                |
-| **Security**           | Indoor (`NACamera`), Indoor Camera Advance (`NPC`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
-| **Roller shutters**    | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                                                 |
-| **Air quality**        | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                                            |
-| **BTicino door entry** | BTicino Classe 300X / Classe 300 EOS door entry, one device (`BNCX` + its `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — preview, off by default      |
+| Toggle                     | Discovers                                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Energy**                 | Thermostat (`NATherm1`), relay plug (`NAPlug`), radiator valves (`NRV`), modulating thermostat (`OTM` + `OTH`), BTicino Smarther (`BNS`)         |
+| **Weather**                | Station (`NAMain`) + outdoor, wind, rain and extra indoor modules                                                                                |
+| **Security**               | Indoor (`NACamera`), Indoor Camera Advance (`NPC`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
+| **Roller shutters**        | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                                                 |
+| **Air quality**            | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                                            |
+| **BTicino door entry**     | BTicino Classe 300X / Classe 300 EOS door entry, one device (`BNCX` + its `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — preview, off by default      |
+| **Legrand Home + Control** | Legrand with Netatmo lights, dimmers, plugs and relays of a Home + Control gateway (`NL*`) — preview, off by default                             |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -682,6 +683,78 @@ than 8 KB is cut with a `[truncated]` marker.
 
 ---
 
+## Legrand Home + Control (Céliane / dooxie / Mosaic) — preview
+
+The **Legrand with Netatmo** wiring devices (Céliane, dooxie, Mosaic…) bridged
+by a **Home + Control** gateway are served by the same Netatmo API
+([issue #60](https://github.com/Terdious/gladys-netatmo/issues/60)). Enable
+**Legrand Home + Control — preview** under **Devices to discover** (off by
+default) and save.
+
+> ℹ️ **Tested on the pyatmo fixtures, feedback welcome.** No real Legrand
+> installation has been tested yet: the payloads come from the
+> [pyatmo](https://github.com/jabesq-org/pyatmo) test data (the library Home
+> Assistant uses). If something looks wrong, send a diagnostic (below).
+
+Each lighting module, plug or relay becomes **one device**, named after it in
+the Netatmo app:
+
+| Modules                                                     | Netatmo types                         | Features in Gladys                                         |
+| ----------------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------- |
+| Light switches, micro module, double switch (each **gang**) | `NLM`, `NLL`, `NLIS`                  | **light on / off**, power (W)                              |
+| Dimmers                                                     | `NLF`, `NLFN`, `NLFE`, `NLUF`, `NLUO` | **light on / off**, **brightness** (0-100 %), power (W)    |
+| Plugs and outlets                                           | `NLP`, `NLPM`, `NLPBS`, `NLC`, `NLUP` | **switch on / off**, power (W)                             |
+| Relays                                                      | `NLUI`, `NLPO`, `NLPT`, `NLPD`        | **switch on / off**, power (W)                             |
+| Gateway                                                     | `NLG`, `NLGS`                         | not a device: every command of its modules goes through it |
+
+(`NLUI` in-wall switch, `NLPO` contactor, `NLPT` latching relay, `NLPD` dry
+contact.)
+
+- **Commands** go through Netatmo like in the app, via the gateway (kept as the
+  `plug_id` parameter). Netatmo reports the state back: Gladys reads it again
+  about 2 seconds after a command. A change made at the wall shows up at the
+  next 2-minute refresh (Netatmo sends no webhook for these modules).
+- **Brightness** uses the Netatmo 0-100 scale. A dimmer that reports no
+  brightness gets none (it is then an on/off light). How a dimmer reacts to a
+  brightness change while it is off has not been checked on real hardware yet.
+- **Power** (read-only) is added only when Netatmo reports it for the module.
+  A module offline during the discovery gets neither brightness nor power:
+  re-scan once it is back, before creating it.
+- **Double switch** (`NLIS`): each gang is a light of its own; the switch
+  itself is not a device.
+- **Contactor** (`NLPO`): on / off only; its `contactor_mode` is not exposed
+  yet.
+- **Unreachable badge:** a module Netatmo reports offline, or behind an
+  offline gateway, gets the **unreachable** badge and publishes no value.
+
+> ⚠️ **New Netatmo permissions — click Connect again.** Turning the toggle on
+> asks for two extra permissions, requested only while it is on:
+> `read_magellan` / `write_magellan` (Legrand wiring devices). Click
+> **Connect** again on the Configuration screen and accept them — your devices
+> and settings are kept. Until then the connection status shows a "click
+> Connect again" hint, Netatmo may leave the Legrand modules out, and a
+> command fails with a "reconnect" message.
+
+### Not supported yet
+
+Roller shutters (`NLV`, `NLLV`, `NLLM`), energy meters (Ecocompteur `NLE`,
+`NLPC`, `NLY`, load shedder `NLPS`), wireless switches and remotes (`NLT`,
+`NLD`, `NLDD`, `NLAS`, `NLAO`, `NLDP`), ventilation (`NLLF`) and garage door
+(`NLJ`) are the next steps of
+[issue #60](https://github.com/Terdious/gladys-netatmo/issues/60). The
+Device diagnostic lists them as "not supported".
+
+### Sending a Legrand diagnostic
+
+Run the **Device diagnostic** action of the Configuration screen (see
+[Troubleshooting](#troubleshooting)): pick a Legrand device, type the name of a
+module not created, or leave both fields empty for the whole account. Paste
+the result in [issue #60](https://github.com/Terdious/gladys-netatmo/issues/60):
+it shows the raw Netatmo data of each module and the fields Gladys does not
+use yet.
+
+---
+
 ## Updating the integration
 
 **Installed from the catalog** (the usual case): Gladys checks the store
@@ -789,7 +862,7 @@ moves what is left.
 - **Doorbell or Indoor Camera Advance without live video:** see _WebRTC live
   view_ in the Video doorbell section (Gladys version, browser, firewall).
 - **"Some Netatmo permissions are missing" status:** a newer version added
-  permissions (video doorbell, Indoor Camera Advance, BTicino door entry) — click Connect again and accept them. The
+  permissions (video doorbell, Indoor Camera Advance, BTicino door entry, Legrand Home + Control) — click Connect again and accept them. The
   integration **Logs** list the missing ones.
 - **Device diagnostic (report a problem or an unsupported device):** on the
   Configuration screen, run the **Device diagnostic** action. Pick a device

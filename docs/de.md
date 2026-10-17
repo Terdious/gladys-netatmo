@@ -78,6 +78,7 @@ Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 | **Rollläden**               | Bubendorff-Rollläden eines iDiamant-Gateways (`NBR`, `NBO`, `NBS`)                                                                                            |
 | **Luftqualität**            | Raumluftsensor — Home Coach (`NHC`), standardmäßig deaktiviert                                                                                                |
 | **BTicino-Türsprechanlage** | BTicino-Türsprechanlage Classe 300X / Classe 300 EOS, ein Gerät (`BNCX` + seine `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — Vorschau, standardmäßig deaktiviert |
+| **Legrand Home + Control**  | Legrand-with-Netatmo-Lichter, Dimmer, Steckdosen und Relais eines Home-+-Control-Gateways (`NL*`) — Vorschau, standardmäßig deaktiviert                       |
 
 Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
 automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
@@ -736,6 +737,85 @@ und Haus-IDs bleiben erhalten), und eine Zeile über 8 KB wird mit der Markierun
 
 ---
 
+## Legrand Home + Control (Céliane / dooxie / Mosaic) — Vorschau
+
+Die **Legrand-with-Netatmo**-Installationsgeräte (Céliane, dooxie, Mosaic…)
+an einem **Home + Control**-Gateway laufen über dieselbe Netatmo-API
+([Issue #60](https://github.com/Terdious/gladys-netatmo/issues/60)). Aktiviere
+**Legrand Home + Control — Vorschau** unter **Zu erkennende Geräte**
+(standardmäßig deaktiviert) und speichere.
+
+> ℹ️ **Mit den pyatmo-Fixtures getestet, Rückmeldungen willkommen.** Noch keine
+> echte Legrand-Installation wurde getestet: Die Daten stammen aus den
+> Testdaten von [pyatmo](https://github.com/jabesq-org/pyatmo) (der von Home
+> Assistant genutzten Bibliothek). Wenn etwas falsch aussieht, sende eine
+> Diagnose (siehe unten).
+
+Jedes Beleuchtungsmodul, jede Steckdose und jedes Relais wird zu **einem
+Gerät**, benannt wie in der Netatmo-App:
+
+| Module                                                      | Netatmo-Typen                         | Funktionen in Gladys                                        |
+| ----------------------------------------------------------- | ------------------------------------- | ----------------------------------------------------------- |
+| Lichtschalter, Mikromodul, Doppelschalter (jeder **Kanal**) | `NLM`, `NLL`, `NLIS`                  | **Licht ein / aus**, Leistung (W)                           |
+| Dimmer                                                      | `NLF`, `NLFN`, `NLFE`, `NLUF`, `NLUO` | **Licht ein / aus**, **Helligkeit** (0-100 %), Leistung (W) |
+| Steckdosen                                                  | `NLP`, `NLPM`, `NLPBS`, `NLC`, `NLUP` | **Schalter ein / aus**, Leistung (W)                        |
+| Relais                                                      | `NLUI`, `NLPO`, `NLPT`, `NLPD`        | **Schalter ein / aus**, Leistung (W)                        |
+| Gateway                                                     | `NLG`, `NLGS`                         | kein Gerät: Alle Befehle seiner Module laufen darüber       |
+
+(`NLUI` Unterputzschalter, `NLPO` Schütz, `NLPT` Stromstoßschalter, `NLPD`
+potenzialfreier Kontakt.)
+
+- **Befehle** laufen wie in der App über Netatmo, über das Gateway (als
+  Parameter `plug_id` gespeichert). Netatmo meldet den Zustand zurück: Gladys
+  liest ihn etwa 2 Sekunden nach einem Befehl erneut. Eine Änderung am
+  Schalter erscheint bei der nächsten Aktualisierung (alle 2 Minuten, Netatmo
+  sendet für diese Module keinen Webhook).
+- **Helligkeit** nutzt die Netatmo-Skala 0-100. Ein Dimmer, der keine
+  Helligkeit meldet, bekommt keine (er ist dann ein Ein/Aus-Licht). Wie ein
+  ausgeschalteter Dimmer auf eine Helligkeitsänderung reagiert, wurde noch
+  nicht an echter Hardware geprüft.
+- **Leistung** (nur lesbar) wird nur hinzugefügt, wenn Netatmo sie für das
+  Modul meldet. Ein Modul, das bei der Erkennung offline ist, bekommt weder
+  Helligkeit noch Leistung: Starte die Erkennung erneut, sobald es zurück ist,
+  bevor du es erstellst.
+- **Doppelschalter** (`NLIS`): Jeder Kanal ist ein eigenes Licht; der Schalter
+  selbst ist kein Gerät.
+- **Schütz** (`NLPO`): nur ein / aus; sein `contactor_mode` wird noch nicht
+  angezeigt.
+- **Badge nicht erreichbar:** Ein Modul, das Netatmo als offline meldet, oder
+  hinter einem Gateway, das offline ist, erhält das Badge **nicht erreichbar**
+  und veröffentlicht keinen Wert.
+
+> ⚠️ **Neue Netatmo-Berechtigungen — klicke erneut auf Verbinden.** Das
+> Einschalten der Option fordert zwei zusätzliche Berechtigungen an, nur
+> solange sie aktiv ist: `read_magellan` / `write_magellan`
+> (Legrand-Installationsgeräte). Klicke auf dem Konfigurationsbildschirm
+> erneut auf **Verbinden** und akzeptiere sie — deine Geräte und
+> Einstellungen bleiben erhalten. Bis dahin zeigt der Verbindungsstatus den
+> Hinweis „Klicke erneut auf Verbinden“, Netatmo lässt die Legrand-Module
+> eventuell weg, und ein Befehl schlägt mit einer Aufforderung zum erneuten
+> Verbinden fehl.
+
+### Noch nicht unterstützt
+
+Rollläden (`NLV`, `NLLV`, `NLLM`), Energiezähler (Ecocompteur `NLE`, `NLPC`,
+`NLY`, Lastabwurf `NLPS`), Funkschalter und Fernbedienungen (`NLT`, `NLD`,
+`NLDD`, `NLAS`, `NLAO`, `NLDP`), Lüftung (`NLLF`) und Garagentor (`NLJ`) sind
+die nächsten Schritte von
+[Issue #60](https://github.com/Terdious/gladys-netatmo/issues/60). Die
+Gerätediagnose führt sie als „not supported“.
+
+### Eine Legrand-Diagnose senden
+
+Starte die Aktion **Gerätediagnose** auf dem Konfigurationsbildschirm (siehe
+[Fehlerbehebung](#fehlerbehebung)): Wähle ein Legrand-Gerät, gib den Namen
+eines nicht erstellten Moduls ein, oder lass beide Felder leer für das ganze
+Konto. Füge das Ergebnis in
+[Issue #60](https://github.com/Terdious/gladys-netatmo/issues/60) ein: Es zeigt
+die Netatmo-Rohdaten jedes Moduls und die Felder, die Gladys noch nicht nutzt.
+
+---
+
 ## Die Integration aktualisieren
 
 **Aus dem Katalog installiert** (der übliche Fall): Gladys prüft den Store
@@ -855,7 +935,7 @@ verschiebt nur, was noch übrig ist.
   _WebRTC-Live-Video_ im Abschnitt Video-Türklingel (Gladys-Version, Browser,
   Firewall).
 - **Status „einige Netatmo-Berechtigungen fehlen“:** Eine neuere Version hat
-  Berechtigungen hinzugefügt (Video-Türklingel, Innenkamera Advance, BTicino-Türsprechanlage) — klicke erneut auf Verbinden
+  Berechtigungen hinzugefügt (Video-Türklingel, Innenkamera Advance, BTicino-Türsprechanlage, Legrand Home + Control) — klicke erneut auf Verbinden
   und akzeptiere sie. Die **Logs** der Integration nennen die fehlenden.
 - **Gerätediagnose (ein Problem oder ein nicht unterstütztes Gerät melden):**
   Starte auf dem Konfigurationsbildschirm die Aktion **Gerätediagnose**. Wähle

@@ -30,6 +30,7 @@ export const DEFAULT_CONFIG = {
   shutter_api: false, // discover Bubendorff / iDiamant roller shutters, opt-in (issue #34)
   aircare_api: false, // discover Aircare devices (Home Coach air quality monitors), opt-in
   bticino_api: false, // discover the BTicino door entry (Classe 300) + diagnostic log, opt-in (issue #59)
+  legrand_api: false, // discover the Legrand Home + Control modules (lights, plugs, relays), opt-in (issue #60)
   camera_quality: 'high', // live stream quality (per-camera device param overrides)
 
   // Internal keys (NOT in the config_schema), persisted through setConfig():
@@ -73,6 +74,7 @@ export function normalizeConfig(raw = {}) {
     shutter_api: toBoolean(raw.shutter_api, DEFAULT_CONFIG.shutter_api),
     aircare_api: toBoolean(raw.aircare_api, DEFAULT_CONFIG.aircare_api),
     bticino_api: toBoolean(raw.bticino_api, DEFAULT_CONFIG.bticino_api),
+    legrand_api: toBoolean(raw.legrand_api, DEFAULT_CONFIG.legrand_api),
     camera_quality: String(raw.camera_quality ?? DEFAULT_CONFIG.camera_quality).trim(),
     access_token: String(raw.access_token ?? DEFAULT_CONFIG.access_token).trim(),
     refresh_token: String(raw.refresh_token ?? DEFAULT_CONFIG.refresh_token).trim(),

@@ -23,6 +23,9 @@ import {
   ROOM_MODE_SUFFIX,
   PERSON_PRESENCE_SUFFIX_PREFIX,
   BTICINO_LIGHT_SUFFIX,
+  LEGRAND_ON_SUFFIX,
+  LEGRAND_BRIGHTNESS_SUFFIX,
+  LEGRAND_POWER_SUFFIX,
 } from './constants.js';
 
 function feature(overrides) {
@@ -259,6 +262,70 @@ export function buildFeatureBticinoLight(name, externalId) {
     read_only: false,
     min: 0,
     max: 1,
+  });
+}
+
+// --- Legrand Home + Control (issue #60) ---------------------------------------
+
+// Lighting module (switch, micro module, dimmer, one gang of a double
+// switch): a standard light, switched through /api/setstate `on` via its
+// gateway. Netatmo reports the state back in homestatus `on`.
+export function buildFeatureLegrandLight(name, externalId) {
+  return feature({
+    name: `Light - ${name}`,
+    external_id: `${externalId}:${LEGRAND_ON_SUFFIX}`,
+    selector: `${externalId}:${LEGRAND_ON_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.LIGHT,
+    type: DEVICE_FEATURE_TYPES.LIGHT.BINARY,
+    read_only: false,
+    min: 0,
+    max: 1,
+  });
+}
+
+// Dimmer level: homestatus `brightness`, written with /api/setstate
+// `brightness` — the same 0-100 scale on both sides (pyatmo DimmableMixin).
+export function buildFeatureLegrandBrightness(name, externalId) {
+  return feature({
+    name: `Brightness - ${name}`,
+    external_id: `${externalId}:${LEGRAND_BRIGHTNESS_SUFFIX}`,
+    selector: `${externalId}:${LEGRAND_BRIGHTNESS_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.LIGHT,
+    type: DEVICE_FEATURE_TYPES.LIGHT.BRIGHTNESS,
+    unit: DEVICE_FEATURE_UNITS.PERCENT,
+    read_only: false,
+    min: 0,
+    max: 100,
+  });
+}
+
+// Plug or relay (plug, cable outlet, contactor, latching relay, dry
+// contact…): a standard switch, homestatus `on`, /api/setstate `on`.
+export function buildFeatureLegrandSwitch(name, externalId) {
+  return feature({
+    name: `Switch - ${name}`,
+    external_id: `${externalId}:${LEGRAND_ON_SUFFIX}`,
+    selector: `${externalId}:${LEGRAND_ON_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.BINARY,
+    read_only: false,
+    min: 0,
+    max: 1,
+  });
+}
+
+// Instant power drawn through the module (homestatus `power`, W), read-only —
+// the Gladys `switch` / `power` of a metering plug.
+export function buildFeatureLegrandPower(name, externalId) {
+  return feature({
+    name: `Power - ${name}`,
+    external_id: `${externalId}:${LEGRAND_POWER_SUFFIX}`,
+    selector: `${externalId}:${LEGRAND_POWER_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.SWITCH,
+    type: DEVICE_FEATURE_TYPES.SWITCH.POWER,
+    unit: DEVICE_FEATURE_UNITS.WATT,
+    min: 0,
+    max: 10000,
   });
 }
 
