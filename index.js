@@ -294,8 +294,10 @@ export function setupIntegration(
         gladys,
         client,
         refresh: () => telemetry.refreshNow(config),
-        scheduleRefresh: () => telemetry.scheduleRefresh(config),
+        scheduleRefresh: (delayMs, key) => telemetry.scheduleRefresh(config, delayMs, key),
         getRawDevice: (id) => telemetry.getRawDevice(id),
+        rememberState: (featureExternalId, state) =>
+          telemetry.rememberState(featureExternalId, state),
       },
       { device, feature, value },
     );
@@ -422,7 +424,8 @@ export function setupIntegration(
       previous.security_api !== config.security_api ||
       previous.shutter_api !== config.shutter_api ||
       previous.aircare_api !== config.aircare_api ||
-      previous.bticino_api !== config.bticino_api;
+      previous.bticino_api !== config.bticino_api ||
+      previous.legrand_api !== config.legrand_api;
     if (togglesChanged) {
       telemetry.resetDedup();
     }
@@ -430,9 +433,12 @@ export function setupIntegration(
       // BTicino toggle (re-)enabled: log every BTicino entry again.
       bticinoDiagnostic.reset();
     }
-    if (config.bticino_api !== previous.bticino_api) {
-      // The BTicino scopes are only requested while the toggle is on: the
-      // "click Connect again" hint follows the toggle.
+    if (
+      config.bticino_api !== previous.bticino_api ||
+      config.legrand_api !== previous.legrand_api
+    ) {
+      // The BTicino and Legrand scopes are only requested while their toggle
+      // is on: the "click Connect again" hint follows the toggles.
       await oauth.recheckScopes();
     }
     await syncConnection();

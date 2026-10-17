@@ -20,7 +20,13 @@
 //     `on` through its bridge (the BNCX door entry). Netatmo never reports
 //     the light state back: the commanded value is published once Netatmo
 //     acknowledged it (optimistic), a module error in the answer fails the
-//     command instead.
+//     command instead;
+//   - Legrand Home + Control light / dimmer / plug / relay (issue #60): POST
+//     /api/setstate `on` or `brightness` through the Legrand gateway (plug_id
+//     param), like pyatmo. Netatmo reports the state back in homestatus: the
+//     commanded value is remembered (dedup) and ONE refresh shortly after
+//     publishes what Netatmo reports — a module error in the answer fails the
+//     command.
 // A 403 with the Netatmo error code 13 means the token lacks the write scope
 // — surfaced as a clear "reconnect" message.
 // -----------------------------------------------------------------------------
@@ -40,6 +46,10 @@ import {
   BTICINO_MODULE_TYPES,
   BTICINO_GATEWAY_TYPES,
   BTICINO_LIGHT_SUFFIX,
+  LEGRAND_MODULE_TYPES,
+  LEGRAND_ON_SUFFIX,
+  LEGRAND_BRIGHTNESS_SUFFIX,
+  LEGRAND_REFRESH_DELAY_MS,
   CONNECTION_MESSAGES,
 } from './constants.js';
 import { writeValues } from './deviceMapping.js';
@@ -223,16 +233,63 @@ async function setBticinoLight({ gladys, client }, { device, feature, value }, h
 }
 
 /**
+ * Command a Legrand module (issue #60): /api/setstate `{id, on, bridge}` or
+ * `{id, brightness, bridge}` (pyatmo SwitchMixin / DimmableMixin), the bridge
+ * being its Legrand gateway (plug_id param; left out for a module that has
+ * none). Netatmo reports the new state in homestatus: the commanded value is
+ * remembered by the telemetry dedup — Gladys saved it already — and one
+ * refresh shortly after publishes what Netatmo actually reports.
+ */
+async function setLegrandModule(
+  { gladys, client, scheduleRefresh, rememberState },
+  { device, feature, value },
+  homeId,
+  transform,
+) {
+  const moduleId = device.external_id.replace(gladys.externalId(''), '');
+  const bridge = getDeviceParam(device, PARAMS.PLUG_ID);
+  const suffix = suffixOf(device, feature);
+  let fields;
+  let state;
+  if (suffix === LEGRAND_BRIGHTNESS_SUFFIX) {
+    state = transform(value);
+    fields = { brightness: state };
+  } else {
+    const on = value === true || Number(value) === 1;
+    state = on ? 1 : 0;
+    fields = { on };
+  }
+  let answer;
+  try {
+    answer = await client.setState({ homeId, moduleId, ...fields, ...(bridge ? { bridge } : {}) });
+  } catch (err) {
+    await rethrowFamilyScopeError(gladys, err, CONNECTION_MESSAGES.LEGRAND_SCOPE_MISSING);
+  }
+  const errors = setStateErrorsOf(answer);
+  if (errors.length > 0) {
+    throw new Error(
+      `Netatmo did not apply the command to ${moduleId}: ${errors
+        .map((error) => `error ${error.code} on ${error.id}`)
+        .join(', ')}`,
+    );
+  }
+  rememberState?.(feature.external_id, state);
+  scheduleRefresh?.(LEGRAND_REFRESH_DELAY_MS, 'legrand');
+}
+
+/**
  * Apply a user command on a Netatmo device.
  * @param {object} deps `{gladys, client, refresh?, scheduleRefresh?,
- * getRawDevice?}` SDK instance, Netatmo API client, the immediate refresh
- * after a heating mode or floodlight change, the delayed refresh to arm after
- * a shutter command and the last raw Netatmo payload of a module (by id)
+ * getRawDevice?, rememberState?}` SDK instance, Netatmo API client, the
+ * immediate refresh after a heating mode or floodlight change, the delayed
+ * refresh to arm after a shutter or Legrand command (`(delayMs?, key?)`), the
+ * last raw Netatmo payload of a module (by id) and the telemetry dedup
+ * update after a Legrand command (`(featureExternalId, state)`)
  * @param {object} command `{device, feature, value}` from the SDK
  * @returns {Promise<void>} resolves when Netatmo acknowledged the command
  */
 export async function setDeviceValue(
-  { gladys, client, refresh, scheduleRefresh, getRawDevice },
+  { gladys, client, refresh, scheduleRefresh, getRawDevice, rememberState },
   { device, feature, value },
 ) {
   const transform = writeValues[feature.category]?.[feature.type];
@@ -250,9 +307,20 @@ export async function setDeviceValue(
     BTICINO_MODULE_TYPES.includes(device.model) &&
     feature.category === DEVICE_FEATURE_CATEGORIES.LIGHT &&
     feature.external_id.endsWith(`:${BTICINO_LIGHT_SUFFIX}`);
+  const isLegrand =
+    LEGRAND_MODULE_TYPES.includes(device.model) &&
+    [DEVICE_FEATURE_CATEGORIES.LIGHT, DEVICE_FEATURE_CATEGORIES.SWITCH].includes(
+      feature.category,
+    ) &&
+    [LEGRAND_ON_SUFFIX, LEGRAND_BRIGHTNESS_SUFFIX].includes(suffixOf(device, feature));
   if (
     !transform ||
-    (!isCameraMonitoring && !isThermostatSetpoint && !isShutter && !isFloodlight && !isBticinoLight)
+    (!isCameraMonitoring &&
+      !isThermostatSetpoint &&
+      !isShutter &&
+      !isFloodlight &&
+      !isBticinoLight &&
+      !isLegrand)
   ) {
     // Every other feature (boiler status, open window...) is read-only: a
     // command reaching it is a routing error, never something to forward.
@@ -289,6 +357,17 @@ export async function setDeviceValue(
   // BTicino staircase / outdoor light: setstate through the door entry bridge.
   if (isBticinoLight) {
     await setBticinoLight({ gladys, client }, { device, feature, value }, homeId);
+    return;
+  }
+
+  // Legrand light / dimmer / plug / relay: setstate through its gateway.
+  if (isLegrand) {
+    await setLegrandModule(
+      { gladys, client, scheduleRefresh, rememberState },
+      { device, feature, value },
+      homeId,
+      transform,
+    );
     return;
   }
 

@@ -66,14 +66,15 @@ vous invite à vous reconnecter.
 
 Sous **Appareils à découvrir**, activez les familles que vous possédez :
 
-| Interrupteur           | Découvre                                                                                                                                                   |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Énergie**            | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`), thermostat modulant (`OTM` + `OTH`), BTicino Smarther (`BNS`)                     |
-| **Météo**              | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                                                                          |
-| **Sécurité**           | Caméras intérieure (`NACamera`), intérieure Advance (`NPC`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires et les personnes connues |
-| **Volets roulants**    | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                                                                          |
-| **Qualité de l'air**   | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                                                                           |
-| **Interphone BTicino** | Interphone BTicino Classe 300X / Classe 300 EOS, un seul appareil (`BNCX` + ses `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — aperçu, désactivé par défaut     |
+| Interrupteur               | Découvre                                                                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Énergie**                | Thermostat (`NATherm1`), relais (`NAPlug`), vannes de radiateur (`NRV`), thermostat modulant (`OTM` + `OTH`), BTicino Smarther (`BNS`)                     |
+| **Météo**                  | Station (`NAMain`) + modules extérieur, vent, pluie et intérieurs                                                                                          |
+| **Sécurité**               | Caméras intérieure (`NACamera`), intérieure Advance (`NPC`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires et les personnes connues |
+| **Volets roulants**        | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                                                                          |
+| **Qualité de l'air**       | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                                                                           |
+| **Interphone BTicino**     | Interphone BTicino Classe 300X / Classe 300 EOS, un seul appareil (`BNCX` + ses `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — aperçu, désactivé par défaut     |
+| **Legrand Home + Control** | Éclairages, variateurs, prises et relais Legrand with Netatmo d'une passerelle Home + Control (`NL*`) — aperçu, désactivé par défaut                       |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -633,6 +634,83 @@ coupée avec un marqueur `[truncated]`.
 
 ---
 
+## Legrand Home + Control (Céliane / dooxie / Mosaic) — aperçu
+
+L'appareillage **Legrand with Netatmo** (Céliane, dooxie, Mosaic…) relié à une
+passerelle **Home + Control** passe par la même API Netatmo
+([issue #60](https://github.com/Terdious/gladys-netatmo/issues/60)). Activez
+**Legrand Home + Control — aperçu** sous **Appareils à découvrir** (désactivé
+par défaut) et enregistrez.
+
+> ℹ️ **Testé sur les fixtures pyatmo, retours bienvenus.** Aucune installation
+> Legrand réelle n'a encore été testée : les données viennent des jeux de test
+> de [pyatmo](https://github.com/jabesq-org/pyatmo) (la bibliothèque utilisée
+> par Home Assistant). Si quelque chose semble faux, envoyez un diagnostic
+> (ci-dessous).
+
+Chaque module d'éclairage, prise ou relais devient **un appareil**, au nom
+qu'il porte dans l'application Netatmo :
+
+| Modules                                                           | Types Netatmo                         | Fonctionnalités dans Gladys                                            |
+| ----------------------------------------------------------------- | ------------------------------------- | ---------------------------------------------------------------------- |
+| Interrupteurs, micromodule, double interrupteur (chaque **voie**) | `NLM`, `NLL`, `NLIS`                  | **éclairage allumé / éteint**, puissance (W)                           |
+| Variateurs                                                        | `NLF`, `NLFN`, `NLFE`, `NLUF`, `NLUO` | **éclairage allumé / éteint**, **luminosité** (0-100 %), puissance (W) |
+| Prises                                                            | `NLP`, `NLPM`, `NLPBS`, `NLC`, `NLUP` | **interrupteur marche / arrêt**, puissance (W)                         |
+| Relais                                                            | `NLUI`, `NLPO`, `NLPT`, `NLPD`        | **interrupteur marche / arrêt**, puissance (W)                         |
+| Passerelle                                                        | `NLG`, `NLGS`                         | pas un appareil : toutes les commandes de ses modules passent par elle |
+
+(`NLUI` interrupteur encastré, `NLPO` contacteur, `NLPT` télérupteur, `NLPD`
+contact sec.)
+
+- **Commandes :** elles passent par Netatmo comme dans l'application, via la
+  passerelle (conservée dans le paramètre `plug_id`). Netatmo renvoie l'état :
+  Gladys le relit environ 2 secondes après une commande. Un changement fait à
+  l'interrupteur apparaît à l'actualisation suivante (toutes les 2 minutes,
+  Netatmo n'envoie pas de webhook pour ces modules).
+- **Luminosité :** sur l'échelle 0-100 de Netatmo. Un variateur qui ne renvoie
+  pas de luminosité n'en a pas (c'est alors un éclairage marche / arrêt). La
+  réaction d'un variateur éteint à un changement de luminosité n'a pas encore
+  été vérifiée sur du matériel réel.
+- **Puissance** (lecture seule) : ajoutée seulement quand Netatmo la renvoie
+  pour le module. Un module hors ligne pendant la découverte n'a ni luminosité
+  ni puissance : relancez la découverte une fois revenu, avant de le créer.
+- **Double interrupteur** (`NLIS`) : chaque voie est un éclairage à part ;
+  l'interrupteur lui-même n'est pas un appareil.
+- **Contacteur** (`NLPO`) : marche / arrêt seulement ; son `contactor_mode`
+  n'est pas encore exposé.
+- **Badge injoignable :** un module que Netatmo signale hors ligne, ou derrière
+  une passerelle hors ligne, reçoit le badge **injoignable** et ne publie
+  aucune valeur.
+
+> ⚠️ **Nouvelles autorisations Netatmo — recliquez sur Connecter.** Activer
+> l'option demande deux autorisations supplémentaires, demandées seulement
+> tant qu'elle est active : `read_magellan` / `write_magellan` (appareillage
+> Legrand). Cliquez à nouveau sur **Connecter** sur l'écran de configuration
+> et acceptez-les — vos appareils et réglages sont conservés. D'ici là, l'état
+> de connexion affiche « cliquez à nouveau sur Connecter », Netatmo peut
+> omettre les modules Legrand, et une commande échoue avec un message de
+> reconnexion.
+
+### Pas encore pris en charge
+
+Les volets roulants (`NLV`, `NLLV`, `NLLM`), les compteurs d'énergie
+(Ecocompteur `NLE`, `NLPC`, `NLY`, délesteur `NLPS`), les commandes sans fil
+(`NLT`, `NLD`, `NLDD`, `NLAS`, `NLAO`, `NLDP`), la ventilation (`NLLF`) et la
+porte de garage (`NLJ`) sont les prochaines étapes de
+l'[issue #60](https://github.com/Terdious/gladys-netatmo/issues/60). Le
+diagnostic d'appareil les indique « not supported ».
+
+### Envoyer un diagnostic Legrand
+
+Lancez l'action **Diagnostic d'un appareil** de l'écran de configuration (voir
+[Dépannage](#dépannage)) : choisissez un appareil Legrand, tapez le nom d'un
+module non créé, ou laissez les deux champs vides pour tout le compte. Collez
+le résultat dans l'[issue #60](https://github.com/Terdious/gladys-netatmo/issues/60) :
+il montre les données Netatmo brutes de chaque module et les champs que Gladys
+n'utilise pas encore.
+
+---
+
 ## Mettre à jour l'intégration
 
 **Installée depuis le catalogue** (le cas habituel) : Gladys consulte
@@ -745,7 +823,7 @@ peut être relancée : elle ne déplace que ce qui reste.
 - **Sonnette ou caméra intérieure Advance sans direct :** voir _Direct WebRTC_
   dans la section Sonnette vidéo (version de Gladys, navigateur, pare-feu).
 - **Statut « des autorisations Netatmo manquent » :** une version plus récente
-  a ajouté des autorisations (sonnette vidéo, caméra intérieure Advance, interphone BTicino) — recliquez sur Connecter et
+  a ajouté des autorisations (sonnette vidéo, caméra intérieure Advance, interphone BTicino, Legrand Home + Control) — recliquez sur Connecter et
   acceptez-les. Les **Journaux** de l'intégration listent celles qui manquent.
 - **Diagnostic d'un appareil (signaler un problème ou un appareil non pris en
   charge) :** dans l'écran de configuration, lancez l'action **Diagnostic d'un

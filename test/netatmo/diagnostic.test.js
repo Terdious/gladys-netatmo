@@ -268,14 +268,16 @@ test('the picked device wins over the typed one; a family off and an unknown typ
   assert.match(camera, /Support: supported, but its family is off \(security_api toggle\)/);
   assert.match(camera, /Gladys device: none \(its family is off in the configuration\)/);
 
-  netatmo.state.homes[0].modules.push({ id: 'nlg-1', type: 'NLG', name: 'Legrand gateway' });
+  // pyatmo's stub for a Legrand type it does not know (the NLG gateway, the
+  // former example, is supported since issue #60).
+  netatmo.state.homes[0].modules.push({ id: 'unknown-1', type: 'NLunknown', name: 'Mystery' });
   netatmo.state.homeStatuses['home-1'].home.modules.push({
-    id: 'nlg-1',
-    type: 'NLG',
+    id: 'unknown-1',
+    type: 'NLunknown',
     wifi_strength: 50,
     zigbee_channel: 15,
   });
-  const unknown = await run({ device_ref: 'nlg-1' });
+  const unknown = await run({ device_ref: 'unknown-1' });
   assert.match(unknown, /Support: not supported by the integration/);
   assert.match(unknown, /Gladys device: none \(module type not supported\)/);
   assert.match(unknown, /Fields not used by the integration: wifi_strength, zigbee_channel/);

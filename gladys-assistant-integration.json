@@ -1203,6 +1203,24 @@
       "default": false
     },
     {
+      "key": "legrand_api",
+      "type": "boolean",
+      "label": {
+        "en": "Legrand Home + Control — preview",
+        "fr": "Legrand Home + Control — aperçu",
+        "de": "Legrand Home + Control — Vorschau",
+        "es": "Legrand Home + Control — vista previa"
+      },
+      "description": {
+        "en": "Discover the Legrand with Netatmo wiring devices (Céliane, dooxie, Mosaic) of a Home + Control gateway: lights and dimmers, plugs and relays (on/off, brightness, power). Roller shutters, energy meters and wireless switches are not supported yet. Already connected? Click Connect again to grant the Legrand permissions.",
+        "fr": "Découvrir l'appareillage Legrand with Netatmo (Céliane, dooxie, Mosaic) d'une passerelle Home + Control : éclairages et variateurs, prises et relais (marche/arrêt, luminosité, puissance). Les volets roulants, compteurs d'énergie et commandes sans fil ne sont pas encore pris en charge. Déjà connecté ? Cliquez à nouveau sur Connecter pour accorder les autorisations Legrand.",
+        "de": "Die Legrand-with-Netatmo-Installationsgeräte (Céliane, dooxie, Mosaic) eines Home-+-Control-Gateways erkennen: Lampen und Dimmer, Steckdosen und Relais (ein/aus, Helligkeit, Leistung). Rollläden, Energiezähler und Funkschalter werden noch nicht unterstützt. Schon verbunden? Klicke erneut auf Verbinden, um die Legrand-Berechtigungen zu erteilen.",
+        "es": "Descubrir los mecanismos Legrand with Netatmo (Céliane, dooxie, Mosaic) de una pasarela Home + Control: luces y reguladores, enchufes y relés (encendido/apagado, brillo, potencia). Las persianas enrollables, los contadores de energía y los interruptores inalámbricos aún no son compatibles. ¿Ya está conectado? Vuelva a hacer clic en Conectar para conceder los permisos de Legrand."
+      },
+      "required": false,
+      "default": false
+    },
+    {
       "key": "camera_quality",
       "type": "select",
       "label": {

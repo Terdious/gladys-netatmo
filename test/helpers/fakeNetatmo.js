@@ -559,6 +559,325 @@ export function addBticinoSocket(state, statusEntry = null, homeId = 'home-1') {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Legrand Home + Control (issue #60). Nobody has real Legrand payloads yet:
+// the entries are COPIED from the pyatmo fixtures — homesdata.json (home
+// 91763b24c43d3e344f424e8b "MYHOME") with homestatus_91763b24c43d3e344f424e8b.json
+// for the gateway NLG, the plug NLP, the dimmer NLF (whose homesdata entry
+// carries no name and no room, kept as is), the Italian switch NLL, the
+// double switch NLIS and its two gangs, the latching relay NLPT, the dry
+// contact NLPD, the contactor NLPO and the not-yet-supported wireless
+// remote NLT, shutter NLV and energy meter NLPC; the light switch with
+// neutral NLFN has no homestatus entry there (reported in `errors` here →
+// unreachable). The dimmer evolution NLFE comes from homesdata_bridged.json /
+// homestatus_bridged_home_id.json (renamed, moved to this home's gateway). A
+// home of its own (the OpenTherm fixtures already use the pyatmo home id),
+// with the pyatmo room ids and names — the two rooms pyatmo references
+// without declaring them (1310352496, 100008999) are named here. Opt-in, like
+// the shutters, so the default fixtures stay intact.
+// -----------------------------------------------------------------------------
+
+export const LEGRAND_HOME_ID = 'legrand-home';
+export const NLG_ID = '12:34:56:80:60:40';
+export const NLP_ID = '12:34:56:80:00:12:ac:f2';
+export const NLF_ID = '00:11:22:33:00:11:45:fe';
+export const NLFN_ID = '12:34:56:00:01:01:01:a1';
+export const NLFE_ID = '12:34:56:bb:00:04';
+export const NLL_ID = '12:34:56:00:01:01:01:b2';
+export const NLIS_ID = '12:34:56:00:01:01:01:b6';
+export const NLPT_ID = '12:34:56:00:01:01:01:b7';
+export const NLPD_ID = '12:34:56:00:01:01:01:b8';
+export const NLPO_ID = '12:34:56:00:01:01:01:b9';
+export const NLT_ID = '12:34:56:80:00:c3:69:3c';
+export const NLV_ID = '12:34:56:00:01:01:01:b3';
+export const NLPC_ID = '12:34:56:00:00:a1:4c:da';
+
+export function addLegrandFixtures(state) {
+  const bridged = [
+    NLP_ID,
+    NLT_ID,
+    NLPC_ID,
+    NLFN_ID,
+    NLF_ID,
+    NLL_ID,
+    NLV_ID,
+    NLIS_ID,
+    NLPT_ID,
+    NLPD_ID,
+    NLPO_ID,
+    NLFE_ID,
+  ];
+  state.homes.push({
+    id: LEGRAND_HOME_ID,
+    name: 'MYHOME',
+    rooms: [
+      { id: '1310352496', name: 'Salon', type: 'livingroom' },
+      { id: '3688132631', name: 'Hall', type: 'custom' },
+      { id: '2833524037', name: 'Entrada', type: 'lobby' },
+      { id: '2940411577', name: 'Cocina', type: 'kitchen' },
+      { id: '100007519', name: 'Cabinet', type: 'electrical_cabinet' },
+      { id: '1002003001', name: 'Corridor', type: 'corridor' },
+      { id: '100008999', name: 'Consumption', type: 'custom' },
+    ],
+    modules: [
+      {
+        id: NLG_ID,
+        type: 'NLG',
+        name: 'Prise Control',
+        setup_date: 1641841257,
+        room_id: '1310352496',
+        modules_bridged: bridged,
+      },
+      {
+        id: NLP_ID,
+        type: 'NLP',
+        name: 'Prise',
+        setup_date: 1641841262,
+        room_id: '1310352496',
+        bridge: NLG_ID,
+      },
+      {
+        id: NLT_ID,
+        type: 'NLT',
+        name: 'Commande sans fil',
+        setup_date: 1641841262,
+        bridge: NLG_ID,
+      },
+      {
+        id: NLPC_ID,
+        type: 'NLPC',
+        name: 'Consumption meter',
+        setup_date: 1638376602,
+        room_id: '100008999',
+        bridge: NLG_ID,
+      },
+      {
+        id: NLF_ID,
+        type: 'NLF',
+        on: false,
+        brightness: 63,
+        firmware_revision: 57,
+        last_seen: 1657086939,
+        power: 0,
+        reachable: true,
+        bridge: NLG_ID,
+      },
+      {
+        id: NLFN_ID,
+        type: 'NLFN',
+        name: 'Bathroom light',
+        setup_date: 1598367404,
+        room_id: '1002003001',
+        bridge: NLG_ID,
+      },
+      {
+        id: NLL_ID,
+        type: 'NLL',
+        name: 'NLL',
+        setup_date: 1673019934,
+        room_id: '1002003001',
+        bridge: NLG_ID,
+      },
+      {
+        id: NLV_ID,
+        type: 'NLV',
+        name: 'NLV',
+        setup_date: 1673019934,
+        room_id: '1002003001',
+        bridge: NLG_ID,
+        appliance_type: 'rolling_shutter',
+      },
+      { id: NLIS_ID, type: 'NLIS', setup_date: 1673019934, bridge: NLG_ID },
+      {
+        id: `${NLIS_ID}#1`,
+        type: 'NLIS',
+        name: 'NLIS droite',
+        setup_date: 1673019934,
+        room_id: '2833524037',
+        bridge: NLG_ID,
+      },
+      {
+        id: `${NLIS_ID}#2`,
+        type: 'NLIS',
+        name: 'NLIS gauche',
+        setup_date: 1673019934,
+        room_id: '2833524037',
+        bridge: NLG_ID,
+      },
+      {
+        id: NLPT_ID,
+        type: 'NLPT',
+        name: 'NLPT',
+        setup_date: 1673019934,
+        room_id: '2940411577',
+        bridge: NLG_ID,
+      },
+      {
+        id: NLPD_ID,
+        type: 'NLPD',
+        name: 'NLPD',
+        setup_date: 1673019934,
+        room_id: '3688132631',
+        bridge: NLG_ID,
+        appliance_type: 'other',
+      },
+      {
+        id: NLPO_ID,
+        type: 'NLPO',
+        name: 'NLPO',
+        setup_date: 1673019934,
+        room_id: '100007519',
+        bridge: NLG_ID,
+        appliance_type: 'other',
+      },
+      {
+        id: NLFE_ID,
+        type: 'NLFE',
+        name: 'Variateur',
+        setup_date: 1785416521,
+        room_id: '1310352496',
+        bridge: NLG_ID,
+      },
+    ],
+  });
+  state.homeStatuses[LEGRAND_HOME_ID] = {
+    home: {
+      id: LEGRAND_HOME_ID,
+      rooms: [],
+      modules: [
+        {
+          id: NLG_ID,
+          type: 'NLG',
+          offload: false,
+          offload_meters: [],
+          firmware_revision: 211,
+          last_seen: 1644567372,
+          wifi_strength: 51,
+          reachable: true,
+        },
+        {
+          id: NLP_ID,
+          type: 'NLP',
+          on: true,
+          offload: false,
+          offload_meters: ['98:76:54:32:10:ab'],
+          firmware_revision: 62,
+          last_seen: 1644569425,
+          power: 0,
+          reachable: true,
+          bridge: NLG_ID,
+        },
+        {
+          id: NLT_ID,
+          type: 'NLT',
+          battery_state: 'full',
+          battery_level: 3300,
+          firmware_revision: 42,
+          last_seen: 0,
+          reachable: false,
+          bridge: NLG_ID,
+        },
+        {
+          id: NLPC_ID,
+          type: 'NLPC',
+          firmware_revision: 62,
+          last_seen: 1646511241,
+          power: 476,
+          reachable: true,
+          bridge: NLG_ID,
+        },
+        {
+          id: NLF_ID,
+          type: 'NLF',
+          on: false,
+          brightness: 63,
+          firmware_revision: 57,
+          last_seen: 1657086939,
+          power: 0,
+          reachable: true,
+          bridge: NLG_ID,
+        },
+        {
+          firmware_revision: 53,
+          id: NLL_ID,
+          last_seen: 1657086949,
+          on: false,
+          power: 0,
+          reachable: true,
+          type: 'NLL',
+          bridge: NLG_ID,
+        },
+        {
+          current_position: 0,
+          firmware_revision: 47,
+          id: NLV_ID,
+          last_seen: 1746730909,
+          reachable: true,
+          target_position: 0,
+          'target_position:step': 100,
+          type: 'NLV',
+          bridge: NLG_ID,
+        },
+        {
+          id: NLIS_ID,
+          type: 'NLIS',
+          firmware_revision: 20,
+          last_seen: 1746731520,
+          reachable: true,
+          bridge: NLG_ID,
+        },
+        { id: `${NLIS_ID}#2`, type: 'NLIS', on: false, power: 0, bridge: NLG_ID },
+        { id: `${NLIS_ID}#1`, type: 'NLIS', on: false, power: 0, bridge: NLG_ID },
+        {
+          id: NLPT_ID,
+          type: 'NLPT',
+          on: true,
+          firmware_revision: 77,
+          last_seen: 1746731885,
+          power: 0,
+          reachable: true,
+          bridge: NLG_ID,
+        },
+        {
+          id: NLPD_ID,
+          type: 'NLPD',
+          on: true,
+          offload: false,
+          firmware_revision: 66,
+          last_seen: 1746731949,
+          power: 0,
+          reachable: true,
+          bridge: NLG_ID,
+        },
+        {
+          id: NLPO_ID,
+          type: 'NLPO',
+          on: false,
+          contactor_mode: 'off',
+          offload: false,
+          firmware_revision: 74,
+          last_seen: 1746731968,
+          power: 0,
+          reachable: true,
+          bridge: NLG_ID,
+        },
+        {
+          id: NLFE_ID,
+          type: 'NLFE',
+          on: false,
+          brightness: 61,
+          firmware_revision: 35,
+          last_seen: 1786355314,
+          power: 0,
+          reachable: true,
+          bridge: NLG_ID,
+        },
+      ],
+      errors: [{ code: 6, id: NLFN_ID }],
+    },
+  };
+}
+
 // Video doorbell (NDB, issue #35), shaped like the pyatmo fixtures (homesdata
 // + homestatus): VPN URL, `is_local` claimed but never used (WebRTC camera).
 // Opt-in, like the Indoor Camera Advance.
