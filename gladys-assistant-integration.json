@@ -8,8 +8,8 @@
     "de": "Verbinde deine Netatmo-Geräte (Wetterstation, Thermostate, Kameras) mit Gladys Assistant.",
     "es": "Conecte sus dispositivos Netatmo (estación meteorológica, termostatos, cámaras) a Gladys Assistant."
   },
-  "version": "2.4.0",
-  "docker_image": "ghcr.io/terdious/gladys-netatmo:2.4.0",
+  "version": "2.5.0",
+  "docker_image": "ghcr.io/terdious/gladys-netatmo:2.5.0",
   "gladys_version": ">=5.2.0",
   "cover_image": "https://raw.githubusercontent.com/Terdious/gladys-netatmo/master/cover.png",
   "categories": ["climate", "security", "environment"],
