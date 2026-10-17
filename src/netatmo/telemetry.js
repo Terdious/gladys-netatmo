@@ -118,7 +118,9 @@ export function createTelemetry({
   const published = new Map();
   let refreshTimer = null;
   let refreshInFlight = null;
-  let delayedRefreshTimer = null;
+  // Pending one-shot refreshes, by key: a shutter command (30 s) and a
+  // Legrand command (2 s) each keep their own timer.
+  const delayedRefreshTimers = new Map();
 
   const cameras = createCameraImages({ fetchImpl, now });
   // Last raw Netatmo payload per camera id (vpn_url, is_local...), refreshed
@@ -169,6 +171,7 @@ export function createTelemetry({
       config.shutter_api,
       config.aircare_api,
       config.bticino_api,
+      config.legrand_api,
     ].join('|');
   }
 
@@ -262,7 +265,8 @@ export function createTelemetry({
       config.security_api ||
       config.weather_api ||
       config.shutter_api ||
-      config.bticino_api
+      config.bticino_api ||
+      config.legrand_api
     ) {
       families.push('homes');
     }
@@ -436,6 +440,18 @@ export function createTelemetry({
   /** The degraded message currently reported (null when every API answers). */
   function getDegradedMessage() {
     return degradedMessage;
+  }
+
+  /**
+   * Remember a state Gladys already holds (a command it saved itself, issue
+   * #60): the next refresh publishes the module's state only if Netatmo
+   * reports something else — and a later change back to the previous value
+   * is not mistaken for "unchanged".
+   * @param {string} featureExternalId feature external id
+   * @param {number} state the state Gladys saved
+   */
+  function rememberState(featureExternalId, state) {
+    published.set(featureExternalId, { state, at: now() });
   }
 
   /** Forget the dedup memory so the next refresh re-publishes every value. */
@@ -850,30 +866,38 @@ export function createTelemetry({
     refreshTimer.unref?.();
   }
 
-  /** Cancel a pending one-shot refresh. */
-  function clearDelayedRefresh() {
-    if (delayedRefreshTimer) {
-      clearTimeout(delayedRefreshTimer);
-      delayedRefreshTimer = null;
+  /** Cancel the pending one-shot refreshes (all of them, or one key). */
+  function clearDelayedRefresh(key) {
+    for (const [timerKey, timer] of delayedRefreshTimers) {
+      if (key === undefined || key === timerKey) {
+        clearTimeout(timer);
+        delayedRefreshTimers.delete(timerKey);
+      }
     }
   }
 
   /**
    * Arm ONE refresh after `delayMs` (a shutter command moves a motor for a
-   * few dozen seconds): commands in a row re-arm the same timer instead of
-   * stacking API loads.
+   * few dozen seconds; a Legrand brightness slider sends a burst of
+   * commands): commands in a row re-arm the same timer instead of stacking
+   * API loads. Each key has its own timer, so a quick refresh never cancels
+   * the later one a shutter needs.
    * @param {object} config normalized integration config
    * @param {number} [delayMs] delay before the refresh
+   * @param {string} [key] which pending refresh to re-arm
    */
-  function scheduleRefresh(config, delayMs = SHUTTER_REFRESH_DELAY_MS) {
-    clearDelayedRefresh();
-    delayedRefreshTimer = setTimeout(() => {
-      delayedRefreshTimer = null;
-      refreshValues(config).catch((err) =>
+  function scheduleRefresh(config, delayMs = SHUTTER_REFRESH_DELAY_MS, key = 'shutter') {
+    clearDelayedRefresh(key);
+    const timer = setTimeout(() => {
+      delayedRefreshTimers.delete(key);
+      // A fresh load: a cycle or a burst-cached load predating the command
+      // would not show its effect.
+      refreshNow(config).catch((err) =>
         logger.error(`Netatmo value refresh failed: ${err.message}`),
       );
     }, delayMs);
-    delayedRefreshTimer.unref?.();
+    timer.unref?.();
+    delayedRefreshTimers.set(key, timer);
   }
 
   /** Stop the periodic refresh loop (and any pending one-shot refresh). */
@@ -964,6 +988,7 @@ export function createTelemetry({
     scheduleRefresh,
     getCameraSnapshot,
     getDegradedMessage,
+    rememberState,
     resetDedup,
     start,
     stop,

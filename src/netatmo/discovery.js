@@ -34,12 +34,14 @@ import {
   BTICINO_MODULE_TYPES,
   BTICINO_GATEWAY_TYPES,
   BTICINO_BRIDGED_MODULE_TYPES,
+  LEGRAND_MODULE_TYPES,
   HOMES_CONCURRENCY,
   HEATING_SCHEDULE_TYPE,
   VIRTUAL_DEVICE_TYPE,
   KNOWN_PERSONS_ID_PREFIX,
 } from './constants.js';
 import { bticinoEntriesOf } from './bticino.js';
+import { resolveLegrandReachability } from './legrand.js';
 
 const logger = createLogger({ name: 'netatmo-discovery' });
 
@@ -96,6 +98,13 @@ export function getModuleCategory(model, config) {
       moduleSupported: true,
       categoryAPI: SUPPORTED_CATEGORY_TYPE.BTICINO,
       apiNotConfigured: !config.bticino_api,
+    };
+  }
+  if (LEGRAND_MODULE_TYPES.includes(model)) {
+    return {
+      moduleSupported: true,
+      categoryAPI: SUPPORTED_CATEGORY_TYPE.LEGRAND,
+      apiNotConfigured: !config.legrand_api,
     };
   }
   return {
@@ -187,6 +196,9 @@ export async function loadDeviceDetails(client, config, homeData, bticinoDiagnos
     const device = {
       ...module,
       ...moduleHomeData,
+      // Legrand (issue #60): the live state is homestatus' — a homesdata
+      // entry carrying `on` / `brightness` too (pyatmo fixture) never hides it.
+      ...(LEGRAND_MODULE_TYPES.includes(module.type) && module !== moduleHomeData ? module : {}),
       home: homeId,
       room: Object.keys(roomDevice).length === 0 ? {} : roomDevice,
       plug: Object.keys(plugDevice).length === 0 ? undefined : plugDevice,
@@ -226,8 +238,12 @@ export async function loadDeviceDetails(client, config, homeData, bticinoDiagnos
     });
 
   const knownPersons = buildKnownPersonsDevice(config, homeData, home);
+  // Legrand (issue #60): the gangs of a double switch follow their parent's
+  // reachability, the modules of an unreachable gateway are unreachable.
   return [
-    ...groupBticinoModules([...reachableDevices, ...unreachableDevices]),
+    ...groupBticinoModules(
+      resolveLegrandReachability([...reachableDevices, ...unreachableDevices]),
+    ),
     ...(knownPersons ? [knownPersons] : []),
   ];
 }
@@ -517,7 +533,8 @@ export async function loadAccount(client, config) {
     config.security_api ||
     config.weather_api ||
     config.shutter_api ||
-    config.bticino_api
+    config.bticino_api ||
+    config.legrand_api
   ) {
     try {
       const homes = await client.getHomesData();

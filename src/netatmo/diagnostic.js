@@ -39,6 +39,7 @@ import { convertDevice } from './convert.js';
 import { UPDATE_MAPPINGS } from './updateMappings.js';
 import { redactForDiagnostic } from './redact.js';
 import { POLL_OUTCOME_LABELS } from './eventsPoll.js';
+import { legrandNotExposedReason } from './legrand.js';
 
 const defaultLogger = createLogger({ name: 'netatmo-diagnostic' });
 
@@ -52,6 +53,7 @@ const FAMILY_TOGGLES = {
   [SUPPORTED_CATEGORY_TYPE.SHUTTER]: 'shutter_api',
   [SUPPORTED_CATEGORY_TYPE.AIRCARE]: 'aircare_api',
   [SUPPORTED_CATEGORY_TYPE.BTICINO]: 'bticino_api',
+  [SUPPORTED_CATEGORY_TYPE.LEGRAND]: 'legrand_api',
 };
 
 // Fields every module carries that the integration consumes for its
@@ -346,6 +348,9 @@ export function publishedFor(gladys, entry) {
       reason = 'module type not supported';
     } else if (top.apiNotConfigured) {
       reason = 'its family is off in the configuration';
+    } else if (legrandNotExposedReason(top)) {
+      // Legrand gateway, parent entry of a double switch (issue #60).
+      reason = legrandNotExposedReason(top);
     }
     return { device: null, features: [], reason };
   }

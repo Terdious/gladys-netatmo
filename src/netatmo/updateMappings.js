@@ -18,6 +18,11 @@ import {
   VIRTUAL_DEVICE_TYPE,
   PERSON_PRESENCE_SUFFIX_PREFIX,
   BTICINO_LIGHT_SUFFIX,
+  LEGRAND_ON_SUFFIX,
+  LEGRAND_BRIGHTNESS_SUFFIX,
+  LEGRAND_POWER_SUFFIX,
+  LEGRAND_LIGHT_TYPES,
+  LEGRAND_SWITCH_TYPES,
 } from './constants.js';
 import { healthIndexToAqi, healthIndexToLevel } from './deviceMapping.js';
 
@@ -119,6 +124,28 @@ const BTICINO_LIGHT_MAPPING = {
 const BTICINO_SWITCH_MAPPING = {
   on: homestatusOn,
   ...BTICINO_MAPPING,
+};
+
+/** A finite number of a homestatus field, anything else is no value. */
+const finiteNumber = (value) =>
+  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
+// Legrand Home + Control (issue #60): homestatus reports the state back
+// (pyatmo SwitchMixin `on`, DimmableMixin `brightness` 0-100, PowerMixin
+// `power` in W). A brightness outside 0-100 is not a level.
+const LEGRAND_SWITCH_MAPPING = {
+  [LEGRAND_ON_SUFFIX]: homestatusOn,
+  [LEGRAND_POWER_SUFFIX]: (deviceNetatmo) => finiteNumber(deviceNetatmo.power),
+};
+const LEGRAND_LIGHT_MAPPING = {
+  [LEGRAND_ON_SUFFIX]: homestatusOn,
+  [LEGRAND_BRIGHTNESS_SUFFIX]: (deviceNetatmo) => {
+    const brightness = finiteNumber(deviceNetatmo.brightness);
+    return brightness !== undefined && brightness >= 0 && brightness <= 100
+      ? brightness
+      : undefined;
+  },
+  [LEGRAND_POWER_SUFFIX]: (deviceNetatmo) => finiteNumber(deviceNetatmo.power),
 };
 
 export const UPDATE_MAPPINGS = {
@@ -346,4 +373,6 @@ export const UPDATE_MAPPINGS = {
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength ?? deviceNetatmo.wifi_status,
   },
   [VIRTUAL_DEVICE_TYPE.KNOWN_PERSONS]: knownPersonsMapping,
+  ...Object.fromEntries(LEGRAND_LIGHT_TYPES.map((type) => [type, LEGRAND_LIGHT_MAPPING])),
+  ...Object.fromEntries(LEGRAND_SWITCH_TYPES.map((type) => [type, LEGRAND_SWITCH_MAPPING])),
 };

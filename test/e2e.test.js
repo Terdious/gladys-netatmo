@@ -27,6 +27,10 @@ import {
   BNCX_ID,
   BNEU_ID,
   BNSL_ID,
+  addLegrandFixtures,
+  LEGRAND_HOME_ID,
+  NLG_ID,
+  NLFE_ID,
 } from './helpers/fakeNetatmo.js';
 
 const { EXTERNAL_INTEGRATION } = WEBSOCKET_MESSAGE_TYPES;
@@ -344,6 +348,43 @@ test('the BTicino toggle surfaces the door entry modules and logs their webhooks
     events.handleWebhook = handleWebhook;
     bticinoDiagnostic.logWebhook = logWebhook;
   }
+});
+
+test('the Legrand toggle surfaces the modules, and a dimmer command reaches setstate (issue #60)', async () => {
+  addLegrandFixtures(netatmo.state);
+  core.send(EXTERNAL_INTEGRATION.CONFIG_UPDATED, {
+    config: {
+      ...core.state.config,
+      client_id: FAKE_CLIENT_ID,
+      client_secret: FAKE_CLIENT_SECRET,
+      legrand_api: 'true',
+    },
+  });
+  const dimmer = await waitFor(() =>
+    core.state.discovered.at(-1)?.find((device) => device.external_id === `ext:netatmo:${NLFE_ID}`),
+  );
+  // The gateway is never a device.
+  assert.ok(!core.state.discovered.at(-1).some((d) => d.external_id === `ext:netatmo:${NLG_ID}`));
+  const brightness = dimmer.features.find((f) => f.external_id.endsWith(':brightness'));
+  const result = await sendAndWaitResult(EXTERNAL_INTEGRATION.DEVICE_SET_VALUE, {
+    device: dimmer,
+    device_feature: brightness,
+    value: 55,
+  });
+  assert.equal(result.success, true);
+  assert.deepEqual(netatmo.state.setStateRequests.at(-1), {
+    home: {
+      id: LEGRAND_HOME_ID,
+      modules: [{ id: NLFE_ID, brightness: 55, bridge: NLG_ID }],
+    },
+  });
+  // The Legrand scopes follow the toggle.
+  const authorize = await sendAndWaitResult(EXTERNAL_INTEGRATION.OAUTH_GET_AUTHORIZE_URL, {
+    key: 'netatmo_account',
+    redirect_uri: REDIRECT_URI,
+  });
+  const scope = new URL(authorize.data.authorize_url).searchParams.get('scope').split(' ');
+  assert.ok(scope.includes('read_magellan') && scope.includes('write_magellan'));
 });
 
 test('the Device diagnostic action answers a plain-text report (Configuration screen)', async () => {
