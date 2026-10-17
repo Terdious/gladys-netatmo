@@ -123,7 +123,8 @@ capabilities land (Home + Security cameras, webhooks, …).
 - **Device diagnostic** action on the Configuration screen: a plain-text
   report on one module (or the whole account) to paste in an issue — what
   Netatmo sends, what the integration publishes, the unused Netatmo fields,
-  scopes, API health and recent webhook events, secrets redacted.
+  scopes, API health, recent webhook events and the events `getevents`
+  returns, secrets redacted.
 - **Connection status** on the Configuration screen at every step (missing
   credentials, not connected, connected, reconnect required), plus the
   **degraded state**: an API family failing 3 cycles in a row is named under
@@ -135,6 +136,12 @@ capabilities land (Home + Security cameras, webhooks, …).
   trigger an immediate refresh (a setpoint change lands in ~2-3 s instead of
   waiting for the next cycle), without shortening the poll. Degrades to poll
   only when Gladys Plus is not linked.
+- **Detections without webhooks**: every refresh cycle also reads the last
+  events of each home with a camera, doorbell, alarm or door entry
+  (`getevents`, one call per home), so motion / person / animal / vehicle,
+  smoke / CO and rings reach the same features and scene triggers within
+  ~2 minutes when the webhooks deliver nothing — deduplicated against them,
+  never replaying history on a restart, stale events (> 10 min) skipped.
 
 Two behaviours differ from the core service on purpose: modules of an
 unsupported type (or whose API toggle is off) are **not listed** in the
@@ -212,6 +219,7 @@ never appear on the configuration form.
 │  │  ├─ bticino.js                  # BTicino door entry diagnostic log (redacted)
 │  │  ├─ redact.js                   # redaction shared by the diagnostic log and report
 │  │  ├─ diagnostic.js               # "Device diagnostic" action report + webhook history
+│  │  ├─ eventsPoll.js               # getevents poll: detections when webhooks deliver nothing
 │  │  └─ setValue.js                 # setpoint, heating mode, camera monitoring, BTicino light
 │  └─ config.js                      # config defaults + normalization
 ├─ gladys-assistant-integration.json # manifest (name, config schema, image…)

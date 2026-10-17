@@ -219,7 +219,7 @@ actualización (2 minutos, o al instante con los webhooks de Gladys Plus).
 
 La cámara de interior Advance se crea como la cámara de interior: una **imagen
 para el panel**, un interruptor de **vigilancia**, las detecciones
-**Movimiento** y **Persona detectada** (webhooks de Gladys Plus), y aparece en
+**Movimiento** y **Persona detectada** (ver _Detecciones_ más abajo), y aparece en
 el widget **Cámaras Netatmo**. Dos diferencias, ambas del lado de Netatmo:
 
 - su captura se obtiene a través de la URL VPN de Netatmo: como el timbre con
@@ -248,8 +248,8 @@ se crea con:
   local;
 - una funcionalidad **Timbre** que muestra **Sonando** cuando alguien pulsa el
   botón, utilizable como disparador de escena (**Si suena el timbre**) —
-  necesita los webhooks de Gladys Plus (ver más abajo): la consulta periódica
-  por sí sola no puede reportar un timbrazo;
+  en tiempo real con los webhooks de Gladys Plus, si no en unos 2 minutos (ver
+  más abajo);
 - la calidad de su enlace **Wifi**.
 
 No hay interruptor de vigilancia (Netatmo no ofrece ninguno para el timbre).
@@ -329,22 +329,25 @@ Netatmo del core), vuelva a guardar la clave de Gladys Plus. Netatmo también
 deja de enviar durante 24 horas a una aplicación cuyo webhook falló 5 veces
 seguidas (solo dev.netatmo.com lo muestra y permite levantarlo). Las
 detecciones solo existen mientras la vigilancia de la cámara está activada.
+Sea cual sea la causa, las detecciones siguen llegando, en unos 2 minutos (ver más
+abajo).
 
 Sin clave (o sin Gladys Plus), la integración se comporta exactamente como
-antes, consultando cada 2 minutos.
+antes, consultando cada 2 minutos — detecciones incluidas.
 
 ### Qué aporta
 
 - **Los valores llegan casi al instante** — por ejemplo, una consigna de
   termostato cambiada desde la aplicación Netatmo, o el estado de vigilancia de
   una cámara.
-- **Detecciones que puede usar en sus escenas** (ver más abajo).
+- **Detecciones en tiempo real** en lugar de en unos 2 minutos (ver más
+  abajo).
 
-### Detecciones en tiempo real (disparadores de escena)
+### Detecciones (disparadores de escena)
 
-Algunos eventos son **momentáneos**: solo existen en el flujo de eventos, y
-ninguna consulta a la API puede reportarlos. Se publican como funcionalidades
-dedicadas, utilizables como **disparadores de escena**:
+Algunos eventos son **momentáneos**: solo existen en el flujo de eventos de
+Netatmo, y ningún estado de dispositivo los reporta. Se publican como
+funcionalidades dedicadas, utilizables como **disparadores de escena**:
 
 | Dispositivo                     | Funcionalidad           | Activada por                         |
 | ------------------------------- | ----------------------- | ------------------------------------ |
@@ -364,10 +367,18 @@ pasa a Sí" — para el timbre, el disparador **Si suena el timbre**. Un timbraz
 dispara una sola vez: los eventos posteriores "llamada aceptada" / "llamada
 perdida" de la aplicación Netatmo no son disparadores aparte.
 
+**¿Con qué rapidez?** Con los webhooks de Gladys Plus, en unos segundos. Sin
+ellos — o cuando Netatmo no los envía — la integración también lee los últimos
+eventos de cada casa en cada actualización de 2 minutos (`getevents` de
+Netatmo, una llamada por casa): se activan las mismas funcionalidades y los
+mismos disparadores de escena, **en unos 2 minutos**. Una detección que llega
+por ambas vías nunca se activa dos veces, los eventos ya presentes al arrancar
+la integración no se repiten, y un evento con más de 10 minutos cuando se lee
+(tras una caída) no activa nada.
+
 > ⚠️ **Si sus cámaras ya existían en Gladys**, estas nuevas funcionalidades no
 > aparecen por sí solas: vaya a la pestaña **Descubrir** y haga clic en
-> **Actualizar** en cada cámara (o detector de humo) para añadirlas. Sin webhooks
-> configurados, estas funcionalidades simplemente permanecen en "No".
+> **Actualizar** en cada cámara (o detector de humo) para añadirlas.
 
 ---
 
@@ -377,7 +388,7 @@ La integración añade sus propias tarjetas al editor de escenas (Gladys **5.1**
 posterior): elija **Activador de integración** o **Acción de integración** y
 luego la entrada de Netatmo.
 
-### Activadores (requieren los webhooks de Gladys Plus)
+### Activadores (en tiempo real con los webhooks de Gladys Plus, en unos 2 minutos sin ellos)
 
 | Activador                      | Se activa cuando                                  | Información transmitida a las acciones |
 | ------------------------------ | ------------------------------------------------- | -------------------------------------- |
@@ -450,12 +461,12 @@ vinculados a sus cámaras:
   (abierto/cerrado), más la batería y la señal RF.
 - **Sirena de interior** (`NIS`) — un sensor de sirena sonando, de solo lectura,
   más la batería y la señal RF.
-- **Detector de humo** (`NSD`) — descubierto con su batería y su señal, más una
-  funcionalidad **Humo** alimentada por los webhooks (ver la sección anterior):
-  la consulta periódica por sí sola no puede reportar ese estado.
+- **Detector de humo** (`NSD`) — descubierto con su batería y su señal, más la
+  detección **Humo** (ver _Detecciones_ más arriba): en tiempo real con los
+  webhooks, en unos 2 minutos sin ellos.
 - **Detector de monóxido de carbono** (`NCO`) — igual que el detector de humo:
-  batería y señal (cuando Netatmo las reporta), más una funcionalidad
-  **Monóxido de carbono** alimentada por los webhooks.
+  batería y señal (cuando Netatmo las reporta), más la detección **Monóxido de
+  carbono**, como el humo.
 
 ---
 
@@ -564,22 +575,22 @@ El portero se descubre como **un solo dispositivo**, con el nombre de su
 unidad interior (la pasarela `BNCX`, p. ej. «Classe 300EOS with Netatmo»). Los
 módulos que conecta le añaden sus funciones, con su nombre:
 
-| Módulo                     | Tipo Netatmo | En el dispositivo del portero                                      |
-| -------------------------- | ------------ | ------------------------------------------------------------------ |
-| Unidad interior (pasarela) | `BNCX`       | calidad WiFi, **timbre** (necesita los webhooks de Gladys Plus)    |
-| Luz de escalera / exterior | `BNSL`       | **luz encendida / apagada** (p. ej. «Iluminación exterior»)        |
-| Toma controlada            | `BNCS`       | estado encendido / apagado (solo lectura), cuando Netatmo lo envía |
-| Placa de calle             | `BNEU`       | nada (Netatmo no envía ningún valor para ella)                     |
-| Cerradura                  | `BNDL`       | nada — vea más abajo                                               |
-| Módulo X                   | `BNXM`       | su calidad de señal, cuando Netatmo envía una                      |
+| Módulo                     | Tipo Netatmo | En el dispositivo del portero                                             |
+| -------------------------- | ------------ | ------------------------------------------------------------------------- |
+| Unidad interior (pasarela) | `BNCX`       | calidad WiFi, **timbre** (en tiempo real con los webhooks de Gladys Plus) |
+| Luz de escalera / exterior | `BNSL`       | **luz encendida / apagada** (p. ej. «Iluminación exterior»)               |
+| Toma controlada            | `BNCS`       | estado encendido / apagado (solo lectura), cuando Netatmo lo envía        |
+| Placa de calle             | `BNEU`       | nada (Netatmo no envía ningún valor para ella)                            |
+| Cerradura                  | `BNDL`       | nada — vea más abajo                                                      |
+| Módulo X                   | `BNXM`       | su calidad de señal, cuando Netatmo envía una                             |
 
 - **Luz:** se acciona a través de Netatmo como en la aplicación. Netatmo nunca
   indica si está encendida: Gladys muestra la última orden enviada (la luz de
   escalera suele apagarse sola al cabo de un tiempo, Gladys no puede saber
   cuándo).
 - **Timbre:** se publica como el del [timbre con vídeo](#timbre-con-vídeo) («Sonando» y luego
-  la hora del último timbrazo), utilizable como activador de escena — solo con
-  los [webhooks de Gladys Plus](#webhooks-de-gladys-plus-tiempo-real--opcional). Netatmo documenta este evento para el
+  la hora del último timbrazo), utilizable como activador de escena — en tiempo
+  real con los [webhooks de Gladys Plus](#webhooks-de-gladys-plus-tiempo-real--opcional), en unos 2 minutos sin ellos. Netatmo documenta este evento para el
   Classe 300 EOS; todavía no se ha visto en una instalación real: si sus
   llamadas no aparecen, envíe un diagnóstico (más abajo).
 - **La apertura de la puerta no está disponible.** La API de Netatmo para
@@ -605,8 +616,8 @@ módulos que conecta le añaden sus funciones, con su nombre:
 Use la acción **Diagnóstico de un dispositivo** de la pantalla de
 configuración (vea [Solución de problemas](#solución-de-problemas)): elija el dispositivo del
 portero, o deje ambos campos vacíos para toda la cuenta, y pegue el resultado
-en la [issue #59](https://github.com/Terdious/gladys-netatmo/issues/59). Toque el timbre una vez antes de ejecutarla: el informe
-enumera los últimos eventos webhook de cada módulo.
+en la [issue #59](https://github.com/Terdious/gladys-netatmo/issues/59). Toque el timbre una vez antes de ejecutarla (y espere 2 minutos): el informe
+enumera los últimos eventos webhook de cada módulo, y los últimos eventos que Netatmo devuelve para él (`getevents`).
 
 Mientras la opción está activa, la integración también escribe en sus
 registros, en la primera actualización tras un arranque y después **solo
@@ -715,6 +726,17 @@ relanzarse: solo mueve lo que queda.
 - **Una orden de persiana falla con un mensaje de "reconectar":** su
   autorización Netatmo es anterior a la compatibilidad con las persianas —
   vuelva a hacer clic en Conectar.
+- **Las detecciones de movimiento / persona (o los timbrazos) llegan con unos
+  2 minutos de retraso, mientras que la aplicación Netatmo avisa al instante:**
+  los webhooks de Gladys Plus no llegan a la integración, las detecciones
+  proceden de la lectura de `getevents` cada 2 minutos. Ejecute la acción
+  **Diagnóstico de un dispositivo** (ambos campos vacíos) y compare **Last
+  events seen by getevents** con **Last webhook events**: eventos en el primero
+  y ninguno en el segundo significa que Netatmo no envía los webhooks — vea
+  _¿Registrado pero no llega nada?_ en la sección de webhooks. Nada en
+  ninguno: compruebe que la vigilancia de la cámara está activada. La línea
+  **Events poll (getevents)** muestra su último error (por ejemplo un permiso
+  que falta: vuelva a hacer clic en Conectar).
 - **No hay sonido en la cámara:** consulte el consejo sobre el micrófono en la
   sección Cámaras más arriba.
 - **Timbre o cámara de interior Advance sin vídeo en directo:** consulte _Vídeo
@@ -730,7 +752,8 @@ relanzarse: solo mueve lo que queda.
   creado (por ejemplo, uno aún no compatible); deje ambos campos vacíos para
   un resumen de toda la cuenta. El informe muestra lo que Netatmo envía para el
   módulo, lo que la integración publica para él, los campos de Netatmo que aún
-  no utiliza, los últimos eventos webhook, los permisos y el estado de cada API
+  no utiliza, los últimos eventos webhook y los últimos eventos leídos con
+  `getevents`, los permisos y el estado de cada API
   de Netatmo. También se escribe en los **Registros** de la integración
   (líneas tras `[netatmo-diagnostic]`) si no puede copiarlo desde la pantalla.
   **Reléalo antes de publicarlo:** los tokens, las URL y las direcciones de
