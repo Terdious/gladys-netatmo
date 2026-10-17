@@ -27,6 +27,8 @@ export const API_PATHS = {
   SET_PERSONS_HOME: '/api/setpersonshome',
   SET_STATE: '/api/setstate',
   ADD_WEBHOOK: '/api/addwebhook',
+  // Lists the URL actually registered for the application (one per app).
+  WEBHOOKS_V1: '/webhooks/v1/',
   DROP_WEBHOOK: '/api/dropwebhook',
   // WebRTC live view of the doorbell and the Indoor Camera Advance (issue #70,
   // pyatmo `WebRTCCameraMixin`): SDP offer in, SDP answer out, then terminate.

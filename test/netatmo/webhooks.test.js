@@ -130,3 +130,38 @@ test('drop() removes the Netatmo webhook only when one was registered', async ()
   assert.equal(netatmo.state.dropWebhookRequests.length, 1);
   assert.equal(webhooks.isRegistered(), false);
 });
+
+test('check() compares the URL Netatmo holds (GET webhooks/v1) with the registered one', async () => {
+  const ours = 'https://api.gladysgateway.com/v1/api/external-integration/KEY/ext-netatmo/events';
+  const gladys = {
+    getWebhooks: async () => ({
+      available: true,
+      webhooks: [{ key: 'events', mode: 'fire_and_forget', url: ours }],
+    }),
+  };
+  const webhooks = createWebhooks({ gladys, client, refresh: async () => {} });
+  await webhooks.register();
+
+  netatmo.state.overrides['/webhooks/v1/'] = { body: { status: 'ok', body: [{ url: ours }] } };
+  assert.deepEqual(await webhooks.check(), {
+    ours,
+    atNetatmo: [ours],
+    matches: true,
+    error: null,
+  });
+
+  // Overwritten by another client (the developer portal field, the former
+  // core Netatmo service URL…).
+  const legacy = 'https://api.gladysgateway.com/v1/api/netatmo/KEY';
+  netatmo.state.overrides['/webhooks/v1/'] = { body: { status: 'ok', body: [{ url: legacy }] } };
+  const overwritten = await webhooks.check();
+  assert.equal(overwritten.matches, false);
+  assert.deepEqual(overwritten.atNetatmo, [legacy]);
+
+  // Never throws: the error is reported.
+  netatmo.state.overrides['/webhooks/v1/'] = { status: 500, body: {} };
+  const failed = await webhooks.check();
+  assert.equal(failed.matches, false);
+  assert.equal(failed.atNetatmo, null);
+  assert.match(failed.error, /webhooks\/v1\/ answered 500/);
+});

@@ -292,6 +292,18 @@ integration **Logs**: you should see
 Netatmo webhook registered — events will trigger an immediate refresh
 ```
 
+Then every event Netatmo delivers adds a line such as
+`Netatmo webhook event received: NACamera-movement (70:ee:50:…)`.
+
+**Registered but nothing arrives?** Run the **Device diagnostic** action
+(Configuration screen, both fields empty): the line **Webhook URL held by
+Netatmo** says whether Netatmo still holds the integration's URL. One webhook
+only per Netatmo application: if another client overwrote it (the "webhook URI"
+field of dev.netatmo.com, the former core Netatmo service), save the Gladys Plus
+key again. Netatmo also stops delivering for 24 hours to an application whose
+webhook failed 5 times in a row (only dev.netatmo.com shows it, and lets you
+lift it). Detections only exist while the camera monitoring is on.
+
 Without a key (or without Gladys Plus), the integration behaves exactly as
 before, polling every 2 minutes.
 

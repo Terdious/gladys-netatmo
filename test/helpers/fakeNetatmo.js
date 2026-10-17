@@ -777,6 +777,20 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
         return;
       }
 
+      // Webhook listing (GET webhooks/v1/): authenticated like /api/, answers
+      // the canned override (none registered by default).
+      if (req.url.startsWith('/webhooks/v1')) {
+        const token = (req.headers.authorization ?? '').replace(/^Bearer /, '');
+        if (!state.accessTokens.includes(token)) {
+          respond({ error: { code: 2, message: 'Invalid access token' } }, 401);
+          return;
+        }
+        if (!respondOverride()) {
+          respond({ status: 'ok', body: [] });
+        }
+        return;
+      }
+
       if (req.url.startsWith('/api/')) {
         const authorization = req.headers.authorization ?? '';
         state.apiRequests.push({ path: req.url, authorization });

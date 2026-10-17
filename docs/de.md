@@ -317,6 +317,19 @@ Folgendes sehen
 Netatmo webhook registered — events will trigger an immediate refresh
 ```
 
+Danach fügt jedes von Netatmo zugestellte Ereignis eine Zeile hinzu, etwa
+`Netatmo webhook event received: NACamera-movement (70:ee:50:…)`.
+
+**Registriert, aber es kommt nichts an?** Starte die Aktion **Gerätediagnose**
+(Konfigurationsbildschirm, beide Felder leer): Die Zeile **Webhook URL held by
+Netatmo** zeigt, ob Netatmo noch die URL der Integration hält. Nur ein Webhook
+pro Netatmo-Anwendung: Hat ein anderer Client sie überschrieben (das Feld
+„webhook URI“ auf dev.netatmo.com, der frühere Netatmo-Dienst des Cores),
+speichere den Gladys-Plus-Schlüssel erneut. Netatmo stellt außerdem 24 Stunden
+lang nichts mehr zu, wenn der Webhook einer Anwendung 5-mal hintereinander
+fehlgeschlagen ist (nur dev.netatmo.com zeigt das an und hebt es auf).
+Erkennungen gibt es nur, solange die Überwachung der Kamera aktiv ist.
+
 Ohne Schlüssel (oder ohne Gladys Plus) verhält sich die Integration genau wie
 zuvor und fragt alle 2 Minuten ab.
 

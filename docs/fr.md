@@ -312,6 +312,19 @@ Pour vérifier, ouvrez les **Journaux** de l'intégration : vous devez y voir
 Netatmo webhook registered — events will trigger an immediate refresh
 ```
 
+Ensuite, chaque événement livré par Netatmo ajoute une ligne comme
+`Netatmo webhook event received: NACamera-movement (70:ee:50:…)`.
+
+**Enregistré mais rien n'arrive ?** Lancez l'action **Diagnostic d'un
+appareil** (écran Configuration, les deux champs vides) : la ligne **Webhook URL
+held by Netatmo** indique si Netatmo détient toujours l'URL de l'intégration.
+Un seul webhook par application Netatmo : si un autre client l'a remplacé (le
+champ « webhook URI » de dev.netatmo.com, l'ancien service Netatmo du core),
+enregistrez à nouveau la clé Gladys Plus. Netatmo suspend aussi les envois
+pendant 24 heures pour une application dont le webhook a échoué 5 fois de suite
+(seul dev.netatmo.com l'affiche et permet de lever la suspension). Les
+détections n'existent que si la surveillance de la caméra est activée.
+
 Sans clé (ou sans Gladys Plus), l'intégration fonctionne exactement comme avant,
 en interrogation toutes les 2 minutes.
 

@@ -40,7 +40,11 @@ import {
   requestRefresh,
 } from './src/netatmo/widgets.js';
 import { createBticinoDiagnostic } from './src/netatmo/bticino.js';
-import { createWebhookHistory, runDeviceDiagnostic } from './src/netatmo/diagnostic.js';
+import {
+  createWebhookHistory,
+  describeWebhookBody,
+  runDeviceDiagnostic,
+} from './src/netatmo/diagnostic.js';
 import {
   CONNECTION_MESSAGES,
   DEVICE_DIAGNOSTIC_ACTION_KEY,
@@ -350,7 +354,9 @@ export function setupIntegration(
   // momentary detections are published from the payload (they exist nowhere
   // else), and every event debounces a refresh of the pollable state.
   gladys.onWebhook(WEBHOOK_KEY, async (request) => {
-    logger.debug('Netatmo webhook event received');
+    // Info level: the only visible proof that Gladys Plus delivers (one line
+    // per event; Netatmo pushes a handful per hour at most).
+    logger.info(`Netatmo webhook event received: ${describeWebhookBody(request?.body)}`);
     try {
       webhookHistory.record(request?.body);
     } catch (err) {
