@@ -34,6 +34,9 @@ export const API_PATHS = {
   // pyatmo `WebRTCCameraMixin`): SDP offer in, SDP answer out, then terminate.
   WEBRTC_OFFER: '/api/webrtc/offer',
   WEBRTC_TERMINATE: '/api/webrtc/terminate',
+  // Last events of a home (pyatmo GETEVENTS_ENDPOINT): the fallback source of
+  // the momentary detections when the webhooks deliver nothing.
+  GET_EVENTS: '/api/getevents',
 };
 
 // The manifest declares ONE webhook (`events`): Netatmo pushes every event
@@ -111,6 +114,34 @@ export const SCENE_EVENT_DEDUP_SIZE = 100;
 // feature is set to 1 then automatically back to 0 after this delay, like any
 // motion sensor (a stuck 1 would make a scene trigger fire once and never again).
 export const EVENT_RESET_MS = 60 * 1000;
+
+// The same detection may reach the integration twice: from a webhook and from
+// the getevents poll (src/netatmo/eventsPoll.js). It is published once: same
+// Netatmo event id, or — the ids missing or different — the same feature
+// within this window. What each source published is remembered for the
+// retention below (longer than the poll's max age), within a bounded size.
+export const EVENT_DEDUP_WINDOW_MS = 90 * 1000;
+export const EVENT_DEDUP_RETENTION_MS = 15 * 60 * 1000;
+export const EVENT_DEDUP_MAX_ENTRIES = 500;
+
+// getevents poll (the webhook fallback): one call per eligible home and per
+// refresh cycle, asking for the last EVENTS_POLL_SIZE events. The webhook-
+// triggered refreshes poll too, but a home is never polled twice within
+// EVENTS_POLL_MIN_INTERVAL_MS. An event older than EVENTS_POLL_MAX_AGE_MS at
+// poll time (an outage, a restart) is recorded as seen but never published:
+// no stale trigger. The first answer after a start only seeds what was
+// already there. At most EVENTS_POLL_SEEN_SIZE event ids are kept per home.
+export const EVENTS_POLL_SIZE = 30;
+export const EVENTS_POLL_MIN_INTERVAL_MS = 30 * 1000;
+export const EVENTS_POLL_MAX_AGE_MS = 10 * 60 * 1000;
+export const EVENTS_POLL_SEEN_SIZE = 500;
+// A getevents call never stalls the refresh cycle for long.
+export const EVENTS_POLL_TIMEOUT_MS = 15 * 1000;
+// Events seen by the poll, kept (redacted) for the Device diagnostic report,
+// bounded like the webhook history.
+export const EVENTS_POLL_HISTORY_SIZE = 20;
+export const EVENTS_POLL_HISTORY_PER_MODULE = 10;
+export const EVENTS_POLL_HISTORY_MAX_MODULES = 50;
 
 // Netatmo module types supported by the discovery (same enum as the core).
 export const SUPPORTED_MODULE_TYPE = {

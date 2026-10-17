@@ -10,6 +10,46 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Detections without webhooks: every refresh cycle (and every
+  webhook-triggered refresh) also reads the last events of each home with a
+  camera, doorbell, smoke / CO alarm (Security family) or BTicino door entry
+  gateway (BTicino toggle) — `GET /api/getevents`, one call per home and per
+  cycle, at most one per home within 30 s (pyatmo `async_update_events`,
+  fixture `getevents.json`). The new events go through the same path as the
+  webhooks (factored out of `events.js`): motion, person, outdoor camera
+  human / animal / vehicle sub-events, doorbell and door entry ring,
+  smoke / CO with their "cleared" events, the known-person and siren scene
+  events, the same 60 s reset. The events already there at startup are only
+  recorded (history is never replayed on a restart), an event older than
+  10 minutes when read is never published, and a detection the webhook
+  already published (same Netatmo event id, or the same feature within 90 s)
+  is not published again, and vice versa. A failure is logged at warn once
+  per streak (a scope refusal says to click Connect again), never breaks the
+  cycle and is counted in a new `events` family of the health; it never
+  marks devices degraded. No new permission: the camera, doorbell, alarm and
+  BTicino read scopes already requested cover it.
+- Device diagnostic: an **Events poll (getevents)** health line, the **Last
+  events seen by getevents** per module (time, type / sub type, ids, what was
+  done with it — no URL, no message) and the last 5 overall, next to the
+  webhook ones: events in getevents and no webhook means Netatmo does not
+  deliver the webhooks. Docs: detections within ~2 minutes without webhooks,
+  troubleshooting in the four languages.
+
+### Fixed
+
+- The motion, person, animal, vehicle, smoke, carbon monoxide and ring
+  features (and the known-person / siren scene triggers) stayed empty when
+  the Gladys Plus webhooks did not reach the integration — even with Netatmo
+  holding the integration's URL — while the Netatmo app showed the alerts:
+  they now arrive within about 2 minutes from `getevents`
+  ([#5](https://github.com/Terdious/gladys-netatmo/issues/5)).
+- Docs: when the webhook URL held by Netatmo is the integration's and nothing
+  arrives, create a new Gladys Plus Open API key — an older one (for instance
+  taken from the former core Netatmo service URL) authenticated yet never
+  delivered the webhooks on a real installation.
+
 ## [2.3.1] - 2026-10-17
 
 ### Added

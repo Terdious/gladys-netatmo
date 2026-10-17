@@ -218,7 +218,7 @@ Aktualisierung (2 Minuten, oder sofort mit den Gladys-Plus-Webhooks).
 
 Die Innenkamera Advance wird wie die Innenkamera erstellt: ein
 **Dashboard-Bild**, ein Schalter **Überwachung**, die Erkennungen **Bewegung**
-und **Person erkannt** (Gladys-Plus-Webhooks), und sie erscheint im Widget
+und **Person erkannt** (siehe _Erkennungen_ unten), und sie erscheint im Widget
 **Netatmo-Kameras**. Zwei Unterschiede, beide auf Netatmo-Seite:
 
 - ihr Schnappschuss wird über die Netatmo-VPN-URL abgerufen: Wie die
@@ -247,8 +247,8 @@ Wenn die Familie Sicherheit aktiviert ist, wird die Netatmo-Video-Türklingel
   Netzwerk bereit;
 - einer Funktion **Türklingel**, die **Klingelt** anzeigt, wenn jemand den
   Knopf drückt, nutzbar als Szenen-Auslöser (**Wenn die Türklingel klingelt**)
-  — sie benötigt die Gladys-Plus-Webhooks (siehe unten): Die Abfrage allein kann
-  kein Klingeln melden;
+  — in Echtzeit mit den Gladys-Plus-Webhooks, sonst innerhalb von etwa 2
+  Minuten (siehe unten);
 - der Qualität ihrer **WLAN**-Verbindung.
 
 Es gibt keinen Überwachungsschalter (Netatmo bietet keinen für die
@@ -327,23 +327,30 @@ pro Netatmo-Anwendung: Hat ein anderer Client sie überschrieben (das Feld
 „webhook URI“ auf dev.netatmo.com, der frühere Netatmo-Dienst des Cores),
 speichere den Gladys-Plus-Schlüssel erneut. Netatmo stellt außerdem 24 Stunden
 lang nichts mehr zu, wenn der Webhook einer Anwendung 5-mal hintereinander
-fehlgeschlagen ist (nur dev.netatmo.com zeigt das an und hebt es auf).
-Erkennungen gibt es nur, solange die Überwachung der Kamera aktiv ist.
+fehlgeschlagen ist (nur dev.netatmo.com zeigt das an und hebt es auf). Ist es
+die URL der Integration und kommt trotzdem nichts an, erstelle in Gladys Plus
+einen **neuen Open-API-Schlüssel** (Einstellungen → Open API) und speichere ihn
+hier: Ein älterer Schlüssel (etwa aus der URL des früheren Netatmo-Dienstes des
+Cores) kann sich anmelden, ohne je Webhooks zuzustellen.
+Erkennungen gibt es nur, solange die Überwachung der Kamera aktiv ist. Unabhängig
+von der Ursache kommen die Erkennungen trotzdem an, innerhalb von etwa 2
+Minuten (siehe unten).
 
 Ohne Schlüssel (oder ohne Gladys Plus) verhält sich die Integration genau wie
-zuvor und fragt alle 2 Minuten ab.
+zuvor und fragt alle 2 Minuten ab — Erkennungen inklusive.
 
 ### Was es bringt
 
 - **Die Werte kommen fast sofort an** — zum Beispiel ein in der Netatmo-App
   geänderter Thermostat-Sollwert oder der Überwachungsstatus einer Kamera.
-- **Erkennungen, die du in deinen Szenen nutzen kannst** (siehe unten).
+- **Erkennungen in Echtzeit** statt innerhalb von etwa 2 Minuten (siehe
+  unten).
 
-### Echtzeit-Erkennungen (Szenen-Auslöser)
+### Erkennungen (Szenen-Auslöser)
 
-Manche Ereignisse sind **momentan**: Sie existieren nur im Ereignisstrom, keine
-API-Abfrage kann sie melden. Sie werden als eigene Funktionen veröffentlicht,
-die als **Szenen-Auslöser** nutzbar sind:
+Manche Ereignisse sind **momentan**: Sie existieren nur im Netatmo-
+Ereignisstrom, kein Gerätezustand meldet sie. Sie werden als eigene Funktionen
+veröffentlicht, die als **Szenen-Auslöser** nutzbar sind:
 
 | Gerät                   | Funktion             | Ausgelöst durch                       |
 | ----------------------- | -------------------- | ------------------------------------- |
@@ -363,11 +370,19 @@ Ja“ — für die Türklingel den Auslöser **Wenn die Türklingel klingelt**. 
 Klingeln löst einmal aus: Die Folgeereignisse „Anruf angenommen“ / „Anruf
 verpasst“ der Netatmo-App sind keine eigenen Auslöser.
 
+**Wie schnell?** Mit den Gladys-Plus-Webhooks in wenigen Sekunden. Ohne sie —
+oder wenn Netatmo sie nicht zustellt — liest die Integration bei jeder
+2-Minuten-Aktualisierung auch die letzten Ereignisse jedes Zuhauses
+(Netatmo `getevents`, ein Aufruf pro Zuhause): Dieselben Funktionen und
+Szenen-Auslöser lösen aus, **innerhalb von etwa 2 Minuten**. Eine Erkennung,
+die beide liefern, löst nie zweimal aus, die beim Start der Integration
+bereits vorhandenen Ereignisse werden nicht wiederholt, und ein Ereignis, das
+beim Lesen älter als 10 Minuten ist (nach einem Ausfall), löst nichts aus.
+
 > ⚠️ **Wenn deine Kameras bereits in Gladys existierten**, erscheinen diese
 > neuen Funktionen nicht von selbst: Gehe in den Tab **Entdecken** und klicke
 > bei jeder Kamera (oder jedem Rauchmelder) auf **Aktualisieren**, um sie
-> hinzuzufügen. Ohne konfigurierte Webhooks bleiben diese Funktionen einfach
-> auf „Nein“.
+> hinzuzufügen.
 
 ---
 
@@ -377,7 +392,7 @@ Die Integration fügt dem Szenen-Editor eigene Karten hinzu (Gladys **5.1** oder
 neuer): Wähle **Integrations-Auslöser** oder **Integrations-Aktion** und dann
 den Netatmo-Eintrag.
 
-### Auslöser (erfordern die Gladys-Plus-Webhooks)
+### Auslöser (in Echtzeit mit den Gladys-Plus-Webhooks, ohne sie innerhalb von etwa 2 Minuten)
 
 | Auslöser                          | Löst aus, wenn                                     | An die Aktionen weitergegebene Informationen |
 | --------------------------------- | -------------------------------------------------- | -------------------------------------------- |
@@ -449,12 +464,12 @@ verknüpfte Zubehör erkannt:
   (offen/geschlossen), dazu Batterie und Funksignal (RF).
 - **Innensirene** (`NIS`) — ein schreibgeschützter Sirenen-Sensor, dazu
   Batterie und RF.
-- **Rauchmelder** (`NSD`) — erkannt mit Batterie und Signal, dazu eine Funktion
-  **Rauch**, die von den Webhooks gespeist wird (siehe Abschnitt oben): Die
-  Abfrage allein kann diesen Zustand nicht melden.
+- **Rauchmelder** (`NSD`) — erkannt mit Batterie und Signal, dazu die
+  Erkennung **Rauch** (siehe _Erkennungen_ oben): in Echtzeit mit den
+  Webhooks, ohne sie innerhalb von etwa 2 Minuten.
 - **Kohlenmonoxidmelder** (`NCO`) — wie der Rauchmelder: Batterie und Signal
-  (sofern Netatmo sie meldet), dazu eine Funktion **Kohlenmonoxid**, die von
-  den Webhooks gespeist wird.
+  (sofern Netatmo sie meldet), dazu die Erkennung **Kohlenmonoxid**, wie beim
+  Rauch.
 
 ---
 
@@ -562,14 +577,14 @@ Die Türsprechanlage wird als **ein Gerät** erkannt, benannt nach ihrer
 Innenstation (dem Gateway `BNCX`, z. B. „Classe 300EOS with Netatmo“). Die
 Module, die sie anbindet, fügen ihm ihre Funktionen hinzu, unter ihrem Namen:
 
-| Modul                           | Netatmo-Typ | Am Gerät der Türsprechanlage                                    |
-| ------------------------------- | ----------- | --------------------------------------------------------------- |
-| Innenstation (Gateway)          | `BNCX`      | WLAN-Qualität, **Klingeln** (benötigt die Gladys-Plus-Webhooks) |
-| Treppenhaus- / Außenbeleuchtung | `BNSL`      | **Licht an / aus** (z. B. „Außenbeleuchtung“)                   |
-| Geschaltete Steckdose           | `BNCS`      | Zustand an / aus (nur lesend), wenn Netatmo ihn meldet          |
-| Außenstation                    | `BNEU`      | nichts (Netatmo meldet keinen Wert dafür)                       |
-| Türschloss                      | `BNDL`      | nichts — siehe unten                                            |
-| X-Modul                         | `BNXM`      | seine Signalqualität, wenn Netatmo eine meldet                  |
+| Modul                           | Netatmo-Typ | Am Gerät der Türsprechanlage                                           |
+| ------------------------------- | ----------- | ---------------------------------------------------------------------- |
+| Innenstation (Gateway)          | `BNCX`      | WLAN-Qualität, **Klingeln** (in Echtzeit mit den Gladys-Plus-Webhooks) |
+| Treppenhaus- / Außenbeleuchtung | `BNSL`      | **Licht an / aus** (z. B. „Außenbeleuchtung“)                          |
+| Geschaltete Steckdose           | `BNCS`      | Zustand an / aus (nur lesend), wenn Netatmo ihn meldet                 |
+| Außenstation                    | `BNEU`      | nichts (Netatmo meldet keinen Wert dafür)                              |
+| Türschloss                      | `BNDL`      | nichts — siehe unten                                                   |
+| X-Modul                         | `BNXM`      | seine Signalqualität, wenn Netatmo eine meldet                         |
 
 - **Licht:** wird über Netatmo geschaltet wie in der App. Netatmo meldet nie,
   ob es an ist: Gladys zeigt den zuletzt gesendeten Befehl (das
@@ -577,7 +592,7 @@ Module, die sie anbindet, fügen ihm ihre Funktionen hinzu, unter ihrem Namen:
   kann nicht wissen, wann).
 - **Klingeln:** wird wie das Klingeln der [Video-Türklingel](#video-türklingel) veröffentlicht
   („Klingelt“, dann die Uhrzeit des letzten Klingelns), nutzbar als
-  Szenen-Auslöser — nur mit den [Gladys-Plus-Webhooks](#gladys-plus-webhooks-echtzeit--optional). Netatmo dokumentiert
+  Szenen-Auslöser — in Echtzeit mit den [Gladys-Plus-Webhooks](#gladys-plus-webhooks-echtzeit--optional), ohne sie innerhalb von etwa 2 Minuten. Netatmo dokumentiert
   dieses Ereignis für die Classe 300 EOS; auf einer echten Installation wurde
   es noch nicht beobachtet: Wenn dein Klingeln nicht erscheint, sende eine
   Diagnose (siehe unten).
@@ -605,8 +620,8 @@ Module, die sie anbindet, fügen ihm ihre Funktionen hinzu, unter ihrem Namen:
 Nutze die Aktion **Gerätediagnose** auf dem Konfigurationsbildschirm (siehe
 [Fehlerbehebung](#fehlerbehebung)): Wähle das Gerät der Türsprechanlage, oder lass
 beide Felder leer für das ganze Konto, und füge das Ergebnis in
-[Issue #59](https://github.com/Terdious/gladys-netatmo/issues/59) ein. Klingle einmal, bevor du sie startest: Der Bericht listet
-die letzten Webhook-Ereignisse jedes Moduls.
+[Issue #59](https://github.com/Terdious/gladys-netatmo/issues/59) ein. Klingle einmal, bevor du sie startest (und warte 2 Minuten): Der Bericht listet
+die letzten Webhook-Ereignisse jedes Moduls und die letzten Ereignisse, die Netatmo dafür liefert (`getevents`).
 
 Solange die Option aktiv ist, schreibt die Integration außerdem in ihre
 Protokolle, bei der ersten Aktualisierung nach einem Start und danach **nur
@@ -715,6 +730,17 @@ verschiebt nur, was noch übrig ist.
 - **Ein Rollladenbefehl schlägt mit einer Meldung „erneut verbinden“ fehl:**
   Deine Netatmo-Autorisierung stammt aus der Zeit vor der
   Rollladen-Unterstützung — klicke erneut auf Verbinden.
+- **Bewegungs- / Personenerkennungen (oder das Klingeln) kommen etwa 2
+  Minuten zu spät an, während die Netatmo-App sofort alarmiert:** Die
+  Gladys-Plus-Webhooks erreichen die Integration nicht, die Erkennungen kommen
+  aus dem Lesen von `getevents` alle 2 Minuten. Starte die Aktion
+  **Gerätediagnose** (beide Felder leer) und vergleiche **Last events seen by
+  getevents** mit **Last webhook events**: Ereignisse im ersten und keine im
+  zweiten bedeutet, dass Netatmo die Webhooks nicht zustellt — siehe
+  _Registriert, aber es kommt nichts an?_ im Abschnitt Webhooks. In beiden
+  nichts: Prüfe, ob die Überwachung der Kamera aktiv ist. Die Zeile **Events
+  poll (getevents)** zeigt ihren letzten Fehler (zum Beispiel eine fehlende
+  Berechtigung: Klicke erneut auf Verbinden).
 - **Kein Kameraton:** Siehe den Mikrofon-Tipp im Abschnitt Kameras oben.
 - **Türklingel oder Innenkamera Advance ohne Live-Video:** Siehe
   _WebRTC-Live-Video_ im Abschnitt Video-Türklingel (Gladys-Version, Browser,
@@ -729,7 +755,8 @@ verschiebt nur, was noch übrig ist.
   unterstütztes); lass beide Felder leer für eine Übersicht des ganzen Kontos.
   Der Bericht zeigt, was Netatmo für das Modul sendet, was die Integration
   dafür veröffentlicht, die Netatmo-Felder, die sie noch nicht nutzt, die
-  letzten Webhook-Ereignisse, die Berechtigungen und den Zustand jeder
+  letzten Webhook-Ereignisse und die letzten mit `getevents` gelesenen
+  Ereignisse, die Berechtigungen und den Zustand jeder
   Netatmo-API. Er wird auch in die **Protokolle** der Integration geschrieben
   (Zeilen nach `[netatmo-diagnostic]`), falls du ihn nicht vom Bildschirm
   kopieren kannst. **Lies ihn, bevor du ihn öffentlich postest:** Tokens, URLs

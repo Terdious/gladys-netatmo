@@ -12,7 +12,8 @@
 // schedule), switchhomeschedule (active heating schedule, issue #58),
 // setthermmode (heating mode of a home), setpersonsaway / setpersonshome
 // (presence of the persons known to the cameras) and webrtc/offer +
-// webrtc/terminate (live view of the WebRTC cameras, issue #70).
+// webrtc/terminate (live view of the WebRTC cameras, issue #70) and getevents
+// (the last events of a home: fallback of the webhook detections).
 // -----------------------------------------------------------------------------
 
 import { createLogger } from '@gladysassistant/integration-sdk';
@@ -113,6 +114,33 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     }
     const { home } = body.body;
     return { home, errors: home.errors ?? body.body.errors ?? [] };
+  }
+
+  /**
+   * Fetch the last events of one home (pyatmo `async_update_events`, fixture
+   * getevents.json): `body.home.events`, newest first — each with its `id`,
+   * `type`, `time` (UNIX seconds), `module_id`, and for the outdoor camera
+   * the `subevents` (`human` / `animal` / `vehicle`). The read scopes of the
+   * cameras, doorbell and alarms (BTicino: `read_bfi` / `read_mx`) cover it.
+   * @param {string} homeId Netatmo home id
+   * @param {{size?: number, timeoutMs?: number}} [options] number of events
+   *   asked for, request timeout
+   * @returns {Promise<Array<object>>} the events (empty when none)
+   */
+  async function getEvents(homeId, { size, timeoutMs } = {}) {
+    const params = { home_id: homeId };
+    if (size) {
+      params.size = String(size);
+    }
+    const query = new URLSearchParams(params).toString();
+    const body = await request(`${API_PATHS.GET_EVENTS}?${query}`, timeoutMs ? { timeoutMs } : {});
+    if (body?.status !== 'ok') {
+      const error = new Error(`Netatmo API ${API_PATHS.GET_EVENTS} answered without a status ok`);
+      error.body = body;
+      throw error;
+    }
+    const events = body?.body?.home?.events;
+    return Array.isArray(events) ? events : [];
   }
 
   /**
@@ -312,6 +340,7 @@ export function createNetatmoClient({ oauth, fetchImpl = fetch, baseUrl = NETATM
     request,
     getHomesData,
     getHomeStatus,
+    getEvents,
     getThermostatsData,
     getStationsData,
     getHomeCoachsData,

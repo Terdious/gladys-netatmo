@@ -216,7 +216,7 @@ Un mode changé depuis l'application Netatmo apparaît au rafraîchissement suiv
 
 La caméra intérieure Advance est créée comme la caméra intérieure : une **image
 de tableau de bord**, un interrupteur **monitoring**, les détections
-**Mouvement** et **Personne détectée** (webhooks Gladys Plus), et elle apparaît
+**Mouvement** et **Personne détectée** (voir _Détections_ ci-dessous), et elle apparaît
 dans le widget **Caméras Netatmo**. Deux différences, toutes deux côté Netatmo :
 
 - son instantané est récupéré via l'URL VPN Netatmo : comme la sonnette vidéo,
@@ -244,8 +244,8 @@ créée avec :
   local ;
 - une fonctionnalité **Sonnette** qui affiche **Sonne** quand quelqu'un appuie
   sur le bouton, utilisable comme déclencheur de scène (**Si la sonnette
-  sonne**) — elle nécessite les webhooks Gladys Plus (voir ci-dessous) : le
-  polling seul ne peut pas remonter un coup de sonnette ;
+  sonne**) — en temps réel avec les webhooks Gladys Plus, sinon en 2 minutes
+  environ (voir ci-dessous) ;
 - la qualité de son lien **Wifi**.
 
 Il n'y a pas d'interrupteur monitoring (Netatmo n'en propose pas pour la
@@ -322,25 +322,31 @@ Un seul webhook par application Netatmo : si un autre client l'a remplacé (le
 champ « webhook URI » de dev.netatmo.com, l'ancien service Netatmo du core),
 enregistrez à nouveau la clé Gladys Plus. Netatmo suspend aussi les envois
 pendant 24 heures pour une application dont le webhook a échoué 5 fois de suite
-(seul dev.netatmo.com l'affiche et permet de lever la suspension). Les
-détections n'existent que si la surveillance de la caméra est activée.
+(seul dev.netatmo.com l'affiche et permet de lever la suspension). Si l'URL est
+bien celle de l'intégration et que rien n'arrive malgré tout, créez une
+**nouvelle clé Open API** dans Gladys Plus (Réglages → Open API) et
+enregistrez-la ici : une ancienne clé (par exemple reprise de l'URL de l'ancien
+service Netatmo du core) peut s'authentifier sans jamais livrer les webhooks. Les
+détections n'existent que si la surveillance de la caméra est activée. Quelle que
+soit la cause, les détections arrivent quand même, en 2 minutes environ (voir
+ci-dessous).
 
 Sans clé (ou sans Gladys Plus), l'intégration fonctionne exactement comme avant,
-en interrogation toutes les 2 minutes.
+en interrogation toutes les 2 minutes — détections comprises.
 
 ### Ce que ça apporte
 
 - **Les valeurs remontent quasi instantanément** — par exemple une consigne de
   thermostat changée depuis l'application Netatmo, ou l'état de surveillance
   d'une caméra.
-- **Des détections utilisables dans vos scènes** (voir ci-dessous).
+- **Les détections en temps réel** au lieu de 2 minutes environ (voir
+  ci-dessous).
 
-### Détections en temps réel (déclencheurs de scène)
+### Détections (déclencheurs de scène)
 
 Certains événements sont **ponctuels** : ils n'existent que dans le flux
-d'événements, aucune interrogation de l'API ne peut les remonter. Ils sont
-publiés comme des fonctionnalités dédiées, utilisables comme **déclencheurs de
-scène** :
+d'événements Netatmo, aucun état d'appareil ne les remonte. Ils sont publiés
+comme des fonctionnalités dédiées, utilisables comme **déclencheurs de scène** :
 
 | Appareil                         | Fonctionnalité          | Déclenchée par                       |
 | -------------------------------- | ----------------------- | ------------------------------------ |
@@ -361,11 +367,20 @@ déclencheur **Si la sonnette sonne**. Un coup de sonnette déclenche une seule
 fois : les événements « appel accepté » / « appel manqué » de l'application
 Netatmo ne sont pas des déclencheurs à part.
 
+**En combien de temps ?** Avec les webhooks Gladys Plus, en quelques secondes.
+Sans eux — ou quand Netatmo ne les envoie pas — l'intégration lit aussi les
+derniers événements de chaque maison à chaque rafraîchissement de 2 minutes
+(`getevents` de Netatmo, un appel par maison) : les mêmes fonctionnalités et
+déclencheurs de scène se déclenchent, **en 2 minutes environ**. Une détection
+apportée par les deux n'est jamais déclenchée deux fois, les événements déjà
+présents au démarrage de l'intégration ne sont pas rejoués, et un événement
+vieux de plus de 10 minutes quand il est lu (après une panne) ne déclenche
+rien.
+
 > ⚠️ **Si vos caméras existaient déjà dans Gladys**, ces nouvelles
 > fonctionnalités n'apparaissent pas toutes seules : allez sur l'écran
 > **Découverte** et cliquez sur **Mettre à jour** sur chaque caméra (ou
-> détecteur de fumée) pour les ajouter. Sans webhooks configurés, ces
-> fonctionnalités restent simplement à « Non ».
+> détecteur de fumée) pour les ajouter.
 
 ---
 
@@ -375,7 +390,7 @@ L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys **5.1*
 plus récent) : choisissez **Déclencheur d'intégration** ou **Action
 d'intégration**, puis l'entrée Netatmo.
 
-### Déclencheurs (nécessitent les webhooks Gladys Plus)
+### Déclencheurs (en temps réel avec les webhooks Gladys Plus, en 2 minutes environ sans)
 
 | Déclencheur                    | Se déclenche quand                               | Informations transmises aux actions |
 | ------------------------------ | ------------------------------------------------ | ----------------------------------- |
@@ -449,11 +464,11 @@ Quand la famille Sécurité est activée, les accessoires liés à vos caméras 
 - **Sirène intérieure** (`NIS`) — un capteur sirène en lecture seule, plus la
   batterie et le signal RF.
 - **Détecteur de fumée** (`NSD`) — découvert avec sa batterie et son signal,
-  plus la fonctionnalité **Fumée** alimentée par les webhooks (voir la section
-  ci-dessus) : le polling seul ne peut pas remonter cet état.
+  plus la détection **Fumée** (voir _Détections_ ci-dessus) : en temps réel
+  avec les webhooks, en 2 minutes environ sans.
 - **Détecteur de monoxyde de carbone** (`NCO`) — comme le détecteur de fumée :
   batterie et signal (quand Netatmo les remonte), plus la fonctionnalité
-  **Monoxyde de carbone** alimentée par les webhooks.
+  **Monoxyde de carbone**, comme pour la fumée.
 
 ---
 
@@ -561,14 +576,14 @@ L'interphone est découvert comme **un seul appareil**, au nom de son poste
 intérieur (la passerelle `BNCX`, ex. « Classe 300EOS with Netatmo »). Les
 modules qu'il relie lui ajoutent leurs fonctionnalités, à leur nom :
 
-| Module                           | Type Netatmo | Sur l'appareil interphone                                       |
-| -------------------------------- | ------------ | --------------------------------------------------------------- |
-| Poste intérieur (passerelle)     | `BNCX`       | qualité WiFi, **sonnerie** (nécessite les webhooks Gladys Plus) |
-| Éclairage d'escalier / extérieur | `BNSL`       | **éclairage allumé / éteint** (ex. « Eclairage extérieur »)     |
-| Prise commandée                  | `BNCS`       | état allumé / éteint en lecture seule, quand Netatmo le renvoie |
-| Platine de rue                   | `BNEU`       | rien (Netatmo ne renvoie aucune valeur pour elle)               |
-| Serrure                          | `BNDL`       | rien — voir ci-dessous                                          |
-| Module X                         | `BNXM`       | sa qualité de signal, quand Netatmo en renvoie une              |
+| Module                           | Type Netatmo | Sur l'appareil interphone                                                |
+| -------------------------------- | ------------ | ------------------------------------------------------------------------ |
+| Poste intérieur (passerelle)     | `BNCX`       | qualité WiFi, **sonnerie** (en temps réel avec les webhooks Gladys Plus) |
+| Éclairage d'escalier / extérieur | `BNSL`       | **éclairage allumé / éteint** (ex. « Eclairage extérieur »)              |
+| Prise commandée                  | `BNCS`       | état allumé / éteint en lecture seule, quand Netatmo le renvoie          |
+| Platine de rue                   | `BNEU`       | rien (Netatmo ne renvoie aucune valeur pour elle)                        |
+| Serrure                          | `BNDL`       | rien — voir ci-dessous                                                   |
+| Module X                         | `BNXM`       | sa qualité de signal, quand Netatmo en renvoie une                       |
 
 - **Éclairage :** commandé via Netatmo comme dans l'application. Netatmo ne
   renvoie jamais s'il est allumé : Gladys affiche la dernière commande envoyée
@@ -576,7 +591,7 @@ modules qu'il relie lui ajoutent leurs fonctionnalités, à leur nom :
   peut pas savoir quand).
 - **Sonnerie :** publiée comme celle de la [sonnette vidéo](#sonnette-vidéo) (« Sonne » puis
   l'heure du dernier appel), utilisable comme déclencheur de scène —
-  uniquement avec les [webhooks Gladys Plus](#webhooks-gladys-plus-temps-réel--optionnel). Netatmo documente cet
+  en temps réel avec les [webhooks Gladys Plus](#webhooks-gladys-plus-temps-réel--optionnel), en 2 minutes environ sans. Netatmo documente cet
   événement pour le Classe 300 EOS ; il n'a pas encore été vu sur une
   installation réelle : si vos appels n'apparaissent pas, envoyez un
   diagnostic (ci-dessous).
@@ -604,8 +619,8 @@ modules qu'il relie lui ajoutent leurs fonctionnalités, à leur nom :
 Utilisez l'action **Diagnostic d'un appareil** de l'écran de configuration
 (voir [Dépannage](#dépannage)) : choisissez l'appareil interphone, ou laissez les
 deux champs vides pour tout le compte, et collez le résultat dans
-l'[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59). Faites sonner une fois avant de la lancer : le rapport
-liste les derniers événements webhook de chaque module.
+l'[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59). Faites sonner une fois avant de la lancer (et attendez 2 minutes) : le rapport
+liste les derniers événements webhook de chaque module, et les derniers événements que Netatmo renvoie pour lui (`getevents`).
 
 Tant que l'option est active, l'intégration écrit aussi dans ses journaux, au
 premier rafraîchissement après un démarrage puis **uniquement quand quelque
@@ -714,6 +729,17 @@ peut être relancée : elle ne déplace que ce qui reste.
 - **Une commande de volet échoue avec un message « reconnecter » :** votre
   autorisation Netatmo date d'avant la prise en charge des volets — recliquez
   sur Connecter.
+- **Les détections de mouvement / personne (ou les coups de sonnette)
+  arrivent avec 2 minutes de retard, alors que l'application Netatmo alerte
+  tout de suite :** les webhooks Gladys Plus n'atteignent pas l'intégration,
+  les détections viennent de la lecture `getevents` toutes les 2 minutes.
+  Lancez l'action **Diagnostic d'un appareil** (les deux champs vides) et
+  comparez **Last events seen by getevents** avec **Last webhook events** :
+  des événements dans le premier et aucun dans le second signifie que Netatmo
+  n'envoie pas les webhooks — voir _Enregistré mais rien n'arrive ?_ dans la
+  section webhooks. Rien dans les deux : vérifiez que la surveillance de la
+  caméra est activée. La ligne **Events poll (getevents)** affiche sa dernière
+  erreur (par exemple une autorisation manquante : recliquez sur Connecter).
 - **Pas de son sur la caméra :** voir l'astuce microphone dans la section
   Caméras ci-dessus.
 - **Sonnette ou caméra intérieure Advance sans direct :** voir _Direct WebRTC_
@@ -728,7 +754,8 @@ peut être relancée : elle ne déplace que ce qui reste.
   module pas encore pris en charge) ; laissez les deux champs vides pour un
   résumé de tout le compte. Le rapport montre ce que Netatmo envoie pour le
   module, ce que l'intégration publie pour lui, les champs Netatmo qu'elle
-  n'utilise pas encore, les derniers événements webhook, les autorisations et
+  n'utilise pas encore, les derniers événements webhook et les derniers
+  événements lus avec `getevents`, les autorisations et
   l'état de chaque API Netatmo. Il est aussi écrit dans les **Journaux** de
   l'intégration (lignes après `[netatmo-diagnostic]`) si vous ne pouvez pas le
   copier depuis l'écran. **Relisez-le avant de le publier :** jetons, URL et

@@ -29,6 +29,7 @@ import { createNetatmoClient } from './src/netatmo/client.js';
 import { createTelemetry } from './src/netatmo/telemetry.js';
 import { createWebhooks } from './src/netatmo/webhooks.js';
 import { createEvents } from './src/netatmo/events.js';
+import { createEventsPoll } from './src/netatmo/eventsPoll.js';
 import { createWebRtc } from './src/netatmo/webrtc.js';
 import { setDeviceValue } from './src/netatmo/setValue.js';
 import { SCENE_ACTIONS } from './src/netatmo/scenes.js';
@@ -125,12 +126,23 @@ export function setupIntegration(
     getRawDevice: (id) => telemetry.getRawDevice(id),
   });
 
+  // Momentary detections (motion, person, smoke, doorbell ring…): published as
+  // push features straight from the event payload — no API state reports them.
+  // Identity events (known person seen / gone, siren sounding) are fired as
+  // scene events: the homes summaries give the person and home names.
+  const events = createEvents({ gladys, getHomes: () => telemetry.getHomes() });
+  // The same detections from GET /api/getevents at the end of every refresh
+  // cycle: the fallback when the webhooks deliver nothing (deduplicated
+  // against them, never replaying history on a restart).
+  const eventsPoll = createEventsPoll({ client, events });
+
   telemetry = createTelemetry({
     gladys,
     client,
     fetchImpl,
     bticinoDiagnostic,
     webRtc,
+    eventsPoll,
     ...(refreshIntervalMs ? { refreshIntervalMs } : {}),
     onDegradedChange: async () => {
       if (connected) {
@@ -148,11 +160,6 @@ export function setupIntegration(
     client,
     refresh: () => telemetry.refreshNow(config),
   });
-  // Momentary detections (motion, person, smoke, doorbell ring…): published as
-  // push features straight from the event payload — no API state reports them.
-  // Identity events (known person seen / gone, siren sounding) are fired as
-  // scene events: the homes summaries give the person and home names.
-  const events = createEvents({ gladys, getHomes: () => telemetry.getHomes() });
 
   // Tokens wiped after the 24h grace window: ask the user to reconnect.
   oauth.onAuthLost(async (message) => {
@@ -351,8 +358,9 @@ export function setupIntegration(
 
   // --- Webhooks: a Netatmo event was relayed by Gladys Plus ------------------
   // fire_and_forget: the resolved value is ignored. Two complementary paths:
-  // momentary detections are published from the payload (they exist nowhere
-  // else), and every event debounces a refresh of the pollable state.
+  // momentary detections are published from the payload (real time; the
+  // getevents poll only catches what the webhooks did not deliver), and every
+  // event debounces a refresh of the pollable state.
   gladys.onWebhook(WEBHOOK_KEY, async (request) => {
     // Info level: the only visible proof that Gladys Plus delivers (one line
     // per event; Netatmo pushes a handful per hour at most).
@@ -386,7 +394,15 @@ export function setupIntegration(
   gladys.onAction(DEVICE_DIAGNOSTIC_ACTION_KEY, (fields) => {
     logger.info(`onAction ${DEVICE_DIAGNOSTIC_ACTION_KEY}`);
     return runDeviceDiagnostic(
-      { gladys, oauth, telemetry, webhooks, webhookHistory, getConfig: () => config },
+      {
+        gladys,
+        oauth,
+        telemetry,
+        webhooks,
+        webhookHistory,
+        eventsPoll,
+        getConfig: () => config,
+      },
       fields,
     );
   });
@@ -456,6 +472,7 @@ export function setupIntegration(
     telemetry,
     webhooks,
     events,
+    eventsPoll,
     bticinoDiagnostic,
     webhookHistory,
     webRtc,

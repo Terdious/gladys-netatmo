@@ -13,6 +13,8 @@ import { normalizeConfig } from '../../src/config.js';
 import { createNetatmoClient } from '../../src/netatmo/client.js';
 import { createTelemetry } from '../../src/netatmo/telemetry.js';
 import { createBticinoDiagnostic } from '../../src/netatmo/bticino.js';
+import { createEvents } from '../../src/netatmo/events.js';
+import { createEventsPoll } from '../../src/netatmo/eventsPoll.js';
 import { redactForDiagnostic as sharedRedact } from '../../src/netatmo/redact.js';
 import { redactForDiagnostic } from '../../src/netatmo/bticino.js';
 import {
@@ -475,5 +477,71 @@ test('the report says which webhook URL Netatmo holds', async () => {
   assert.match(
     report,
     /\n {2}Webhook URL held by Netatmo: https:\/\/relay\.example\/v1\/api\/netatmo\/<redacted> — NOT the integration's URL/,
+  );
+});
+
+test('the events seen by getevents are reported next to the webhooks, per module and overall', async () => {
+  const doorEntry = await createDoorEntry();
+  assert.ok(doorEntry);
+  const events = createEvents({ gladys, getHomes: () => telemetry.getHomes(), now: () => clock });
+  const eventsPoll = createEventsPoll({
+    client,
+    events,
+    now: () => clock,
+    logger: { info() {}, warn() {}, debug() {} },
+  });
+  const t = Math.round(clock / 1000);
+  netatmo.state.events['home-1'] = [
+    { id: 'ring-old', type: 'incoming_call', time: t - 600, module_id: BNEU_ID },
+  ];
+  await eventsPoll.poll(CONFIG, telemetry.getHomes());
+  clock += 2 * 60 * 1000;
+  netatmo.state.events['home-1'].push({
+    id: 'ring-new',
+    type: 'incoming_call',
+    time: t + 100,
+    module_id: BNEU_ID,
+    snapshot: { url: 'https://netatmocameraimage.blob.core.windows.net/production/secret' },
+  });
+  await eventsPoll.poll(CONFIG, telemetry.getHomes());
+  events.stop();
+
+  const report = await run({ device: ext(BNCX_ID) }, { eventsPoll });
+  assert.match(
+    report,
+    / {2}Events poll \(getevents\): last poll 2027-01-15T08:02:00.000Z, 2 event\(s\) seen since start, 1 detection\(s\) published from it, newest event per home home-1: 2027-01-15T08:01:40.000Z/,
+  );
+  assert.match(
+    report,
+    /Module c04774-a06f-db4f3bf1ff93[\s\S]*Last events seen by getevents:\n {4}2027-01-15T07:50:00.000Z incoming_call \(c04774-a06f-db4f3bf1ff93, event ring-old\): already there at startup — not published\n {4}2027-01-15T08:01:40.000Z incoming_call \(c04774-a06f-db4f3bf1ff93, event ring-new\): published/,
+  );
+  assert.ok(!report.includes('netatmocameraimage'));
+
+  const summary = await run({}, { eventsPoll });
+  assert.match(
+    summary,
+    /Last events seen by getevents \(all modules\):\n {2}2027-01-15T07:50:00.000Z incoming_call/,
+  );
+  // Without a poll (older wiring) the sections are simply absent.
+  assert.ok(!(await run({})).includes('getevents'));
+});
+
+test('the events poll line says when it has not run yet, and its last error', async () => {
+  const eventsPoll = createEventsPoll({
+    client,
+    events: { handleEvent: async () => ({ outcome: 'published', scenes: 0 }) },
+    now: () => clock,
+    logger: { info() {}, warn() {}, debug() {} },
+  });
+  assert.match(
+    await run({}, { eventsPoll }),
+    /Events poll \(getevents\): not run yet \(no camera, doorbell, alarm or door entry discovered with its family on\)/,
+  );
+  await telemetry.syncDiscovery(CONFIG);
+  netatmo.state.failGetEventsWith = { status: 503, body: {} };
+  await eventsPoll.poll(CONFIG, telemetry.getHomes());
+  assert.match(
+    await run({}, { eventsPoll }),
+    /Events poll \(getevents\): last poll .*, 0 event\(s\) seen since start, 0 detection\(s\) published from it, last error: Netatmo API \/api\/getevents\?home_id=home-1&size=30 answered 503/,
   );
 });

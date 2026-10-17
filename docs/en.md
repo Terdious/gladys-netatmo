@@ -204,7 +204,7 @@ right away with the Gladys Plus webhooks).
 
 The Indoor Camera Advance is created like the indoor camera: a **dashboard
 image**, a **monitoring** switch, the **Motion** and **Person detected**
-detections (Gladys Plus webhooks), and it shows up in the **Netatmo cameras**
+detections (see _Detections_ below), and it shows up in the **Netatmo cameras**
 widget. Two differences, both on Netatmo's side:
 
 - its snapshot is fetched through the Netatmo VPN URL: like the video doorbell,
@@ -229,8 +229,8 @@ created with:
 - a **dashboard image** (a snapshot, refreshed automatically) — fetched through
   the Netatmo VPN URL: the doorbell does not serve it on the local network;
 - a **Doorbell** feature that shows **Ringing** when someone presses the button,
-  usable as a scene trigger (**If the doorbell rings**) — it needs the Gladys
-  Plus webhooks (see below): polling alone cannot report a ring;
+  usable as a scene trigger (**If the doorbell rings**) — in real time with
+  the Gladys Plus webhooks, otherwise within about 2 minutes (see below);
 - its **Wifi** link quality.
 
 There is no monitoring switch (Netatmo offers none for the doorbell). Its live
@@ -302,22 +302,27 @@ only per Netatmo application: if another client overwrote it (the "webhook URI"
 field of dev.netatmo.com, the former core Netatmo service), save the Gladys Plus
 key again. Netatmo also stops delivering for 24 hours to an application whose
 webhook failed 5 times in a row (only dev.netatmo.com shows it, and lets you
-lift it). Detections only exist while the camera monitoring is on.
+lift it). If the URL is the integration's and still nothing arrives, create a
+**new Open API key** in Gladys Plus (Settings → Open API) and save it here: an
+older key (for instance one taken from the former core Netatmo service URL) can
+authenticate yet never deliver the webhooks. Detections only exist while the
+camera monitoring is on. Whatever the
+cause, the detections still arrive, within about 2 minutes (see below).
 
 Without a key (or without Gladys Plus), the integration behaves exactly as
-before, polling every 2 minutes.
+before, polling every 2 minutes — detections included.
 
 ### What it brings
 
 - **Values land almost instantly** — for example a thermostat setpoint changed
   from the Netatmo app, or a camera monitoring state.
-- **Detections you can use in your scenes** (see below).
+- **Detections in real time** instead of within about 2 minutes (see below).
 
-### Real-time detections (scene triggers)
+### Detections (scene triggers)
 
-Some events are **momentary**: they exist only in the event stream, no API poll
-can report them. They are published as dedicated features, usable as **scene
-triggers**:
+Some events are **momentary**: they exist only in the Netatmo event stream,
+no device state reports them. They are published as dedicated features,
+usable as **scene triggers**:
 
 | Device                     | Feature              | Fired by                       |
 | -------------------------- | -------------------- | ------------------------------ |
@@ -336,10 +341,17 @@ scene, use the "value becomes Yes" trigger — for the doorbell, the **If the
 doorbell rings** trigger. A ring fires once: the follow-up "call answered" /
 "call missed" events of the Netatmo app are not separate triggers.
 
+**How fast?** With the Gladys Plus webhooks, in a few seconds. Without them —
+or when Netatmo does not deliver them — the integration also reads the last
+events of each home at every 2-minute refresh (Netatmo `getevents`, one call
+per home): the same features and scene triggers fire, **within about 2
+minutes**. A detection is never fired twice when both bring it, the events
+already there when the integration starts are not replayed, and an event
+older than 10 minutes when read (after an outage) fires nothing.
+
 > ⚠️ **If your cameras already existed in Gladys**, these new features do not
 > appear on their own: go to the **Discovery** screen and click **Update** on
-> each camera (or smoke alarm) to add them. Without webhooks configured, these
-> features simply stay at "No".
+> each camera (or smoke alarm) to add them.
 
 ---
 
@@ -349,7 +361,7 @@ The integration adds its own cards to the scene editor (Gladys **5.1** or
 later): pick **Integration trigger** or **Integration action**, then the Netatmo
 entry.
 
-### Triggers (need the Gladys Plus webhooks)
+### Triggers (real time with the Gladys Plus webhooks, within about 2 minutes without)
 
 | Trigger                    | Fires when                               | Information passed on to the actions |
 | -------------------------- | ---------------------------------------- | ------------------------------------ |
@@ -418,11 +430,11 @@ discovered too:
   battery and RF signal.
 - **Indoor siren** (`NIS`) — a read-only sounding sensor, plus battery and RF.
 - **Smoke alarm** (`NSD`) — discovered with its battery and signal, plus a
-  **Smoke** feature fed by the webhooks (see the section above): polling alone
-  cannot report that state.
+  **Smoke** detection (see _Detections_ above): in real time with the
+  webhooks, within about 2 minutes without.
 - **Carbon monoxide alarm** (`NCO`) — same as the smoke alarm: battery and
-  signal (when Netatmo reports them), plus a **Carbon monoxide** feature fed by
-  the webhooks.
+  signal (when Netatmo reports them), plus a **Carbon monoxide** detection,
+  like the smoke.
 
 ---
 
@@ -523,21 +535,21 @@ The door entry is discovered as **one device**, named after its indoor unit
 (the `BNCX` gateway, e.g. "Classe 300EOS with Netatmo"). The modules it
 bridges add their features to it, named after them:
 
-| Module                    | Netatmo type | On the door entry device                                         |
-| ------------------------- | ------------ | ---------------------------------------------------------------- |
-| Indoor unit (gateway)     | `BNCX`       | WiFi quality, **doorbell ring** (needs the Gladys Plus webhooks) |
-| Staircase / outdoor light | `BNSL`       | **light on / off** (e.g. "Outdoor lighting")                     |
-| Controlled socket         | `BNCS`       | read-only on / off state, when Netatmo reports it                |
-| Street panel              | `BNEU`       | nothing (Netatmo reports no value for it)                        |
-| Door lock                 | `BNDL`       | nothing — see below                                              |
-| X module                  | `BNXM`       | its signal quality, when Netatmo reports one                     |
+| Module                    | Netatmo type | On the door entry device                                                  |
+| ------------------------- | ------------ | ------------------------------------------------------------------------- |
+| Indoor unit (gateway)     | `BNCX`       | WiFi quality, **doorbell ring** (real time with the Gladys Plus webhooks) |
+| Staircase / outdoor light | `BNSL`       | **light on / off** (e.g. "Outdoor lighting")                              |
+| Controlled socket         | `BNCS`       | read-only on / off state, when Netatmo reports it                         |
+| Street panel              | `BNEU`       | nothing (Netatmo reports no value for it)                                 |
+| Door lock                 | `BNDL`       | nothing — see below                                                       |
+| X module                  | `BNXM`       | its signal quality, when Netatmo reports one                              |
 
 - **Light:** switched through Netatmo like in the app. Netatmo never reports
   whether it is on: Gladys shows the last command it sent (the staircase light
   usually switches itself off after a while, Gladys cannot know when).
 - **Ring:** published like the [video doorbell](#video-doorbell) ring (`Ringing` then the
-  time of the last ring), usable as a scene trigger — only with the
-  [Gladys Plus webhooks](#gladys-plus-webhooks-real-time--optional). Netatmo documents this event for the
+  time of the last ring), usable as a scene trigger — in real time with the
+  [Gladys Plus webhooks](#gladys-plus-webhooks-real-time--optional), within about 2 minutes without. Netatmo documents this event for the
   Classe 300 EOS; it has not been seen on a real installation yet: if your
   rings do not show, send a diagnostic (below).
 - **Opening the door is not available.** The Netatmo API used by third-party
@@ -562,8 +574,8 @@ bridges add their features to it, named after them:
 Use the **Device diagnostic** action of the Configuration screen (see
 [Troubleshooting](#troubleshooting)): pick the door entry device, or leave both
 fields empty for the whole account, and paste the result in
-[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59). Ring once before running it: the report lists the last webhook
-events of each module.
+[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59). Ring once before running it (and wait 2 minutes): the report lists the last webhook
+events of each module, and the last events Netatmo returns for it (`getevents`).
 
 While the toggle is on, the integration also writes to its logs, at the first
 refresh after a start and then **only when something changes**, the raw data
@@ -662,6 +674,16 @@ moves what is left.
   account.
 - **A shutter command fails with a "reconnect" message:** your Netatmo
   authorization predates the shutter support — click Connect again.
+- **Motion / person detections (or rings) arrive about 2 minutes late, while
+  the Netatmo app alerts at once:** the Gladys Plus webhooks do not reach the
+  integration, the detections come from the 2-minute `getevents` reading.
+  Run the **Device diagnostic** action (both fields empty) and compare **Last
+  events seen by getevents** with **Last webhook events**: events in the first
+  and none in the second means Netatmo does not deliver the webhooks — see
+  _Registered but nothing arrives?_ in the webhooks section. Nothing in
+  either: check that the camera monitoring is on. The **Events poll
+  (getevents)** line shows its last error (for instance a missing permission:
+  click Connect again).
 - **No camera sound:** see the microphone tip in the Cameras section above.
 - **Doorbell or Indoor Camera Advance without live video:** see _WebRTC live
   view_ in the Video doorbell section (Gladys version, browser, firewall).
@@ -674,7 +696,8 @@ moves what is left.
   create (e.g. one the integration does not support yet); leave both fields
   empty for a summary of the whole account. The report shows what Netatmo
   sends for the module, what the integration publishes for it, the Netatmo
-  fields it does not use yet, the last webhook events, the permissions and the
+  fields it does not use yet, the last webhook events and the last events
+  read with `getevents`, the permissions and the
   state of each Netatmo API. It is also written to the integration **Logs**
   (lines after `[netatmo-diagnostic]`) if you cannot copy it from the screen.
   **Read it before posting it publicly:** tokens, URLs and e-mail addresses

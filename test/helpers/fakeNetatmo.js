@@ -5,7 +5,8 @@
 //   - Bearer-protected API: homesdata, homestatus, getthermostatsdata,
 //     getstationsdata, setroomthermpoint, switchhomeschedule, setthermmode,
 //     setpersonsaway and setpersonshome (form), gethomecoachsdata, setstate
-//     (JSON), webrtc/offer and webrtc/terminate (form, issue #70);
+//     (JSON), webrtc/offer and webrtc/terminate (form, issue #70), getevents
+//     (the events of `state.events[<home id>]`, pyatmo getevents.json shape);
 //   - two fake cameras (/vpn/<id> and /local/<id>: command/ping + snapshot).
 // Behaviour toggles (`failTokenWith`, `rejectAccessToken`, `failSetpointWith`,
 // `failSwitchScheduleWith`, `failHomesWith`, `failLocalSnapshot`) let the tests exercise the failure
@@ -660,6 +661,12 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
     failHomesWith: null, // set to an HTTP status to make homesdata fail
     failStationsWith: null, // set to an HTTP status to make getstationsdata fail
     failHomeCoachsWith: null, // set to {status, body} to make gethomecoachsdata fail
+    // getevents (pyatmo fixture getevents.json shape): the events answered per
+    // home id, newest first like the real cloud (none by default), every
+    // parsed query, and a failure toggle ({status, body}).
+    events: {},
+    getEventsRequests: [],
+    failGetEventsWith: null,
     cameraRequests: [], // every hit on the fake camera endpoints ({side, camId, path})
     snapshotJpeg: Buffer.from('fake-jpeg-snapshot-bytes'), // served by /live/snapshot_720.jpg
     failLocalSnapshot: false, // make the LOCAL snapshot fail (stale-cache fallback test)
@@ -825,6 +832,23 @@ export async function startFakeNetatmo({ expiresIn = 10800 } = {}) {
             return;
           }
           respond({ status: 'ok', body: homeStatus });
+          return;
+        }
+        if (req.url.startsWith('/api/getevents')) {
+          const query = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
+          state.getEventsRequests.push(query);
+          if (state.failGetEventsWith) {
+            respond(state.failGetEventsWith.body, state.failGetEventsWith.status);
+            return;
+          }
+          const events = [...(state.events[query.home_id] ?? [])].sort((a, b) => b.time - a.time);
+          respond({
+            status: 'ok',
+            time_server: 1645897231,
+            body: {
+              home: { id: query.home_id, events: events.slice(0, Number(query.size) || 30) },
+            },
+          });
           return;
         }
         if (req.url.startsWith('/api/getthermostatsdata')) {

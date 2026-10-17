@@ -11,8 +11,9 @@
 //     name or Netatmo id of a module not created): its type, name, home,
 //     bridge, support status, the Gladys device and features the integration
 //     publishes for it, its raw homesdata / homestatus entries, the fields
-//     Netatmo reports that the integration does not use, and the last
-//     webhook events naming it;
+//     Netatmo reports that the integration does not use, the last webhook
+//     events naming it and the last events the getevents poll saw for it
+//     (events in getevents and no webhook = Netatmo does not deliver);
 //   - with no module given: a summary of every module of the account.
 // Everything raw goes through the shared redaction (src/netatmo/redact.js):
 // tokens, URLs and e-mail addresses go, the ids stay — the report says so,
@@ -37,6 +38,7 @@ import { getModuleCategory, netatmoId } from './discovery.js';
 import { convertDevice } from './convert.js';
 import { UPDATE_MAPPINGS } from './updateMappings.js';
 import { redactForDiagnostic } from './redact.js';
+import { POLL_OUTCOME_LABELS } from './eventsPoll.js';
 
 const defaultLogger = createLogger({ name: 'netatmo-diagnostic' });
 
@@ -453,6 +455,44 @@ function webhookLines(events, indent = '  ') {
   );
 }
 
+/**
+ * One line per event seen by the getevents poll: event time, type / sub
+ * type, Netatmo event id and what the integration did with it. The entries
+ * hold no URL and no message (see eventsPoll.js); the line is redacted all
+ * the same.
+ */
+function polledEventLines(entries, indent = '  ') {
+  if (entries.length === 0) {
+    return [`${indent}none since the integration started`];
+  }
+  return entries.map((entry) => {
+    const type = `${entry.type ?? 'event'}${entry.sub_type !== undefined ? ` / ${entry.sub_type}` : ''}`;
+    const outcome = POLL_OUTCOME_LABELS[entry.outcome] ?? entry.outcome;
+    const scenes = entry.scenes > 0 ? `, ${entry.scenes} scene event(s)` : '';
+    const ids = [
+      entry.module_id ? redactForDiagnostic(entry.module_id) : null,
+      entry.id ? `event ${redactForDiagnostic(entry.id)}` : null,
+    ]
+      .filter(Boolean)
+      .join(', ');
+    return `${indent}${timeOf(entry.time)} ${type} (${ids || 'no id'}): ${outcome}${scenes}`;
+  });
+}
+
+/** The getevents poll line of the account health. */
+function eventsPollLine(poll) {
+  if (poll.lastAttemptAt === null) {
+    return '  Events poll (getevents): not run yet (no camera, doorbell, alarm or door entry discovered with its family on)';
+  }
+  const newest = poll.homes
+    .filter((home) => home.newest)
+    .map((home) => `${home.id}: ${timeOf(home.newest.time)}`)
+    .join(', ');
+  return `  Events poll (getevents): last poll ${timeOf(poll.lastAttemptAt)}, ${poll.history.total()} event(s) seen since start, ${poll.published} detection(s) published from it${
+    newest ? `, newest event per home ${newest}` : ''
+  }${poll.lastError ? `, last error: ${poll.lastError}` : ''}`;
+}
+
 /** The header shared by both reports: versions, families, scopes, health. */
 function headerLines(ctx) {
   const { config, scopes, health, webhook, loadError, load } = ctx;
@@ -489,6 +529,9 @@ function headerLines(ctx) {
   );
   if (webhook.check) {
     lines.push(`  Webhook URL held by Netatmo: ${describeWebhookCheck(webhook.check)}`);
+  }
+  if (ctx.eventsPoll) {
+    lines.push(eventsPollLine(ctx.eventsPoll));
   }
   return lines;
 }
@@ -584,6 +627,10 @@ function moduleLines(ctx, modules, id) {
   }
   lines.push('  Recent webhook events naming it:');
   lines.push(...webhookLines(webhook.history.forModule(id), '    '));
+  if (ctx.eventsPoll) {
+    lines.push('  Last events seen by getevents:');
+    lines.push(...polledEventLines(ctx.eventsPoll.history.forModule(id), '    '));
+  }
   return lines;
 }
 
@@ -645,13 +692,18 @@ function summaryLines(ctx, modules) {
   }
   lines.push('', 'Last webhook events (all modules):');
   lines.push(...webhookLines(ctx.webhook.history.recent(5)));
+  if (ctx.eventsPoll) {
+    lines.push('', 'Last events seen by getevents (all modules):');
+    lines.push(...polledEventLines(ctx.eventsPoll.history.recent(5)));
+  }
   return lines;
 }
 
 /**
  * Build the diagnostic report.
  * @param {object} ctx `{gladys, config, version, now, scopes: {requested,
- *   granted, missing}, load, loadError, health, webhook: {registered, history}}`
+ *   granted, missing}, load, loadError, health, webhook: {registered, history},
+ *   eventsPoll?: eventsPoll.status()}`
  * @param {object} fields the action fields (`device`, `device_ref`)
  * @returns {string} the plain-text report
  */
@@ -700,7 +752,7 @@ export function buildDiagnosticReport(ctx, fields = {}) {
  * cache; the last load when it fails), the report, also logged at info
  * level for a user who cannot copy from the screen.
  * @param {object} deps `{gladys, oauth, telemetry, webhooks, webhookHistory,
- *   getConfig, logger?, now?}`
+ *   eventsPoll?, getConfig, logger?, now?}`
  * @param {object} fields the action fields
  * @returns {Promise<string>} the report
  */
@@ -711,6 +763,7 @@ export async function runDeviceDiagnostic(deps, fields = {}) {
     telemetry,
     webhooks,
     webhookHistory,
+    eventsPoll,
     getConfig,
     logger = defaultLogger,
     now = Date.now,
@@ -753,6 +806,7 @@ export async function runDeviceDiagnostic(deps, fields = {}) {
         history: webhookHistory,
         check: oauth.hasTokens() && webhooks?.check ? await webhooks.check() : null,
       },
+      eventsPoll: eventsPoll?.status() ?? null,
     },
     fields,
   );
