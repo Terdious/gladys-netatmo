@@ -45,6 +45,10 @@ the notes of the version's GitHub Release.
   holding the integration's URL — while the Netatmo app showed the alerts:
   they now arrive within about 2 minutes from `getevents`
   ([#5](https://github.com/Terdious/gladys-netatmo/issues/5)).
+- Docs: when the webhook URL held by Netatmo is the integration's and nothing
+  arrives, create a new Gladys Plus Open API key — an older one (for instance
+  taken from the former core Netatmo service URL) authenticated yet never
+  delivered the webhooks on a real installation.
 
 ## [2.3.1] - 2026-10-17
 

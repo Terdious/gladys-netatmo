@@ -322,7 +322,11 @@ Un seul webhook par application Netatmo : si un autre client l'a remplacé (le
 champ « webhook URI » de dev.netatmo.com, l'ancien service Netatmo du core),
 enregistrez à nouveau la clé Gladys Plus. Netatmo suspend aussi les envois
 pendant 24 heures pour une application dont le webhook a échoué 5 fois de suite
-(seul dev.netatmo.com l'affiche et permet de lever la suspension). Les
+(seul dev.netatmo.com l'affiche et permet de lever la suspension). Si l'URL est
+bien celle de l'intégration et que rien n'arrive malgré tout, créez une
+**nouvelle clé Open API** dans Gladys Plus (Réglages → Open API) et
+enregistrez-la ici : une ancienne clé (par exemple reprise de l'URL de l'ancien
+service Netatmo du core) peut s'authentifier sans jamais livrer les webhooks. Les
 détections n'existent que si la surveillance de la caméra est activée. Quelle que
 soit la cause, les détections arrivent quand même, en 2 minutes environ (voir
 ci-dessous).

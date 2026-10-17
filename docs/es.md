@@ -327,7 +327,11 @@ integración. Un solo webhook por aplicación Netatmo: si otro cliente la
 sustituyó (el campo "webhook URI" de dev.netatmo.com, el antiguo servicio
 Netatmo del core), vuelva a guardar la clave de Gladys Plus. Netatmo también
 deja de enviar durante 24 horas a una aplicación cuyo webhook falló 5 veces
-seguidas (solo dev.netatmo.com lo muestra y permite levantarlo). Las
+seguidas (solo dev.netatmo.com lo muestra y permite levantarlo). Si la URL es
+la de la integración y aun así no llega nada, cree una **nueva clave Open API**
+en Gladys Plus (Ajustes → Open API) y guárdela aquí: una clave antigua (por
+ejemplo tomada de la URL del antiguo servicio Netatmo del core) puede
+autenticarse sin entregar nunca los webhooks. Las
 detecciones solo existen mientras la vigilancia de la cámara está activada.
 Sea cual sea la causa, las detecciones siguen llegando, en unos 2 minutos (ver más
 abajo).

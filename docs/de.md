@@ -327,7 +327,11 @@ pro Netatmo-Anwendung: Hat ein anderer Client sie überschrieben (das Feld
 „webhook URI“ auf dev.netatmo.com, der frühere Netatmo-Dienst des Cores),
 speichere den Gladys-Plus-Schlüssel erneut. Netatmo stellt außerdem 24 Stunden
 lang nichts mehr zu, wenn der Webhook einer Anwendung 5-mal hintereinander
-fehlgeschlagen ist (nur dev.netatmo.com zeigt das an und hebt es auf).
+fehlgeschlagen ist (nur dev.netatmo.com zeigt das an und hebt es auf). Ist es
+die URL der Integration und kommt trotzdem nichts an, erstelle in Gladys Plus
+einen **neuen Open-API-Schlüssel** (Einstellungen → Open API) und speichere ihn
+hier: Ein älterer Schlüssel (etwa aus der URL des früheren Netatmo-Dienstes des
+Cores) kann sich anmelden, ohne je Webhooks zuzustellen.
 Erkennungen gibt es nur, solange die Überwachung der Kamera aktiv ist. Unabhängig
 von der Ursache kommen die Erkennungen trotzdem an, innerhalb von etwa 2
 Minuten (siehe unten).

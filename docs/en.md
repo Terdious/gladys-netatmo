@@ -302,7 +302,11 @@ only per Netatmo application: if another client overwrote it (the "webhook URI"
 field of dev.netatmo.com, the former core Netatmo service), save the Gladys Plus
 key again. Netatmo also stops delivering for 24 hours to an application whose
 webhook failed 5 times in a row (only dev.netatmo.com shows it, and lets you
-lift it). Detections only exist while the camera monitoring is on. Whatever the
+lift it). If the URL is the integration's and still nothing arrives, create a
+**new Open API key** in Gladys Plus (Settings → Open API) and save it here: an
+older key (for instance one taken from the former core Netatmo service URL) can
+authenticate yet never deliver the webhooks. Detections only exist while the
+camera monitoring is on. Whatever the
 cause, the detections still arrive, within about 2 minutes (see below).
 
 Without a key (or without Gladys Plus), the integration behaves exactly as
