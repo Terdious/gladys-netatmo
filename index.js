@@ -289,6 +289,9 @@ export function setupIntegration(
   // --- Command: the user acts on a controllable feature ----------------------
   gladys.onSetValue(async (device, feature, value) => {
     logger.info(`onSetValue <- ${feature.external_id} = ${value}`);
+    // A Legrand command keeps the commanded value in the dedup itself (issue
+    // #60): only the other commands need the dedup forgotten below.
+    let remembered = false;
     await setDeviceValue(
       {
         gladys,
@@ -296,11 +299,20 @@ export function setupIntegration(
         refresh: () => telemetry.refreshNow(config),
         scheduleRefresh: (delayMs, key) => telemetry.scheduleRefresh(config, delayMs, key),
         getRawDevice: (id) => telemetry.getRawDevice(id),
-        rememberState: (featureExternalId, state) =>
-          telemetry.rememberState(featureExternalId, state),
+        patchRoom: (homeId, roomId, patch) => telemetry.patchRoom(homeId, roomId, patch),
+        rememberState: (featureExternalId, state) => {
+          remembered = true;
+          telemetry.rememberState(featureExternalId, state);
+        },
       },
       { device, feature, value },
     );
+    // Gladys saved the commanded value: the next load re-publishes what
+    // Netatmo reports, even if it is what was published before the command
+    // (issue #77: a mode or setpoint Netatmo did not apply must show again).
+    if (!remembered) {
+      telemetry.forgetPublished(feature.external_id);
+    }
   });
 
   // --- Scene actions: operations a scene author placed in a scene -----------

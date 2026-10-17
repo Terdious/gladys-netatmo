@@ -7,7 +7,13 @@
 
 import { DEVICE_FEATURE_CATEGORIES, DEVICE_FEATURE_TYPES } from '@gladysassistant/integration-sdk';
 
-import { THERM_MODE_PRESETS, COVER_STATE, SHUTTER_POSITION } from './constants.js';
+import {
+  THERM_MODE_PRESETS,
+  COVER_STATE,
+  SHUTTER_POSITION,
+  THERMOSTAT_MODE,
+  NETATMO_SETPOINT_MODES,
+} from './constants.js';
 
 const toBinary = (valueFromDevice) => (valueFromDevice === true || valueFromDevice === 1 ? 1 : 0);
 const toInteger = (valueFromDevice) => parseInt(valueFromDevice, 10);
@@ -102,10 +108,27 @@ export function presetToThermMode(preset) {
   return mode;
 }
 
+/**
+ * Gladys thermostat mode -> Netatmo room setpoint mode (issue #77): OFF
+ * switches the room off, HEATING hands it back to its schedule (`home`).
+ * Cooling and auto are refused: the feature never declares them.
+ */
+export function thermostatModeToSetpointMode(mode) {
+  const value = Number(mode);
+  if (value === THERMOSTAT_MODE.OFF) {
+    return NETATMO_SETPOINT_MODES.OFF;
+  }
+  if (value === THERMOSTAT_MODE.HEATING) {
+    return NETATMO_SETPOINT_MODES.HOME;
+  }
+  throw new Error(`A Netatmo room has no thermostat mode ${mode}`);
+}
+
 export const writeValues = {
   [DEVICE_FEATURE_CATEGORIES.THERMOSTAT]: {
     [DEVICE_FEATURE_TYPES.THERMOSTAT.TARGET_TEMPERATURE]: identity,
     [DEVICE_FEATURE_TYPES.THERMOSTAT.PRESET]: presetToThermMode,
+    [DEVICE_FEATURE_TYPES.THERMOSTAT.MODE]: thermostatModeToSetpointMode,
   },
   [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
     /* camera monitoring: 'on' / 'off' */
@@ -140,6 +163,9 @@ export const readValues = {
   [DEVICE_FEATURE_CATEGORIES.THERMOSTAT]: {
     [DEVICE_FEATURE_TYPES.THERMOSTAT.TARGET_TEMPERATURE]: identity,
     [DEVICE_FEATURE_TYPES.THERMOSTAT.PRESET]: thermModeToPreset,
+    // Already Gladys values (updateMappings roomMode / roomOperatingState).
+    [DEVICE_FEATURE_TYPES.THERMOSTAT.MODE]: identity,
+    [DEVICE_FEATURE_TYPES.THERMOSTAT.OPERATING_STATE]: identity,
   },
   [DEVICE_FEATURE_CATEGORIES.SWITCH]: {
     [DEVICE_FEATURE_TYPES.SWITCH.BINARY]: toBinary,

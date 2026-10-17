@@ -16,6 +16,11 @@ import {
 import {
   THERM_MODE_PRESETS,
   THERM_MODE_LABELS,
+  THERMOSTAT_MODE,
+  THERMOSTAT_MODE_LABELS,
+  THERMOSTAT_OPERATING_STATE,
+  ROOM_OPERATING_STATE_SUFFIX,
+  ROOM_MODE_SUFFIX,
   PERSON_PRESENCE_SUFFIX_PREFIX,
   BTICINO_LIGHT_SUFFIX,
   LEGRAND_ON_SUFFIX,
@@ -122,6 +127,48 @@ export function buildFeatureThermPreset(name, externalId) {
     supported_options: THERM_MODE_PRESETS.map(({ mode, preset }, index) => ({
       value: preset,
       label: THERM_MODE_LABELS[mode].en,
+      sort_order: index,
+    })),
+  });
+}
+
+// Heated room thermostat features (issue #77), for the Gladys Thermostat
+// service and its dashboard widget: ONE device per room carries them (the
+// room's thermostat, or one valve of a room without thermostat), named after
+// the room. Their values come from the ROOM (homestatus `rooms`).
+
+// Whether the room is heating (`thermostat/operating-state`, read-only):
+// THERMOSTAT_OPERATING_STATE, IDLE / HEATING (COOLING for an air-conditioned
+// BTicino Smarther).
+export function buildFeatureRoomOperatingState(roomName, externalId) {
+  return feature({
+    name: `Heating state - ${roomName}`,
+    external_id: `${externalId}:${ROOM_OPERATING_STATE_SUFFIX}`,
+    selector: `${externalId}:${ROOM_OPERATING_STATE_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.THERMOSTAT,
+    type: DEVICE_FEATURE_TYPES.THERMOSTAT.OPERATING_STATE,
+    min: THERMOSTAT_OPERATING_STATE.IDLE,
+    max: THERMOSTAT_OPERATING_STATE.COOLING,
+  });
+}
+
+// What the room does (`thermostat/mode`, writable): off or heating — written
+// with setroomthermpoint `off` / `home`. `max` = HEATING tells the Gladys
+// Thermostat service that this thermostat does not cool.
+export function buildFeatureRoomMode(roomName, externalId) {
+  const modes = [THERMOSTAT_MODE.OFF, THERMOSTAT_MODE.HEATING];
+  return feature({
+    name: `Thermostat mode - ${roomName}`,
+    external_id: `${externalId}:${ROOM_MODE_SUFFIX}`,
+    selector: `${externalId}:${ROOM_MODE_SUFFIX}`,
+    category: DEVICE_FEATURE_CATEGORIES.THERMOSTAT,
+    type: DEVICE_FEATURE_TYPES.THERMOSTAT.MODE,
+    read_only: false,
+    min: THERMOSTAT_MODE.OFF,
+    max: THERMOSTAT_MODE.HEATING,
+    supported_options: modes.map((value, index) => ({
+      value,
+      label: THERMOSTAT_MODE_LABELS[value],
       sort_order: index,
     })),
   });
@@ -482,7 +529,8 @@ export function buildFeatureCarbonMonoxide(name, externalId) {
 }
 
 // Door/window tag (NACamDoorTag): open/closed contact, read from homestatus
-// `status` (issue #9). Distinct suffix from the thermostat `open_window`.
+// `status` (issue #9), 0 open / 1 closed (OPENING_SENSOR_STATE). Distinct
+// suffix from the thermostat `open_window`.
 export function buildFeatureOpeningSensor(name, externalId) {
   return feature({
     name: `Opening - ${name}`,
@@ -509,6 +557,9 @@ export function buildFeatureSiren(name, externalId) {
   });
 }
 
+// Open window detected in the room (thermostats and valves), 0 open /
+// 1 closed like every Gladys opening sensor (OPENING_SENSOR_STATE). It is the
+// window sensor the Gladys Thermostat widget watches (issue #77).
 export function buildFeatureOpenWindow(name, externalId) {
   return feature({
     name: `Detecting open window - ${name}`,

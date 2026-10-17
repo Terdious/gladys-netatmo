@@ -98,7 +98,11 @@ test('refreshValues publishes the states of the devices created in Gladys', asyn
   assert.deepEqual(stateOf('ext:netatmo:valve-1:battery_percent'), [50]);
   // Booleans → binary.
   assert.deepEqual(stateOf('ext:netatmo:therm-1:boiler_status'), [1]);
-  assert.deepEqual(stateOf('ext:netatmo:valve-1:open_window'), [1]);
+  // Opening sensor, Gladys convention (0 open / 1 closed): the room's window
+  // is open.
+  assert.deepEqual(stateOf('ext:netatmo:valve-1:open_window'), [0]);
+  // The thermostat's room (Salon) reports its window closed.
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:open_window'), [1]);
   assert.deepEqual(stateOf('ext:netatmo:valve-1:heating_power_request'), [1]); // 42 > 0
   // Legacy `measured` merge feeds the thermostat's own temperature.
   assert.deepEqual(stateOf('ext:netatmo:therm-1:temperature'), [19.4]);
@@ -140,11 +144,13 @@ test('unchanged values are deduped, then re-published after the 30-minute keep-a
   clock += 2 * 60 * 1000;
   assert.equal(await telemetry.refreshValues(config), 0);
 
-  // A changed value goes out immediately.
+  // A changed value goes out immediately — with the room heating state it
+  // drives (issue #77).
   netatmo.state.homeStatuses['home-1'].home.modules.find((m) => m.id === 'therm-1').boiler_status =
     false;
-  assert.equal(await telemetry.refreshValues(config), 1);
+  assert.equal(await telemetry.refreshValues(config), 2);
   assert.deepEqual(stateOf('ext:netatmo:therm-1:boiler_status'), [1, 0]);
+  assert.deepEqual(stateOf('ext:netatmo:therm-1:room_operating_state'), [1, 0]);
 
   // Past the keep-alive, everything goes out again.
   clock += 31 * 60 * 1000;
@@ -196,8 +202,9 @@ test('the camera-bridged security accessories publish their states (issue #9)', 
   gladys.devices = await telemetry.syncDiscovery(configSecurity);
   await telemetry.refreshValues(configSecurity);
 
-  // Door tag: status 'open' → opening 1, battery_state 'high' → 75, rf 68.
-  assert.deepEqual(stateOf('ext:netatmo:doortag-1:opening'), [1]);
+  // Door tag: status 'open' → opening 0 (Gladys opening sensor: 0 open,
+  // 1 closed), battery_state 'high' → 75, rf 68.
+  assert.deepEqual(stateOf('ext:netatmo:doortag-1:opening'), [0]);
   assert.deepEqual(stateOf('ext:netatmo:doortag-1:battery_percent'), [75]);
   assert.deepEqual(stateOf('ext:netatmo:doortag-1:rf_strength'), [68]);
 
@@ -215,13 +222,20 @@ test('the camera-bridged security accessories publish their states (issue #9)', 
   assert.deepEqual(stateOf('ext:netatmo:co-1:wifi_strength'), []);
   assert.deepEqual(stateOf('ext:netatmo:co-1:carbon_monoxide'), []); // webhook-only
 
-  // A door opening flows on the next cycle.
+  // The door closing flows on the next cycle (1 = closed).
   const doortag = netatmo.state.homeStatuses['home-1'].home.modules.find(
     (m) => m.id === 'doortag-1',
   );
   doortag.status = 'closed';
   await telemetry.refreshValues(configSecurity);
-  assert.deepEqual(stateOf('ext:netatmo:doortag-1:opening'), [1, 0]);
+  assert.deepEqual(stateOf('ext:netatmo:doortag-1:opening'), [0, 1]);
+  // A status that is no reliable state publishes nothing.
+  for (const status of ['no_news', 'calibrating', 'undefined']) {
+    doortag.status = status;
+    telemetry.resetDedup();
+    await telemetry.refreshValues(configSecurity);
+    assert.deepEqual(stateOf('ext:netatmo:doortag-1:opening'), [0, 1], status);
+  }
 });
 
 /** Add a video doorbell (pyatmo fixture shape, issue #35) to the fake account. */

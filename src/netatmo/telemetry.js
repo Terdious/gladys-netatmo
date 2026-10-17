@@ -927,6 +927,32 @@ export function createTelemetry({
   }
 
   /**
+   * Patch the room of the last raw payloads (issue #77): after a room command
+   * Netatmo acknowledged, every module of that room sees the new value until
+   * the next load replaces the payloads.
+   * @param {string} homeId Netatmo home id
+   * @param {string} roomId Netatmo room id
+   * @param {object} patch room fields to overwrite, e.g. `{therm_setpoint_mode: 'off'}`
+   */
+  function patchRoom(homeId, roomId, patch) {
+    for (const rawDevice of rawDevicesById.values()) {
+      if (rawDevice.home === homeId && rawDevice.room?.id === roomId) {
+        Object.assign(rawDevice.room, patch);
+      }
+    }
+  }
+
+  /**
+   * Forget the last published state of a feature (issue #77): Gladys saved
+   * the value of a command itself, so the next load must publish what Netatmo
+   * reports even when it matches what this loop published before the command.
+   * @param {string} featureExternalId feature external id
+   */
+  function forgetPublished(featureExternalId) {
+    published.delete(featureExternalId);
+  }
+
+  /**
    * The account as the last load saw it, for the "Device diagnostic" report:
    * a load sharing the burst cache (fresh enough, cheap when one just ran).
    * @param {object} config normalized integration config
@@ -980,6 +1006,8 @@ export function createTelemetry({
     refreshNow,
     getHomes,
     getRawDevice,
+    patchRoom,
+    forgetPublished,
     getAccount,
     getLastLoad,
     getHealth,

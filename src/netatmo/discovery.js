@@ -242,10 +242,53 @@ export async function loadDeviceDetails(client, config, homeData, bticinoDiagnos
   // reachability, the modules of an unreachable gateway are unreachable.
   return [
     ...groupBticinoModules(
-      resolveLegrandReachability([...reachableDevices, ...unreachableDevices]),
+      markRoomThermostats(resolveLegrandReachability([...reachableDevices, ...unreachableDevices])),
     ),
     ...(knownPersons ? [knownPersons] : []),
   ];
+}
+
+// Thermostats first: in a room with a thermostat and valves, the room's
+// thermostat features ride on the thermostat.
+const ROOM_THERMOSTAT_PRIORITY = [
+  SUPPORTED_MODULE_TYPE.THERMOSTAT,
+  SUPPORTED_MODULE_TYPE.OTM,
+  SUPPORTED_MODULE_TYPE.BNS,
+  SUPPORTED_MODULE_TYPE.NRV,
+];
+
+/**
+ * Elect ONE device per heated room to carry the room's thermostat features
+ * (issue #77: heating state, mode, window — the Gladys Thermostat widget),
+ * flagged `room_thermostat: true`: the room's thermostat (NATherm1, modulating
+ * OTM, Smarther BNS), else one of its valves (NRV). Ties go to the smallest
+ * Netatmo id, so the choice stays the same from one load to the next — the
+ * powered-off modules rebuilt from homesdata take part, so a valve going
+ * offline does not move the features to another device.
+ * @param {Array} devices raw devices of one home
+ * @returns {Array} the same devices, the elected ones flagged
+ */
+export function markRoomThermostats(devices) {
+  const elected = new Map();
+  const rank = (device) => ROOM_THERMOSTAT_PRIORITY.indexOf(device.type);
+  for (const device of devices) {
+    const roomId = device.room?.id;
+    if (!roomId || !HEATED_ROOM_MODULE_TYPES.includes(device.type) || !netatmoId(device)) {
+      continue;
+    }
+    const current = elected.get(roomId);
+    const better =
+      !current ||
+      rank(device) < rank(current) ||
+      (rank(device) === rank(current) && String(netatmoId(device)) < String(netatmoId(current)));
+    if (better) {
+      elected.set(roomId, device);
+    }
+  }
+  const carriers = new Set(elected.values());
+  return devices.map((device) =>
+    carriers.has(device) ? { ...device, room_thermostat: true } : device,
+  );
 }
 
 /**

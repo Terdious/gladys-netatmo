@@ -12,6 +12,34 @@ the notes of the version's GitHub Release.
 
 ### Added
 
+- Netatmo heating fully usable by the Gladys **Thermostat** integration and
+  its dashboard widget (Gladys 5.2+, core PR GladysAssistant/Gladys#3178):
+  one device per heated room — its thermostat (`NATherm1`, `OTM`, `BNS`),
+  else the valve (`NRV`) with the smallest id — carries two features named
+  after the room. **Heating state** (`thermostat`/`operating-state`,
+  read-only): heating while the room's `heating_power_request` is above 0 or
+  a boiler thermostat's `boiler_status` is on, cooling while a Smarther's
+  `cooler_status` is on, idle otherwise. **Thermostat mode**
+  (`thermostat`/`mode`, writable, `supported_options` Off / Heating): off
+  when the room's `therm_setpoint_mode` is `off`, heating otherwise; writing
+  it sends `setroomthermpoint` mode `off` or `home` (back to the room's
+  schedule), nothing when the room is already in that mode, and a token
+  without the write scope gets the "reconnect" message. The window sensor is
+  the existing **Detecting open window** (`open_window`) of any thermostat or
+  valve of the room, now also created on the `OTM` and `BNS` thermostats.
+  Existing devices get them with **Update** on the Discovery screen; no new
+  permission ([#77](https://github.com/Terdious/gladys-netatmo/issues/77)).
+- A room switched off keeps it: a setpoint written while the room is off is
+  not sent (a `manual` setpoint would switch it back on — the Thermostat
+  service stops a room with Off then its frost setpoint, and starts it with
+  Heating before the setpoint), and the setpoint of an off room is no longer
+  published, so whatever Netatmo reports then never looks like a change made
+  on the thermostat. After a command, the next cycle re-publishes the value
+  Netatmo reports even when unchanged since the last publish. Docs: "Use the
+  Gladys Thermostat widget" in the four languages — one external thermostat
+  per room, which features to pick, what the widget brings, and the Netatmo
+  schedule that keeps running under Gladys's manual setpoints
+  ([#77](https://github.com/Terdious/gladys-netatmo/issues/77)).
 - Legrand Home + Control (Céliane / dooxie / Mosaic with Netatmo), first three
   groups ([#60](https://github.com/Terdious/gladys-netatmo/issues/60)), behind
   a new opt-in toggle **Legrand Home + Control — preview** (`legrand_api`,
@@ -38,6 +66,13 @@ the notes of the version's GitHub Release.
 
 ### Changed
 
+- `open_window` (thermostats, valves) and `opening` (door / window tags) now
+  follow the Gladys convention — 0 open, 1 closed — instead of 1 when open;
+  the dashboard showed an open window or door as closed. A scene that tested
+  `= 1` for open must now test `= 0`. Absent or unreliable values (no
+  `open_window` in the room, a tag `status` other than `open` / `closed`)
+  still publish nothing
+  ([#77](https://github.com/Terdious/gladys-netatmo/issues/77)).
 - The delayed one-shot refreshes after a command (shutters 30 s, Legrand
   2 s) keep one timer each and start from a fresh account load.
 
