@@ -67,14 +67,14 @@ le indica que vuelva a conectarse.
 
 En **Dispositivos a descubrir**, active las familias que posee:
 
-| Interruptor               | Descubre                                                                                                                                                   |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`), termostato modulante (`OTM` + `OTH`), BTicino Smarther (`BNS`)                     |
-| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                                                                            |
-| **Seguridad**             | Cámaras de interior (`NACamera`), de interior Advance (`NPC`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios y las personas conocidas |
-| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                                                                        |
-| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                                                                         |
-| **Portero BTicino**       | Módulos BTicino Classe 300X / Classe 300 EOS (`BNCX`, `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — vista previa, desactivado por defecto                      |
+| Interruptor               | Descubre                                                                                                                                                        |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energía**               | Termostato (`NATherm1`), relé (`NAPlug`), válvulas de radiador (`NRV`), termostato modulante (`OTM` + `OTH`), BTicino Smarther (`BNS`)                          |
+| **Meteorología**          | Estación (`NAMain`) + módulos exterior, viento, lluvia e interiores adicionales                                                                                 |
+| **Seguridad**             | Cámaras de interior (`NACamera`), de interior Advance (`NPC`) y de exterior (`NOC`), timbre con vídeo (`NDB`), más sus accesorios y las personas conocidas      |
+| **Persianas enrollables** | Persianas Bubendorff de una pasarela iDiamant (`NBR`, `NBO`, `NBS`)                                                                                             |
+| **Calidad del aire**      | Monitor de calidad del aire interior — Home Coach (`NHC`), desactivado por defecto                                                                              |
+| **Portero BTicino**       | Portero BTicino Classe 300X / Classe 300 EOS, un solo dispositivo (`BNCX` + sus `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — vista previa, desactivado por defecto |
 
 Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
 automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
@@ -542,75 +542,67 @@ versión.
 ## Portero BTicino (Classe 300X / Classe 300 EOS) — vista previa
 
 Los videoporteros **BTicino Classe 300X** y **Classe 300 EOS with Netatmo**
-funcionan a través de la API de Netatmo, pero no existe ninguna descripción
-pública de sus datos. Esta versión es una **vista previa** (primer paso de la
-[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59)): descubre los módulos y escribe sus datos brutos en los
-registros de la integración, para que la compatibilidad completa — el timbre
-como activador de escena, la apertura de la puerta, la luz de escalera — se
-construya sobre datos reales.
+funcionan a través de la API de Netatmo, que expone mucho menos que la
+aplicación Netatmo ([issue #59](https://github.com/Terdious/gladys-netatmo/issues/59)). Active **Portero BTicino (Classe 300) —
+vista previa** en **Dispositivos a descubrir** (desactivado por defecto) y
+guarde.
 
-Active **Portero BTicino (Classe 300) — vista previa** en **Dispositivos a
-descubrir** (desactivado por defecto) y guarde. Cada módulo se descubre como un
-dispositivo, solo con lo que Netatmo devuelve realmente:
+El portero se descubre como **un solo dispositivo**, con el nombre de su
+unidad interior (la pasarela `BNCX`, p. ej. «Classe 300EOS with Netatmo»). Los
+módulos que conecta le añaden sus funciones, con su nombre:
 
-| Módulo                     | Tipo Netatmo | En Gladys (vista previa)                                   |
-| -------------------------- | ------------ | ---------------------------------------------------------- |
-| Unidad interior (pasarela) | `BNCX`       | calidad WiFi, cuando Netatmo la devuelve                   |
-| Placa de calle             | `BNEU`       | solo accesibilidad (aún sin timbre)                        |
-| Cerradura / abrepuertas    | `BNDL`       | solo accesibilidad (aún sin orden de apertura)             |
-| Luz de escalera            | `BNSL`       | estado encendido / apagado de solo lectura, si se devuelve |
-| Enchufe controlado         | `BNCS`       | estado encendido / apagado de solo lectura, si se devuelve |
-| Módulo X                   | `BNXM`       | solo accesibilidad                                         |
+| Módulo                     | Tipo Netatmo | En el dispositivo del portero                                      |
+| -------------------------- | ------------ | ------------------------------------------------------------------ |
+| Unidad interior (pasarela) | `BNCX`       | calidad WiFi, **timbre** (necesita los webhooks de Gladys Plus)    |
+| Luz de escalera / exterior | `BNSL`       | **luz encendida / apagada** (p. ej. «Iluminación exterior»)        |
+| Toma controlada            | `BNCS`       | estado encendido / apagado (solo lectura), cuando Netatmo lo envía |
+| Placa de calle             | `BNEU`       | nada (Netatmo no envía ningún valor para ella)                     |
+| Cerradura                  | `BNDL`       | nada — vea más abajo                                               |
+| Módulo X                   | `BNXM`       | su calidad de señal, cuando Netatmo envía una                      |
 
-Cada módulo recibe además su calidad WiFi o RF en cuanto Netatmo devuelve una.
-Un módulo que Netatmo indica sin conexión recibe la insignia **inaccesible**.
-Todavía no se puede controlar nada: las órdenes llegarán con el siguiente paso,
-una vez conocidos los datos reales.
+- **Luz:** se acciona a través de Netatmo como en la aplicación. Netatmo nunca
+  indica si está encendida: Gladys muestra la última orden enviada (la luz de
+  escalera suele apagarse sola al cabo de un tiempo, Gladys no puede saber
+  cuándo).
+- **Timbre:** se publica como el del [timbre con vídeo](#timbre-con-vídeo) («Sonando» y luego
+  la hora del último timbrazo), utilizable como activador de escena — solo con
+  los [webhooks de Gladys Plus](#webhooks-de-gladys-plus-tiempo-real--opcional). Netatmo documenta este evento para el
+  Classe 300 EOS; todavía no se ha visto en una instalación real: si sus
+  llamadas no aparecen, envíe un diagnóstico (más abajo).
+- **La apertura de la puerta no está disponible.** La API de Netatmo para
+  aplicaciones de terceros no les permite abrir una cerradura BTicino (Netatmo
+  lo bloquea por motivos de seguridad); solo puede hacerlo la aplicación
+  Netatmo / BTicino.
+- La insignia **inaccesible** sigue a la unidad interior. Un módulo conectado
+  que Netatmo indica fuera de línea no publica ningún valor.
+- Si creó dispositivos con la vista previa 2.2.0 (uno por módulo), elimínelos
+  y vuelva a crear el dispositivo del portero.
 
-> ⚠️ **Nuevos permisos de Netatmo — vuelva a hacer clic en Conectar.** El
-> interruptor solicita cuatro permisos adicionales, solo mientras está
-> activado: `read_bfi` / `write_bfi` (BTicino IP, Classe 300X) y `read_mx` /
+> ⚠️ **Nuevos permisos de Netatmo — vuelva a hacer clic en Conectar.**
+> Activar la opción solicita cuatro permisos adicionales, solo mientras está
+> activa: `read_bfi` / `write_bfi` (BTicino IP, Classe 300X) y `read_mx` /
 > `write_mx` (Classe 300 EOS). Vuelva a hacer clic en **Conectar** en la
-> pantalla Configuración y acéptelos — sus dispositivos y ajustes se
-> conservan. Mientras tanto, el estado de la conexión
-> muestra un aviso "vuelva a hacer clic en Conectar", y Netatmo puede omitir los
-> módulos BTicino. Los permisos de escritura se solicitan ya para que el
-> siguiente paso no requiera una nueva reconexión.
+> pantalla de configuración y acéptelos — sus dispositivos y ajustes se
+> conservan. Hasta entonces, el estado de la conexión muestra una invitación a
+> volver a conectarse, y Netatmo puede omitir los módulos BTicino (una orden de
+> luz falla entonces con un mensaje «vuelva a conectar»).
 
-### Enviar el registro de diagnóstico al mantenedor
+### Enviar un diagnóstico al mantenedor
 
-Mientras el interruptor está activado, la integración escribe en sus registros,
-en la primera actualización tras un arranque y después **solo cuando algo
-cambia**:
+Use la acción **Diagnóstico de un dispositivo** de la pantalla de
+configuración (vea [Solución de problemas](#solución-de-problemas)): elija el dispositivo del
+portero, o deje ambos campos vacíos para toda la cuenta, y pegue el resultado
+en la [issue #59](https://github.com/Terdious/gladys-netatmo/issues/59). Toque el timbre una vez antes de ejecutarla: el informe
+enumera los últimos eventos webhook de cada módulo.
 
-- los datos brutos que Netatmo devuelve para cada módulo BTicino (topología y
-  estado de la casa, incluidos los módulos que Netatmo indica en error);
-- cada evento webhook de Gladys Plus sobre un módulo BTicino (timbre, llamada
-  contestada o perdida, puerta abierta… — requiere los
-  [webhooks de Gladys Plus](#webhooks-de-gladys-plus-tiempo-real--opcional)).
-
-Cada línea empieza por `[bticino-diagnostic]`. Los tokens de acceso, claves,
-firmas, direcciones de correo electrónico y todas las URL (una URL de VPN o de
-imagen contiene una clave de acceso) se sustituyen por `<redacted>`; los
-identificadores de los módulos, de la pasarela y de la casa se conservan — son
-necesarios para distinguir los módulos. Una línea de más de 8 KB se corta, con
-una marca `[truncated]`.
-
-Para ayudar a construir la compatibilidad completa:
-
-1. active el interruptor, guarde y vuelva a hacer clic en **Conectar** si el
-   estado lo pide;
-2. use el portero unos minutos: llame desde la placa de calle (conteste una
-   vez, deje sonar una vez), abra la puerta desde la aplicación, encienda la
-   luz de escalera;
-3. abra la pestaña **Registros** de la integración, copie las líneas que
-   empiezan por `[bticino-diagnostic]` y publíquelas en la
-   [issue #59](https://github.com/Terdious/gladys-netatmo/issues/59) o en el tema del foro
-   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308). Reléalas antes de publicarlas:
-   están depuradas, pero compruebe que no queda nada personal.
-
-Después puede dejar el interruptor activado (el registro solo escribe cuando
-hay cambios) o desactivarlo.
+Mientras la opción está activa, la integración también escribe en sus
+registros, en la primera actualización tras un arranque y después **solo
+cuando algo cambia**, los datos brutos que Netatmo devuelve para cada módulo
+BTicino y cada evento webhook de Gladys Plus que le concierne. Cada línea
+empieza por `[bticino-diagnostic]`; se aplica la misma anonimización (tokens,
+claves, direcciones de correo y URL se sustituyen por `<redacted>`, los ID de
+módulo, de pasarela y de casa se conservan), y una línea de más de 8 KB se
+corta con un marcador `[truncated]`.
 
 ---
 
@@ -718,6 +710,19 @@ relanzarse: solo mueve lo que queda.
 - **Estado "faltan algunos permisos de Netatmo":** una versión más reciente
   añadió permisos (timbre con vídeo, cámara de interior Advance, portero BTicino) — vuelva a hacer clic en Conectar y
   acéptelos. Los **Registros** de la integración indican cuáles faltan.
+- **Diagnóstico de un dispositivo (informar de un problema o de un
+  dispositivo no compatible):** en la pantalla de configuración, ejecute la
+  acción **Diagnóstico de un dispositivo**. Elija un dispositivo creado en
+  Gladys, o escriba el nombre o el ID de Netatmo de un módulo que no haya
+  creado (por ejemplo, uno aún no compatible); deje ambos campos vacíos para
+  un resumen de toda la cuenta. El informe muestra lo que Netatmo envía para el
+  módulo, lo que la integración publica para él, los campos de Netatmo que aún
+  no utiliza, los últimos eventos webhook, los permisos y el estado de cada API
+  de Netatmo. También se escribe en los **Registros** de la integración
+  (líneas tras `[netatmo-diagnostic]`) si no puede copiarlo desde la pantalla.
+  **Reléalo antes de publicarlo:** los tokens, las URL y las direcciones de
+  correo se eliminan, pero los ID de módulos y de casa y los nombres de sus
+  módulos se conservan.
 - **¿Sigue bloqueado, o falta un dispositivo?** Pregunte en el tema del foro
   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308)
   o abra una issue en [GitHub](https://github.com/Terdious/gladys-netatmo/issues) con los registros de la integración

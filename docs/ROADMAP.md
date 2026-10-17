@@ -42,11 +42,16 @@
   - cameras and security: Indoor Camera Advance NPC (#55, PR #66, new
     scopes, snapshot only), outdoor camera floodlight on / off / auto (#56,
     PR #67), presence of the known persons (#57, PR #62).
-- **Unreleased** (next release):
+- **v2.2.0**:
   - BTicino Classe 300 door entry preview: discovery and diagnostic log,
     scopes requested only with its toggle (#59 step 1, PR #72);
   - WebRTC live view of the doorbell and the Indoor Camera Advance, inert
     until Gladys#3215 and SDK#43 ship (#70, PR #71).
+- **Unreleased** (next release):
+  - BTicino door entry step 2: one device per door entry, staircase /
+    outdoor light command, ring as a doorbell feature (#59);
+  - Device diagnostic action on the Configuration screen, for any module
+    (#59).
 - Upstream, shipped in Gladys: live-stream latency (GladysAssistant/Gladys#2698,
   4.84.1, see #11), device migration with history
   (GladysAssistant/Gladys#2737, 4.84.1, hardened in #2778).
@@ -93,16 +98,21 @@ forum topic.
 ### Next
 
 - [#59](https://github.com/Terdious/gladys-netatmo/issues/59) BTicino
-  Classe 300 / IP door entry (BNCX, door lock BNDL, staircase light BNSL):
-  step 1 (discovery + `[bticino-diagnostic]` log, preview toggle) done;
-  step 2 (ring trigger, door lock, staircase light command) waits for the
-  real payloads.
+  Classe 300 / IP door entry: step 1 (discovery + diagnostic log) and step 2
+  (one device, light command, ring) done. To confirm on the real
+  installation: the ring webhook (event name and module ids — Netatmo also
+  shows a `BNCX-rtc` sample, not mapped) and that the light command is
+  relayed by the gateway. Door opening (BNDL) stays out: Netatmo blocks it
+  for third-party applications (only the app's private client can, with a
+  live session).
 - [#60](https://github.com/Terdious/gladys-netatmo/issues/60) Legrand
   Home + Control devices, behind a new toggle.
 
 ## external_id conventions (FROZEN)
 
 - Device: `ext:netatmo:<netatmo id>` (the id is the MAC-like module id).
+  A BTicino door entry is ONE device, its `BNCX` gateway's; the features of
+  the modules it bridges keep THEIR id: `ext:netatmo:<module id>:<suffix>`.
 - Feature: `ext:netatmo:<netatmo id>:<suffix>` with the exact core suffixes
   (`temperature`, `therm_setpoint_temperature`, `battery_percent`,
   `monitoring`, `camera`, …). Changing a suffix re-creates features on every

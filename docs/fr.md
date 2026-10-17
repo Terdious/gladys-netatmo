@@ -73,7 +73,7 @@ Sous **Appareils à découvrir**, activez les familles que vous possédez :
 | **Sécurité**           | Caméras intérieure (`NACamera`), intérieure Advance (`NPC`) et extérieure (`NOC`), sonnette vidéo (`NDB`), plus leurs accessoires et les personnes connues |
 | **Volets roulants**    | Volets Bubendorff d'une passerelle iDiamant (`NBR`, `NBO`, `NBS`)                                                                                          |
 | **Qualité de l'air**   | Capteur de qualité de l'air intérieur — Home Coach (`NHC`), désactivé par défaut                                                                           |
-| **Interphone BTicino** | Modules BTicino Classe 300X / Classe 300 EOS (`BNCX`, `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — aperçu, désactivé par défaut                               |
+| **Interphone BTicino** | Interphone BTicino Classe 300X / Classe 300 EOS, un seul appareil (`BNCX` + ses `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — aperçu, désactivé par défaut     |
 
 Activer une famille et **enregistrer** relance la découverte automatiquement —
 pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
@@ -540,76 +540,68 @@ première version.
 ## Interphone BTicino (Classe 300X / Classe 300 EOS) — aperçu
 
 Les interphones vidéo **BTicino Classe 300X** et **Classe 300 EOS with
-Netatmo** passent par l'API Netatmo, mais aucune description publique de leurs
-données n'existe. Cette version est un **aperçu** (première étape de
-l'[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59)) : elle découvre les modules et écrit leurs données
-brutes dans les journaux de l'intégration, pour que la prise en charge complète
-— la sonnerie comme déclencheur de scène, l'ouverture de la porte, l'éclairage
-d'escalier — soit construite sur des données réelles.
+Netatmo** passent par l'API Netatmo, qui en expose bien moins que l'application
+Netatmo ([issue #59](https://github.com/Terdious/gladys-netatmo/issues/59)). Activez **Interphone BTicino (Classe 300) — aperçu**
+sous **Appareils à découvrir** (désactivé par défaut) et enregistrez.
 
-Activez **Interphone BTicino (Classe 300) — aperçu** sous **Appareils à
-découvrir** (désactivé par défaut) et enregistrez. Chaque module est découvert
-comme un appareil, avec seulement ce que Netatmo renvoie réellement :
+L'interphone est découvert comme **un seul appareil**, au nom de son poste
+intérieur (la passerelle `BNCX`, ex. « Classe 300EOS with Netatmo »). Les
+modules qu'il relie lui ajoutent leurs fonctionnalités, à leur nom :
 
-| Module                       | Type Netatmo | Dans Gladys (aperçu)                                    |
-| ---------------------------- | ------------ | ------------------------------------------------------- |
-| Poste intérieur (passerelle) | `BNCX`       | qualité WiFi, quand Netatmo la renvoie                  |
-| Platine de rue               | `BNEU`       | joignabilité seulement (pas encore de sonnerie)         |
-| Gâche / ouvre-porte          | `BNDL`       | joignabilité seulement (pas encore de commande)         |
-| Éclairage d'escalier         | `BNSL`       | état allumé / éteint en lecture seule, s'il est renvoyé |
-| Prise commandée              | `BNCS`       | état allumé / éteint en lecture seule, s'il est renvoyé |
-| Module X                     | `BNXM`       | joignabilité seulement                                  |
+| Module                           | Type Netatmo | Sur l'appareil interphone                                       |
+| -------------------------------- | ------------ | --------------------------------------------------------------- |
+| Poste intérieur (passerelle)     | `BNCX`       | qualité WiFi, **sonnerie** (nécessite les webhooks Gladys Plus) |
+| Éclairage d'escalier / extérieur | `BNSL`       | **éclairage allumé / éteint** (ex. « Eclairage extérieur »)     |
+| Prise commandée                  | `BNCS`       | état allumé / éteint en lecture seule, quand Netatmo le renvoie |
+| Platine de rue                   | `BNEU`       | rien (Netatmo ne renvoie aucune valeur pour elle)               |
+| Serrure                          | `BNDL`       | rien — voir ci-dessous                                          |
+| Module X                         | `BNXM`       | sa qualité de signal, quand Netatmo en renvoie une              |
 
-Chaque module reçoit aussi sa qualité WiFi ou RF dès que Netatmo en renvoie une.
-Un module que Netatmo signale hors ligne reçoit le badge **injoignable**. Rien
-n'est encore pilotable : les commandes arrivent avec l'étape suivante, une fois
-les données réelles connues.
+- **Éclairage :** commandé via Netatmo comme dans l'application. Netatmo ne
+  renvoie jamais s'il est allumé : Gladys affiche la dernière commande envoyée
+  (l'éclairage d'escalier s'éteint en général seul après un délai, Gladys ne
+  peut pas savoir quand).
+- **Sonnerie :** publiée comme celle de la [sonnette vidéo](#sonnette-vidéo) (« Sonne » puis
+  l'heure du dernier appel), utilisable comme déclencheur de scène —
+  uniquement avec les [webhooks Gladys Plus](#webhooks-gladys-plus-temps-réel--optionnel). Netatmo documente cet
+  événement pour le Classe 300 EOS ; il n'a pas encore été vu sur une
+  installation réelle : si vos appels n'apparaissent pas, envoyez un
+  diagnostic (ci-dessous).
+- **L'ouverture de la porte n'est pas disponible.** L'API Netatmo utilisée par
+  les applications tierces ne leur permet pas d'ouvrir une serrure BTicino
+  (Netatmo la bloque pour des raisons de sécurité) ; seule l'application
+  Netatmo / BTicino le peut.
+- Le badge **injoignable** suit le poste intérieur. Un module relié que Netatmo
+  signale hors ligne ne publie aucune valeur.
+- Si vous aviez créé des appareils avec l'aperçu 2.2.0 (un par module),
+  supprimez-les et créez à nouveau l'appareil interphone.
 
-> ⚠️ **Nouvelles autorisations Netatmo — recliquez sur Connecter.**
-> Activer l'interrupteur demande quatre autorisations supplémentaires,
-> demandées uniquement tant qu'il est activé : `read_bfi` / `write_bfi`
-> (BTicino IP, Classe 300X) et `read_mx` / `write_mx` (Classe 300 EOS).
-> Cliquez à nouveau sur **Connecter** dans l'écran Configuration et
-> acceptez-les — vos appareils et réglages sont conservés. D'ici là, le statut
-> de connexion affiche « cliquez à nouveau sur Connecter », et Netatmo peut
-> omettre les modules BTicino. Les autorisations d'écriture sont demandées dès
-> maintenant pour que l'étape suivante ne demande pas de nouvelle reconnexion.
+> ⚠️ **Nouvelles autorisations Netatmo — cliquez à nouveau sur Connecter.**
+> Activer l'option demande quatre autorisations supplémentaires, demandées
+> uniquement quand elle est active : `read_bfi` / `write_bfi` (BTicino IP,
+> Classe 300X) et `read_mx` / `write_mx` (Classe 300 EOS). Cliquez à nouveau
+> sur **Connecter** dans l'écran de configuration et acceptez-les — vos
+> appareils et réglages sont conservés. D'ici là, le statut de connexion
+> affiche une invitation à vous reconnecter, et Netatmo peut omettre les
+> modules BTicino (une commande d'éclairage échoue alors avec un message
+> « reconnectez »).
 
-### Envoyer le journal de diagnostic au mainteneur
+### Envoyer un diagnostic au mainteneur
 
-Tant que l'interrupteur est activé, l'intégration écrit dans ses journaux, au
+Utilisez l'action **Diagnostic d'un appareil** de l'écran de configuration
+(voir [Dépannage](#dépannage)) : choisissez l'appareil interphone, ou laissez les
+deux champs vides pour tout le compte, et collez le résultat dans
+l'[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59). Faites sonner une fois avant de la lancer : le rapport
+liste les derniers événements webhook de chaque module.
+
+Tant que l'option est active, l'intégration écrit aussi dans ses journaux, au
 premier rafraîchissement après un démarrage puis **uniquement quand quelque
-chose change** :
-
-- les données brutes que Netatmo renvoie pour chaque module BTicino
-  (topologie et état de la maison, y compris les modules que Netatmo signale en
-  erreur) ;
-- chaque événement webhook Gladys Plus concernant un module BTicino (sonnerie,
-  appel décroché ou manqué, porte ouverte… — nécessite les
-  [webhooks Gladys Plus](#webhooks-gladys-plus-temps-réel--optionnel)).
-
-Chaque ligne commence par `[bticino-diagnostic]`. Les jetons d'accès, clés,
-signatures, adresses e-mail et toutes les URL (une URL VPN ou d'image contient
-une clé d'accès) sont remplacés par `<redacted>` ; les identifiants des
-modules, de la passerelle et de la maison sont conservés — ils servent à
-distinguer les modules. Une ligne de plus de 8 Ko est coupée, avec une marque
-`[truncated]`.
-
-Pour aider à construire la prise en charge complète :
-
-1. activez l'interrupteur, enregistrez, et recliquez sur **Connecter** si le
-   statut le demande ;
-2. utilisez l'interphone quelques minutes : sonnez à la platine de rue
-   (décrochez une fois, laissez sonner une fois), ouvrez la porte depuis
-   l'application, allumez l'éclairage d'escalier ;
-3. ouvrez l'onglet **Journaux** de l'intégration, copiez les lignes qui
-   commencent par `[bticino-diagnostic]` et publiez-les dans
-   l'[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59) ou sur le sujet du forum
-   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308). Relisez-les avant de les publier :
-   elles sont expurgées, mais vérifiez qu'il ne reste rien de personnel.
-
-Vous pouvez ensuite laisser l'interrupteur activé (le journal n'écrit que lors
-des changements) ou le désactiver.
+chose change**, les données brutes renvoyées par Netatmo pour chaque module
+BTicino et chaque événement webhook Gladys Plus le concernant. Chaque ligne
+commence par `[bticino-diagnostic]` ; la même anonymisation s'applique (jetons,
+clés, adresses e-mail et URL remplacés par `<redacted>`, identifiants de
+module, de passerelle et de maison conservés), et une ligne de plus de 8 Ko est
+coupée avec un marqueur `[truncated]`.
 
 ---
 
@@ -716,6 +708,19 @@ peut être relancée : elle ne déplace que ce qui reste.
 - **Statut « des autorisations Netatmo manquent » :** une version plus récente
   a ajouté des autorisations (sonnette vidéo, caméra intérieure Advance, interphone BTicino) — recliquez sur Connecter et
   acceptez-les. Les **Journaux** de l'intégration listent celles qui manquent.
+- **Diagnostic d'un appareil (signaler un problème ou un appareil non pris en
+  charge) :** dans l'écran de configuration, lancez l'action **Diagnostic d'un
+  appareil**. Choisissez un appareil créé dans Gladys, ou saisissez le nom ou
+  l'identifiant Netatmo d'un module que vous n'avez pas créé (par exemple un
+  module pas encore pris en charge) ; laissez les deux champs vides pour un
+  résumé de tout le compte. Le rapport montre ce que Netatmo envoie pour le
+  module, ce que l'intégration publie pour lui, les champs Netatmo qu'elle
+  n'utilise pas encore, les derniers événements webhook, les autorisations et
+  l'état de chaque API Netatmo. Il est aussi écrit dans les **Journaux** de
+  l'intégration (lignes après `[netatmo-diagnostic]`) si vous ne pouvez pas le
+  copier depuis l'écran. **Relisez-le avant de le publier :** jetons, URL et
+  adresses e-mail sont retirés, mais les identifiants de modules et de maison
+  et les noms donnés à vos modules sont conservés.
 - **Toujours bloqué, ou un appareil manque ?** Posez votre question sur le
   sujet du forum [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),
   ou ouvrez une issue sur [GitHub](https://github.com/Terdious/gladys-netatmo/issues) avec les journaux de

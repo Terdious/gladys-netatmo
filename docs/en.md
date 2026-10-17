@@ -70,7 +70,7 @@ Under **Devices to discover**, enable the families you own:
 | **Security**           | Indoor (`NACamera`), Indoor Camera Advance (`NPC`) and outdoor (`NOC`) cameras, video doorbell (`NDB`), plus their accessories and known persons |
 | **Roller shutters**    | Bubendorff shutters of an iDiamant gateway (`NBR`, `NBO`, `NBS`)                                                                                 |
 | **Air quality**        | Smart Indoor Air Quality Monitor — Home Coach (`NHC`), off by default                                                                            |
-| **BTicino door entry** | BTicino Classe 300X / Classe 300 EOS modules (`BNCX`, `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — preview, off by default                          |
+| **BTicino door entry** | BTicino Classe 300X / Classe 300 EOS door entry, one device (`BNCX` + its `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — preview, off by default      |
 
 Enabling a family and **saving** re-runs the discovery automatically — no manual
 re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
@@ -503,29 +503,38 @@ are not published. No reconnection is needed: the Home Coach permission
 ## BTicino door entry (Classe 300X / Classe 300 EOS) — preview
 
 The **BTicino Classe 300X** and **Classe 300 EOS with Netatmo** video door entry
-systems are served by the Netatmo API, but no public description of their data
-exists. This version is a **preview** (first step of
-[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59)): it discovers the modules and writes their raw data to the
-integration logs, so that the full support — the ring as a scene trigger, the
-door opening, the staircase light — can be built on real data.
+systems are served by the Netatmo API, with far less than the Netatmo app
+shows ([issue #59](https://github.com/Terdious/gladys-netatmo/issues/59)). Enable **BTicino door entry (Classe 300) — preview** under
+**Devices to discover** (off by default) and save.
 
-Enable **BTicino door entry (Classe 300) — preview** under **Devices to
-discover** (off by default) and save. Each module is discovered as a device,
-with only what Netatmo actually reports:
+The door entry is discovered as **one device**, named after its indoor unit
+(the `BNCX` gateway, e.g. "Classe 300EOS with Netatmo"). The modules it
+bridges add their features to it, named after them:
 
-| Module                | Netatmo type | In Gladys (preview)                               |
-| --------------------- | ------------ | ------------------------------------------------- |
-| Indoor unit (gateway) | `BNCX`       | WiFi quality, when Netatmo reports it             |
-| Street panel          | `BNEU`       | reachability only (no ring yet)                   |
-| Door lock             | `BNDL`       | reachability only (no opening command yet)        |
-| Staircase light       | `BNSL`       | read-only on / off state, when Netatmo reports it |
-| Controlled socket     | `BNCS`       | read-only on / off state, when Netatmo reports it |
-| X module              | `BNXM`       | reachability only                                 |
+| Module                    | Netatmo type | On the door entry device                                         |
+| ------------------------- | ------------ | ---------------------------------------------------------------- |
+| Indoor unit (gateway)     | `BNCX`       | WiFi quality, **doorbell ring** (needs the Gladys Plus webhooks) |
+| Staircase / outdoor light | `BNSL`       | **light on / off** (e.g. "Outdoor lighting")                     |
+| Controlled socket         | `BNCS`       | read-only on / off state, when Netatmo reports it                |
+| Street panel              | `BNEU`       | nothing (Netatmo reports no value for it)                        |
+| Door lock                 | `BNDL`       | nothing — see below                                              |
+| X module                  | `BNXM`       | its signal quality, when Netatmo reports one                     |
 
-Every module also gets its WiFi or RF quality whenever Netatmo reports one. A
-module Netatmo reports offline gets the **unreachable** badge. Nothing can be
-controlled yet: the commands come with the next step, once the real data is
-known.
+- **Light:** switched through Netatmo like in the app. Netatmo never reports
+  whether it is on: Gladys shows the last command it sent (the staircase light
+  usually switches itself off after a while, Gladys cannot know when).
+- **Ring:** published like the [video doorbell](#video-doorbell) ring (`Ringing` then the
+  time of the last ring), usable as a scene trigger — only with the
+  [Gladys Plus webhooks](#gladys-plus-webhooks-real-time--optional). Netatmo documents this event for the
+  Classe 300 EOS; it has not been seen on a real installation yet: if your
+  rings do not show, send a diagnostic (below).
+- **Opening the door is not available.** The Netatmo API used by third-party
+  applications does not let them open a BTicino door lock (Netatmo blocks it
+  for security reasons); only the Netatmo / BTicino app can.
+- The **unreachable** badge follows the indoor unit. A bridged module Netatmo
+  reports offline publishes no value.
+- If you created devices with the 2.2.0 preview (one per module), delete them
+  and create the door entry device again.
 
 > ⚠️ **New Netatmo permissions — click Connect again.** Turning the toggle on
 > asks for four extra permissions, requested only while it is on:
@@ -533,39 +542,24 @@ known.
 > `write_mx` (Classe 300 EOS). Click **Connect** again on the Configuration
 > screen and accept them — your devices and settings are kept.
 > Until then the connection status shows a "click Connect again" hint, and
-> Netatmo may leave the BTicino modules out. The write permissions are
-> requested now so that the next step needs no new reconnection.
+> Netatmo may leave the BTicino modules out (a light command then fails with a
+> "reconnect" message).
 
-### Sending the diagnostic log to the maintainer
+### Sending a diagnostic to the maintainer
 
-While the toggle is on, the integration writes to its logs, at the first
-refresh after a start and then **only when something changes**:
+Use the **Device diagnostic** action of the Configuration screen (see
+[Troubleshooting](#troubleshooting)): pick the door entry device, or leave both
+fields empty for the whole account, and paste the result in
+[issue #59](https://github.com/Terdious/gladys-netatmo/issues/59). Ring once before running it: the report lists the last webhook
+events of each module.
 
-- the raw data Netatmo returns for every BTicino module (home topology and
-  home status, including the modules Netatmo reports in error);
-- every Gladys Plus webhook event about a BTicino module (ring, call answered
-  or missed, door opened… — requires the
-  [Gladys Plus webhooks](#gladys-plus-webhooks-real-time--optional)).
-
-Each line starts with `[bticino-diagnostic]`. Access tokens, keys, signatures,
-e-mail addresses and every URL (a VPN or snapshot URL embeds an access key) are
-replaced by `<redacted>`; the module, bridge and home ids are kept — they are
-needed to tell the modules apart. A line longer than 8 KB is cut, with a
-`[truncated]` marker.
-
-To help build the full support:
-
-1. enable the toggle, save, and click **Connect** again if the status asks for
-   it;
-2. use the door entry for a few minutes: ring at the street panel (answer once,
-   let it ring once), open the door from the app, switch the staircase light;
-3. open the integration **Logs** tab, copy the lines starting with
-   `[bticino-diagnostic]` and post them in [issue #59](https://github.com/Terdious/gladys-netatmo/issues/59) or on the
-   forum topic [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308). Read them before
-   posting: they are redacted, but check that nothing personal is left.
-
-You can leave the toggle on afterwards (the log only writes on changes) or turn
-it off.
+While the toggle is on, the integration also writes to its logs, at the first
+refresh after a start and then **only when something changes**, the raw data
+Netatmo returns for every BTicino module and every Gladys Plus webhook event
+about one. Each line starts with `[bticino-diagnostic]`; the same redaction
+applies (tokens, keys, e-mail addresses and URLs are replaced by
+`<redacted>`, the module, bridge and home ids are kept), and a line longer
+than 8 KB is cut with a `[truncated]` marker.
 
 ---
 
@@ -662,6 +656,18 @@ moves what is left.
 - **"Some Netatmo permissions are missing" status:** a newer version added
   permissions (video doorbell, Indoor Camera Advance, BTicino door entry) — click Connect again and accept them. The
   integration **Logs** list the missing ones.
+- **Device diagnostic (report a problem or an unsupported device):** on the
+  Configuration screen, run the **Device diagnostic** action. Pick a device
+  created in Gladys, or type the name or Netatmo id of a module you did not
+  create (e.g. one the integration does not support yet); leave both fields
+  empty for a summary of the whole account. The report shows what Netatmo
+  sends for the module, what the integration publishes for it, the Netatmo
+  fields it does not use yet, the last webhook events, the permissions and the
+  state of each Netatmo API. It is also written to the integration **Logs**
+  (lines after `[netatmo-diagnostic]`) if you cannot copy it from the screen.
+  **Read it before posting it publicly:** tokens, URLs and e-mail addresses
+  are removed, but module and home ids and the names you gave your modules
+  are kept.
 - **Still stuck, or a device is missing?** Ask on the forum topic
   [Intégration externe - Netatmo](https://community.gladysassistant.com/t/integration-externe-netatmo/11308),
   or open an issue on [GitHub](https://github.com/Terdious/gladys-netatmo/issues) with the integration logs
