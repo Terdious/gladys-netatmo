@@ -163,6 +163,107 @@ como se reporta) y su calidad WiFi. Su habitación aparece en el widget
 
 ---
 
+## Usar el widget Termostato de Gladys
+
+Gladys 5.2 incluye una integración **Termostato** y su widget de panel
+**Termostato**: una programación semanal definida en Gladys, preajustes de
+temperatura (Confort, Eco, Noche, Ausencia, Antihielo), un botón de parada y el
+corte de la calefacción cuando se abre una ventana. Puede controlar un
+**termostato real**, y cada habitación calefactada de Netatmo lo es: una
+habitación con termostato (`NATherm1`, modulante `OTM`, Smarther `BNS`) o una
+habitación solo con válvulas de radiador (`NRV`).
+
+Para ello, **un dispositivo por habitación calefactada** — su termostato o, en
+una habitación sin termostato, una de sus válvulas — incluye tres
+funcionalidades con el nombre de la habitación (los nombres de las
+funcionalidades están en inglés en Gladys):
+
+| Funcionalidad                      | Lo que indica                                                                                                                                                                                                                     |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Heating state - _habitación_**   | estado de calefacción: **Calentando** mientras la habitación pide calor (o, en un termostato de caldera, mientras la caldera funciona), **Inactivo** si no (**Enfriando** mientras funciona el aire acondicionado de un Smarther) |
+| **Thermostat mode - _habitación_** | **Apagado** o **Calor**, controlable: Apagado apaga la habitación en Netatmo, Calor la devuelve a su programación Netatmo. No se envía nada a Netatmo si la habitación ya está en ese modo                                        |
+| **Window open - _habitación_**     | **Abierto** / **Cerrado**, según la detección de ventana abierta de Netatmo (nada mientras Netatmo no la informa)                                                                                                                 |
+
+La antigua funcionalidad **Detecting open window** de los termostatos y las
+válvulas se mantiene tal cual (vale 1 cuando la ventana está abierta); utilice
+**Window open** con la integración Termostato, sigue la convención de los
+sensores de apertura de Gladys.
+
+> ⚠️ **Si sus termostatos y válvulas ya existían en Gladys**, las nuevas
+> funcionalidades no aparecen solas: vaya a la pantalla **Descubrimiento** y
+> haga clic en **Actualizar** en cada termostato y válvula. No se necesita
+> ningún permiso Netatmo nuevo.
+
+### Crear el termostato
+
+1. Abra la integración **Termostato** de Gladys y haga clic en **Nuevo**, un
+   termostato por habitación Netatmo.
+2. En **Tipo de termostato**, elija **Termostato real (el aparato regula por sí
+   mismo)**.
+3. Elija las funcionalidades del dispositivo que incluye las de la habitación:
+
+| Campo en Gladys                       | Funcionalidad Netatmo que elegir                         |
+| ------------------------------------- | -------------------------------------------------------- |
+| **Consigna del termostato real**      | **Setpoint temperature** de ese dispositivo              |
+| **Sensor de temperatura**             | **Temperature - room _habitación_**                      |
+| **Estado de calefacción (opcional)**  | **Heating state - _habitación_**                         |
+| **Modo de funcionamiento (opcional)** | **Thermostat mode - _habitación_**                       |
+| **Sensor de apertura de ventana**     | **Window open - _habitación_** (opcional, vea más abajo) |
+
+4. Defina los preajustes y una programación, guarde y añada el widget
+   **Termostato** a un panel.
+
+Cada termostato y cada válvula de una habitación tiene su propia **Setpoint
+temperature**, y todas ajustan la misma consigna de la habitación: elija la del
+dispositivo que incluye las funcionalidades de la habitación, para que todo el
+termostato lea un solo dispositivo.
+
+### Lo que obtiene
+
+- el **halo de calefacción** del widget mientras la habitación calienta;
+- la **programación semanal y los preajustes** de Gladys: en cada tramo,
+  Gladys escribe la temperatura del preajuste como consigna de la habitación
+  (una consigna manual en Netatmo);
+- la **parada** (y los tramos Apagado): Gladys apaga la habitación en Netatmo
+  y luego escribe su consigna antihielo — que no se envía mientras la
+  habitación está apagada, así que la habitación sigue apagada. **Puesta en
+  marcha**: la habitación vuelve a encenderse (con su programación Netatmo) y
+  luego Gladys escribe su consigna;
+- la **ventana**: cuando **Window open** pasa a Abierto, Gladys detiene la
+  habitación y la vuelve a poner en marcha al cerrarse la ventana. Es
+  **opcional**: los termostatos y las válvulas Netatmo ya cortan la calefacción
+  por sí mismos cuando detectan una ventana abierta. Elíjala si quiere ver la
+  parada en Gladys.
+
+### La programación de Netatmo sigue funcionando
+
+Gladys no desactiva la programación de Netatmo: la sustituye con consignas
+manuales. Netatmo termina una consigna manual tras la duración predeterminada
+definida en la aplicación Netatmo, y la habitación vuelve entonces a seguir su
+programación Netatmo — como cuando alguien gira el termostato o cambia la
+consigna en la aplicación Netatmo. Gladys ve cambiar la consigna en el
+dispositivo y la mantiene como una **anulación manual**, exactamente como un
+giro del dial del widget (durante la **Duración del modo manual** del
+termostato, o hasta el tramo siguiente), y luego retoma el control con su
+propia programación. Netatmo se lee cada 2 minutos y informa la misma consigna
+una y otra vez: Gladys reconoce su propia consigna en estas lecturas, así que
+un informe sin cambios nunca cuenta como un cambio. Para el resultado más
+previsible, defina una duración predeterminada larga de las consignas manuales
+en la aplicación Netatmo, o haga coincidir la programación Netatmo con la de
+Gladys.
+
+Dos cosas más:
+
+- una habitación **apagada** desde la aplicación Netatmo vuelve a encenderla
+  Gladys en su siguiente pasada cuando su programación pide calor: deténgala
+  mejor desde Gladys (botón de parada, tramo Apagado);
+- mientras una habitación está apagada, una consigna enviada desde Gladys
+  (página del dispositivo, escena) no se transmite a Netatmo — una consigna
+  manual volvería a encender la habitación. Vuelva a encender primero la
+  habitación con su **Thermostat mode**.
+
+---
+
 ## Cámaras
 
 Cuando la familia Seguridad está activada, cada cámara se crea con:

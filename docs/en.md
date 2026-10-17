@@ -152,6 +152,97 @@ the thermostat can be chosen in the **Change the heating mode** scene action.
 
 ---
 
+## Use the Gladys Thermostat widget
+
+Gladys 5.2 comes with a **Thermostat** integration and its **Thermostat**
+dashboard widget: a weekly schedule set in Gladys, temperature presets
+(Comfort, Eco, Night, Away, Frost protection), a stop button and the heating
+cut when a window opens. It can drive a **real thermostat**, and every heated
+Netatmo room is one: a room with a thermostat (`NATherm1`, modulating `OTM`,
+Smarther `BNS`) or a room with radiator valves only (`NRV`).
+
+To make it possible, **one device per heated room** — its thermostat, or one of
+its valves in a room without thermostat — carries three features named after
+the room:
+
+| Feature                      | What it says                                                                                                                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Heating state - _room_**   | **Heating** while the room asks for heat (or, on a boiler thermostat, while the boiler runs), **Idle** otherwise (**Cooling** while a Smarther's air conditioning runs)       |
+| **Thermostat mode - _room_** | **Off** or **Heating**, writable: Off switches the room off in Netatmo, Heating hands it back to its Netatmo schedule. Nothing is sent to Netatmo when the room is already so |
+| **Window open - _room_**     | **Opened** / **Closed**, from the Netatmo open window detection (nothing while Netatmo does not report it)                                                                    |
+
+The older **Detecting open window** feature of thermostats and valves is kept
+as it was (it reads 1 when the window is open); use **Window open** with the
+Thermostat integration, it follows the Gladys convention of opening sensors.
+
+> ⚠️ **If your thermostats and valves already existed in Gladys**, the new
+> features do not appear on their own: go to the **Discovery** screen and click
+> **Update** on each thermostat and valve. No new Netatmo permission is needed.
+
+### Create the thermostat
+
+1. Open the **Thermostat** integration of Gladys and click **New**, one
+   thermostat per Netatmo room.
+2. In **Thermostat type**, choose **Real thermostat (the appliance regulates
+   itself)**.
+3. Pick the features of the device that carries the room features:
+
+| Field in Gladys                     | Netatmo feature to pick                        |
+| ----------------------------------- | ---------------------------------------------- |
+| **Setpoint of the real thermostat** | **Setpoint temperature** of that device        |
+| **Temperature sensor**              | **Temperature - room _room_**                  |
+| **Heating state (optional)**        | **Heating state - _room_**                     |
+| **Operating mode (optional)**       | **Thermostat mode - _room_**                   |
+| **Window opening sensor**           | **Window open - _room_** (optional, see below) |
+
+4. Set the presets and a schedule, save, then add the **Thermostat** widget to
+   a dashboard.
+
+Every thermostat and valve of a room has its own **Setpoint temperature**, and
+they all set the same room setpoint: pick the one of the device that carries
+the room features, so the whole thermostat reads one device.
+
+### What you get
+
+- the **heating halo** of the widget while the room heats;
+- the **weekly schedule and the presets** of Gladys: at each slot Gladys
+  writes the preset's temperature as the room setpoint (a manual setpoint in
+  Netatmo);
+- **stop** (and the Off slots): Gladys switches the room off in Netatmo, then
+  writes its frost protection setpoint — which is not sent while the room is
+  off, so the room stays off. **Start**: the room goes back on (its Netatmo
+  schedule), then Gladys writes its setpoint;
+- **window**: when **Window open** reads Opened, Gladys stops the room, and
+  restarts it once the window is closed. This one is **optional**: Netatmo
+  thermostats and valves already cut the heating themselves when they detect
+  an open window. Pick it if you want the stop shown in Gladys.
+
+### Netatmo's own schedule keeps running
+
+Gladys does not turn the Netatmo schedule off: it overrides it with manual
+setpoints. Netatmo ends a manual setpoint after the default duration set in
+the Netatmo app, and the room then follows its Netatmo schedule again — like
+when somebody turns the thermostat or changes the setpoint in the Netatmo
+app. Gladys sees the setpoint change on the device and keeps it as a **manual
+hold**, exactly like a turn of the widget dial (for the **Manual mode
+duration** of the thermostat, or until the next slot), then takes over again
+with its own schedule. Netatmo is read every 2 minutes and reports the same
+setpoint again and again: Gladys recognises its own setpoint in these reads,
+so an unchanged report never counts as a change. For the most predictable
+result, set a long default duration of manual setpoints in the Netatmo app, or
+make the Netatmo schedule match the Gladys one.
+
+Two more things to know:
+
+- a room switched **off** from the Netatmo app is switched back on by Gladys
+  at its next pass when its schedule wants heat: stop it from Gladys instead
+  (stop button, Off slot);
+- while a room is off, a setpoint sent from Gladys (device page, scene) is not
+  sent to Netatmo — a manual setpoint would switch the room back on. Switch
+  the room back on with its **Thermostat mode** first.
+
+---
+
 ## Cameras
 
 When the Security family is enabled, each camera is created with:

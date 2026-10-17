@@ -160,6 +160,103 @@ peut être choisi dans l'action de scène **Changer le mode du chauffage**.
 
 ---
 
+## Utiliser le widget Thermostat de Gladys
+
+Gladys 5.2 arrive avec une intégration **Thermostat** et son widget de tableau
+de bord **Thermostat** : une programmation hebdomadaire réglée dans Gladys, des
+presets de température (Confort, Éco, Nuit, Absence, Hors-gel), un bouton
+d'arrêt et la coupure du chauffage quand une fenêtre s'ouvre. Elle sait piloter
+un **thermostat réel**, et chaque pièce chauffée Netatmo en est un : une pièce
+avec un thermostat (`NATherm1`, modulant `OTM`, Smarther `BNS`) ou une pièce
+équipée seulement de vannes de radiateur (`NRV`).
+
+Pour cela, **un appareil par pièce chauffée** — son thermostat, ou l'une de ses
+vannes dans une pièce sans thermostat — porte trois fonctionnalités au nom de
+la pièce (les noms des fonctionnalités sont en anglais dans Gladys) :
+
+| Fonctionnalité                | Ce qu'elle indique                                                                                                                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Heating state - _pièce_**   | état de chauffe : **Chauffe** quand la pièce demande de la chaleur (ou, pour un thermostat de chaudière, quand la chaudière tourne), **Inactif** sinon (**Refroidit** quand la climatisation d'un Smarther tourne) |
+| **Thermostat mode - _pièce_** | **Arrêt** ou **Chauffage**, pilotable : Arrêt éteint la pièce dans Netatmo, Chauffage la rend à son planning Netatmo. Rien n'est envoyé à Netatmo si la pièce est déjà dans ce mode                                |
+| **Window open - _pièce_**     | **Ouvert** / **Fermé**, d'après la détection de fenêtre ouverte de Netatmo (rien tant que Netatmo ne la rapporte pas)                                                                                              |
+
+L'ancienne fonctionnalité **Detecting open window** des thermostats et des
+vannes reste telle quelle (elle vaut 1 quand la fenêtre est ouverte) ; utilisez
+**Window open** avec l'intégration Thermostat, elle suit la convention des
+capteurs d'ouverture de Gladys.
+
+> ⚠️ **Si vos thermostats et vannes existaient déjà dans Gladys**, les nouvelles
+> fonctionnalités n'apparaissent pas toutes seules : allez sur l'écran
+> **Découverte** et cliquez sur **Mettre à jour** sur chaque thermostat et
+> vanne. Aucune nouvelle autorisation Netatmo n'est nécessaire.
+
+### Créer le thermostat
+
+1. Ouvrez l'intégration **Thermostat** de Gladys et cliquez sur **Nouveau**,
+   un thermostat par pièce Netatmo.
+2. Dans **Type de thermostat**, choisissez **Thermostat réel (l'appareil régule
+   lui-même)**.
+3. Choisissez les fonctionnalités de l'appareil qui porte celles de la pièce :
+
+| Champ dans Gladys                       | Fonctionnalité Netatmo à choisir                      |
+| --------------------------------------- | ----------------------------------------------------- |
+| **Consigne du thermostat réel**         | **Setpoint temperature** de cet appareil              |
+| **Capteur de température**              | **Temperature - room _pièce_**                        |
+| **État de chauffe (facultatif)**        | **Heating state - _pièce_**                           |
+| **Mode de fonctionnement (facultatif)** | **Thermostat mode - _pièce_**                         |
+| **Capteur d'ouverture de fenêtre**      | **Window open - _pièce_** (facultatif, voir plus bas) |
+
+4. Réglez les presets et un planning, sauvegardez, puis ajoutez le widget
+   **Thermostat** à un tableau de bord.
+
+Chaque thermostat et chaque vanne d'une pièce a sa propre **Setpoint
+temperature**, et toutes règlent la même consigne de pièce : choisissez celle
+de l'appareil qui porte les fonctionnalités de la pièce, pour que tout le
+thermostat lise un seul appareil.
+
+### Ce que vous obtenez
+
+- le **halo de chauffe** du widget quand la pièce chauffe ;
+- la **programmation hebdomadaire et les presets** de Gladys : à chaque
+  créneau, Gladys écrit la température du preset comme consigne de la pièce
+  (une consigne manuelle dans Netatmo) ;
+- l'**arrêt** (et les créneaux Arrêt) : Gladys éteint la pièce dans Netatmo,
+  puis écrit sa consigne hors-gel — qui n'est pas envoyée tant que la pièce est
+  éteinte, la pièce reste donc éteinte. **Remise en route** : la pièce se
+  rallume (sur son planning Netatmo), puis Gladys écrit sa consigne ;
+- la **fenêtre** : quand **Window open** passe à Ouvert, Gladys arrête la
+  pièce, et la relance une fois la fenêtre fermée. Elle est **facultative** :
+  les thermostats et les vannes Netatmo coupent déjà eux-mêmes le chauffage
+  quand ils détectent une fenêtre ouverte. Choisissez-la si vous voulez voir
+  l'arrêt dans Gladys.
+
+### Le planning Netatmo continue de tourner
+
+Gladys ne désactive pas le planning Netatmo : elle le remplace par des
+consignes manuelles. Netatmo met fin à une consigne manuelle après la durée par
+défaut réglée dans l'application Netatmo, et la pièce suit alors de nouveau son
+planning Netatmo — comme quand quelqu'un tourne le thermostat ou change la
+consigne dans l'application Netatmo. Gladys voit la consigne changer sur
+l'appareil et la garde comme une **dérogation manuelle**, exactement comme un
+tour de la molette du widget (pendant la **Durée du mode manuel** du
+thermostat, ou jusqu'au créneau suivant), puis reprend la main avec sa propre
+programmation. Netatmo est lu toutes les 2 minutes et rapporte la même consigne
+encore et encore : Gladys reconnaît sa propre consigne dans ces lectures, un
+rapport inchangé ne compte donc jamais comme un changement. Pour le résultat le
+plus prévisible, réglez une longue durée par défaut des consignes manuelles
+dans l'application Netatmo, ou alignez le planning Netatmo sur celui de Gladys.
+
+Deux choses encore :
+
+- une pièce **éteinte** depuis l'application Netatmo est rallumée par Gladys à
+  son passage suivant quand sa programmation demande de chauffer : arrêtez-la
+  plutôt depuis Gladys (bouton d'arrêt, créneau Arrêt) ;
+- tant qu'une pièce est éteinte, une consigne envoyée depuis Gladys (page de
+  l'appareil, scène) n'est pas transmise à Netatmo — une consigne manuelle
+  rallumerait la pièce. Rallumez d'abord la pièce avec son **Thermostat mode**.
+
+---
+
 ## Caméras
 
 Quand la famille Sécurité est activée, chaque caméra est créée avec :

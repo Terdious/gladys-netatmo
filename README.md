@@ -35,6 +35,16 @@ capabilities land (Home + Security cameras, webhooks, …).
 - **Heating mode**: the home's mode (schedule / away / frost guard) as a
   writable thermostat preset on every thermostat and valve (`setthermmode`,
   then an immediate refresh).
+- **Gladys Thermostat widget** (Gladys 5.2+, core Thermostat service): one
+  device per heated room (its thermostat, else one of its valves) carries the
+  room's **Heating state** (`thermostat`/`operating-state`, from the room's
+  `heating_power_request` or the boiler status), a writable **Thermostat
+  mode** off / heating (`thermostat`/`mode`, setroomthermpoint `off` /
+  `home`, skipped when the room is already so) and **Window open**
+  (`opening-sensor`, 0 open / 1 closed): an external thermostat of the
+  Thermostat integration gets the heating halo, the Gladys schedule and
+  presets, a real stop and the window cut on every Netatmo room. A setpoint
+  reaching an off room is not sent (it would switch the room back on).
 - **Scene triggers and actions** (Gladys 5.1+): "a known person arrives /
   leaves" and "the siren sounds" fired from the webhook events with the
   person, camera and home names; "change the heating mode" (optional
