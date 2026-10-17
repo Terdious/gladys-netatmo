@@ -24,7 +24,6 @@ import {
   OPENING_SENSOR_STATE,
   ROOM_OPERATING_STATE_SUFFIX,
   ROOM_MODE_SUFFIX,
-  ROOM_WINDOW_SUFFIX,
 } from './constants.js';
 import { healthIndexToAqi, healthIndexToLevel } from './deviceMapping.js';
 
@@ -180,10 +179,12 @@ function roomMode(deviceNetatmo) {
 }
 
 /**
- * Open window detected in the room (issue #77), OPENING_SENSOR_STATE: 0 open,
- * 1 closed. Nothing when homestatus does not report it.
+ * Open window detected in the room (`open_window`, thermostats and valves),
+ * with the Gladys convention of an opening sensor, OPENING_SENSOR_STATE:
+ * 0 open, 1 closed (it published 1 when open before, so the dashboard showed
+ * an open window as closed). Nothing when homestatus does not report it.
  */
-function roomWindow(deviceNetatmo) {
+function openWindow(deviceNetatmo) {
   const open = deviceNetatmo.room?.open_window;
   if (typeof open !== 'boolean') {
     return undefined;
@@ -191,12 +192,22 @@ function roomWindow(deviceNetatmo) {
   return open ? OPENING_SENSOR_STATE.OPEN : OPENING_SENSOR_STATE.CLOSE;
 }
 
+/**
+ * Door / window tag contact (`opening`, issue #9) from homestatus `status`,
+ * OPENING_SENSOR_STATE like `open_window`: "open" 0, "closed" 1. Any other
+ * value ("no_news", "calibrating", "undefined") is no reliable state: nothing.
+ */
+function doorTagOpening(deviceNetatmo) {
+  if (deviceNetatmo.status === 'open') return OPENING_SENSOR_STATE.OPEN;
+  if (deviceNetatmo.status === 'closed') return OPENING_SENSOR_STATE.CLOSE;
+  return undefined;
+}
+
 // The room thermostat features (issue #77): only published on the device that
 // carries them (one per room), like any feature the device does not have.
 const ROOM_THERMOSTAT_MAPPING = {
   [ROOM_OPERATING_STATE_SUFFIX]: roomOperatingState,
   [ROOM_MODE_SUFFIX]: roomMode,
-  [ROOM_WINDOW_SUFFIX]: roomWindow,
 };
 
 export const UPDATE_MAPPINGS = {
@@ -215,7 +226,7 @@ export const UPDATE_MAPPINGS = {
     temperature: (deviceNetatmo) => deviceNetatmo.measured?.temperature,
     therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
     therm_setpoint_temperature: roomSetpoint,
-    open_window: (deviceNetatmo) => deviceNetatmo.room?.open_window,
+    open_window: openWindow,
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
     boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
     // Heating mode of the home (issue #38), carried on every device of the
@@ -227,7 +238,7 @@ export const UPDATE_MAPPINGS = {
     battery_percent: (deviceNetatmo) => deviceNetatmo.battery_state,
     therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
     therm_setpoint_temperature: roomSetpoint,
-    open_window: (deviceNetatmo) => deviceNetatmo.room?.open_window,
+    open_window: openWindow,
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
     heating_power_request: (deviceNetatmo) => {
       const heatingPowerRequest = deviceNetatmo.room?.heating_power_request;
@@ -246,6 +257,7 @@ export const UPDATE_MAPPINGS = {
       deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
     therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
     therm_setpoint_temperature: roomSetpoint,
+    open_window: openWindow,
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,
     boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
     therm_preset: (deviceNetatmo) => deviceNetatmo.therm_mode,
@@ -263,6 +275,7 @@ export const UPDATE_MAPPINGS = {
     wifi_strength: (deviceNetatmo) => deviceNetatmo.wifi_strength,
     therm_measured_temperature: (deviceNetatmo) => deviceNetatmo.room?.therm_measured_temperature,
     therm_setpoint_temperature: roomSetpoint,
+    open_window: openWindow,
     boiler_status: (deviceNetatmo) => deviceNetatmo.boiler_status,
     cooler_status: (deviceNetatmo) => deviceNetatmo.cooler_status,
     boiler_valve_comfort_boost: (deviceNetatmo) => deviceNetatmo.boiler_valve_comfort_boost,
@@ -351,11 +364,7 @@ export const UPDATE_MAPPINGS = {
   // "open"/"closed" (other values — "no_news"/"calibrating"/"undefined" — mean
   // "no reliable state", skipped). Battery is a percent or the string state.
   [SUPPORTED_MODULE_TYPE.NACAMDOORTAG]: {
-    opening: (deviceNetatmo) => {
-      if (deviceNetatmo.status === 'open') return true;
-      if (deviceNetatmo.status === 'closed') return false;
-      return undefined;
-    },
+    opening: doorTagOpening,
     battery_percent: (deviceNetatmo) =>
       deviceNetatmo.battery_percent ?? deviceNetatmo.battery_state,
     rf_strength: (deviceNetatmo) => deviceNetatmo.rf_strength,

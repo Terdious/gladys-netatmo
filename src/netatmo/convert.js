@@ -40,7 +40,6 @@ import {
   buildFeatureThermPreset,
   buildFeatureRoomOperatingState,
   buildFeatureRoomMode,
-  buildFeatureRoomWindow,
   buildFeatureBoilerStatus,
   buildFeatureBoilerFault,
   buildFeatureCoolerStatus,
@@ -199,8 +198,8 @@ function pushThermPreset(features, homeId, nameDevice, externalId) {
 }
 
 /**
- * Append the room thermostat features (issue #77) — heating state, mode
- * (off / heating) and open window, named after the room — on the ONE device
+ * Append the room thermostat features (issue #77) — heating state and mode
+ * (off / heating), named after the room — on the ONE device
  * elected to carry them for its room (discovery markRoomThermostats), when
  * the room can be commanded (home and room ids).
  */
@@ -209,7 +208,6 @@ function pushRoomThermostat(features, netatmoDevice, { roomName, externalId, wri
     features.push(
       buildFeatureRoomOperatingState(roomName, externalId),
       buildFeatureRoomMode(roomName, externalId),
-      buildFeatureRoomWindow(roomName, externalId),
     );
   }
 }
@@ -338,7 +336,8 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
     case SUPPORTED_MODULE_TYPE.OTM:
       // Modulating / OpenTherm thermostat (issue #53): battery + RF built
       // above; the room carries the measured temperature and the setpoint
-      // (setroomthermpoint), the home the heating mode, like the NATherm1.
+      // (setroomthermpoint), the open window, the home the heating mode, like
+      // the NATherm1.
       if (room.id) {
         features.push(
           buildFeatureTemperature(`room ${roomName}`, externalId, 'therm_measured_temperature'),
@@ -348,6 +347,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
         buildFeatureThermSetpointTemperature(nameDevice, externalId, {
           writable: setpointWritable,
         }),
+        buildFeatureOpenWindow(nameDevice, externalId),
         buildFeatureBoilerStatus(nameDevice, externalId),
       );
       pushThermPreset(features, homeId, nameDevice, externalId);
@@ -355,8 +355,8 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
       break;
     case SUPPORTED_MODULE_TYPE.BNS:
       // BTicino Smarther with Netatmo (issue #54): a wifi thermostat of its
-      // own (no relay, no battery); room temperature, setpoint and heating
-      // mode like the NATherm1, plus its heating / cooling states.
+      // own (no relay, no battery); room temperature, setpoint, open window and
+      // heating mode like the NATherm1, plus its heating / cooling states.
       features.push(buildFeatureWifiStrength(nameDevice, externalId));
       if (room.id) {
         features.push(
@@ -367,6 +367,7 @@ export function convertDevice(gladys, netatmoDevice, cameraEnrichments, options 
         buildFeatureThermSetpointTemperature(nameDevice, externalId, {
           writable: setpointWritable,
         }),
+        buildFeatureOpenWindow(nameDevice, externalId),
         buildFeatureBoilerStatus(nameDevice, externalId),
         buildFeatureCoolerStatus(nameDevice, externalId),
         buildFeatureComfortBoost(nameDevice, externalId),

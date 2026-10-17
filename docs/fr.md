@@ -121,7 +121,8 @@ fait partie de la famille Énergie. Ses deux modules sont chacun créés comme u
 appareil :
 
 - le **thermostat** (`OTM`) : température de la pièce, **consigne** pilotable,
-  **Mode du chauffage** (voir ci-dessus), **état de la chaudière** (allumé
+  **Mode du chauffage** (voir ci-dessus), la **détection de fenêtre ouverte**
+  de sa pièce (**Detecting open window**), **état de la chaudière** (allumé
   quand la chaudière chauffe), batterie et signal radio, comme l'ancien
   `NATherm1` ;
 - le **relais OpenTherm** (`OTH`) branché à la chaudière : sa qualité WiFi, la
@@ -143,7 +144,8 @@ depuis la première version.
 
 Le thermostat **BTicino Smarther with Netatmo** (`BNS`) fait partie de la
 famille Énergie. Il est créé avec la température de sa pièce, une **consigne**
-pilotable, le **Mode du chauffage** (voir ci-dessus), l'**état de la
+pilotable, le **Mode du chauffage** (voir ci-dessus), la **détection de
+fenêtre ouverte** de sa pièce (**Detecting open window**), l'**état de la
 chaudière** (allumé quand il chauffe), l'**état de la climatisation** (allumé
 quand la climatisation tourne), un état **Boost confort** en lecture seule (le
 champ Netatmo `boiler_valve_comfort_boost`, tel que rapporté) et sa qualité
@@ -171,19 +173,18 @@ avec un thermostat (`NATherm1`, modulant `OTM`, Smarther `BNS`) ou une pièce
 équipée seulement de vannes de radiateur (`NRV`).
 
 Pour cela, **un appareil par pièce chauffée** — son thermostat, ou l'une de ses
-vannes dans une pièce sans thermostat — porte trois fonctionnalités au nom de
-la pièce (les noms des fonctionnalités sont en anglais dans Gladys) :
+vannes dans une pièce sans thermostat — porte deux fonctionnalités au nom de la
+pièce (les noms des fonctionnalités sont en anglais dans Gladys) :
 
 | Fonctionnalité                | Ce qu'elle indique                                                                                                                                                                                                 |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Heating state - _pièce_**   | état de chauffe : **Chauffe** quand la pièce demande de la chaleur (ou, pour un thermostat de chaudière, quand la chaudière tourne), **Inactif** sinon (**Refroidit** quand la climatisation d'un Smarther tourne) |
 | **Thermostat mode - _pièce_** | **Arrêt** ou **Chauffage**, pilotable : Arrêt éteint la pièce dans Netatmo, Chauffage la rend à son planning Netatmo. Rien n'est envoyé à Netatmo si la pièce est déjà dans ce mode                                |
-| **Window open - _pièce_**     | **Ouvert** / **Fermé**, d'après la détection de fenêtre ouverte de Netatmo (rien tant que Netatmo ne la rapporte pas)                                                                                              |
 
-L'ancienne fonctionnalité **Detecting open window** des thermostats et des
-vannes reste telle quelle (elle vaut 1 quand la fenêtre est ouverte) ; utilisez
-**Window open** avec l'intégration Thermostat, elle suit la convention des
-capteurs d'ouverture de Gladys.
+Le capteur de fenêtre est la fonctionnalité **Detecting open window** que
+chaque thermostat et chaque vanne a déjà : la détection de fenêtre ouverte de
+Netatmo pour sa pièce, **Ouvert** / **Fermé** — 0 ouvert, 1 fermé, comme tout
+capteur d'ouverture de Gladys (rien tant que Netatmo ne la rapporte pas).
 
 > ⚠️ **Si vos thermostats et vannes existaient déjà dans Gladys**, les nouvelles
 > fonctionnalités n'apparaissent pas toutes seules : allez sur l'écran
@@ -198,13 +199,13 @@ capteurs d'ouverture de Gladys.
    lui-même)**.
 3. Choisissez les fonctionnalités de l'appareil qui porte celles de la pièce :
 
-| Champ dans Gladys                       | Fonctionnalité Netatmo à choisir                      |
-| --------------------------------------- | ----------------------------------------------------- |
-| **Consigne du thermostat réel**         | **Setpoint temperature** de cet appareil              |
-| **Capteur de température**              | **Temperature - room _pièce_**                        |
-| **État de chauffe (facultatif)**        | **Heating state - _pièce_**                           |
-| **Mode de fonctionnement (facultatif)** | **Thermostat mode - _pièce_**                         |
-| **Capteur d'ouverture de fenêtre**      | **Window open - _pièce_** (facultatif, voir plus bas) |
+| Champ dans Gladys                       | Fonctionnalité Netatmo à choisir                                                                 |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **Consigne du thermostat réel**         | **Setpoint temperature** de cet appareil                                                         |
+| **Capteur de température**              | **Temperature - room _pièce_**                                                                   |
+| **État de chauffe (facultatif)**        | **Heating state - _pièce_**                                                                      |
+| **Mode de fonctionnement (facultatif)** | **Thermostat mode - _pièce_**                                                                    |
+| **Capteur d'ouverture de fenêtre**      | **Detecting open window** d'un thermostat ou d'une vanne de la pièce (facultatif, voir plus bas) |
 
 4. Réglez les presets et un planning, sauvegardez, puis ajoutez le widget
    **Thermostat** à un tableau de bord.
@@ -224,8 +225,8 @@ thermostat lise un seul appareil.
   puis écrit sa consigne hors-gel — qui n'est pas envoyée tant que la pièce est
   éteinte, la pièce reste donc éteinte. **Remise en route** : la pièce se
   rallume (sur son planning Netatmo), puis Gladys écrit sa consigne ;
-- la **fenêtre** : quand **Window open** passe à Ouvert, Gladys arrête la
-  pièce, et la relance une fois la fenêtre fermée. Elle est **facultative** :
+- la **fenêtre** : quand **Detecting open window** passe à Ouvert, Gladys
+  arrête la pièce, et la relance une fois la fenêtre fermée. Elle est **facultative** :
   les thermostats et les vannes Netatmo coupent déjà eux-mêmes le chauffage
   quand ils détectent une fenêtre ouverte. Choisissez-la si vous voulez voir
   l'arrêt dans Gladys.
@@ -556,8 +557,10 @@ Netatmo. Un widget n'affiche que les appareils créés dans Gladys.
 Quand la famille Sécurité est activée, les accessoires liés à vos caméras sont
 également découverts :
 
-- **Capteur porte / fenêtre** (`NACamDoorTag`) — un capteur d'ouverture
-  (ouvert/fermé), plus la batterie et le signal RF.
+- **Capteur porte / fenêtre** (`NACamDoorTag`) — un capteur d'ouverture, plus
+  la batterie et le signal RF. Comme tout capteur d'ouverture de Gladys (et la
+  fonctionnalité **Detecting open window** des thermostats et des vannes), il
+  vaut **0 quand c'est ouvert** et **1 quand c'est fermé**.
 - **Sirène intérieure** (`NIS`) — un capteur sirène en lecture seule, plus la
   batterie et le signal RF.
 - **Détecteur de fumée** (`NSD`) — découvert avec sa batterie et son signal,
@@ -804,6 +807,13 @@ peut être relancée : elle ne déplace que ce qui reste.
 
 ## Dépannage
 
+- **Une scène sur une fenêtre ou une porte ouverte ne se déclenche plus (mise
+  à jour depuis la 2.4.0 ou avant) :** **Detecting open window** (thermostats,
+  vannes) et l'**Opening** du capteur porte / fenêtre suivent désormais la
+  convention des capteurs d'ouverture de Gladys — **0 ouvert, 1 fermé**. Ils
+  valaient 1 quand c'était ouvert, et le tableau de bord affichait donc une
+  fenêtre ou une porte ouverte comme fermée. Une scène qui testait `= 1` pour
+  « ouvert » doit maintenant tester `= 0`.
 - **« Enregistrez d'abord » à la connexion :** enregistrez le client id /
   secret, puis recliquez sur Connecter.
 - **Session expirée :** recliquez sur Connecter pour réautoriser votre compte

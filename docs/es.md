@@ -123,8 +123,9 @@ El termostato Netatmo actual, el modelo **modulante** (OpenTherm), forma parte
 de la familia Energía. Sus dos módulos se crean cada uno como un dispositivo:
 
 - el **termostato** (`OTM`): temperatura de la habitación, una **consigna**
-  ajustable, el **Modo de calefacción** (ver arriba), el **estado de la
-  caldera** (encendido mientras la caldera calienta), batería y señal de
+  ajustable, el **Modo de calefacción** (ver arriba), la **detección de
+  ventana abierta** de su habitación (**Detecting open window**), el **estado
+  de la caldera** (encendido mientras la caldera calienta), batería y señal de
   radio, como el antiguo `NATherm1`;
 - el **relé OpenTherm** (`OTH`) conectado a la caldera: su calidad WiFi, la
   **temperatura exterior** con la que Netatmo modula la calefacción, y una
@@ -145,7 +146,8 @@ versión.
 
 El termostato **BTicino Smarther with Netatmo** (`BNS`) forma parte de la
 familia Energía. Se crea con la temperatura de su habitación, una **consigna**
-ajustable, el **Modo de calefacción** (ver arriba), el **estado de la
+ajustable, el **Modo de calefacción** (ver arriba), la **detección de ventana
+abierta** de su habitación (**Detecting open window**), el **estado de la
 caldera** (encendido mientras calienta), el **estado de la climatización**
 (encendido mientras funciona el aire acondicionado), un estado **Boost de
 confort** de solo lectura (el campo Netatmo `boiler_valve_comfort_boost`, tal
@@ -174,7 +176,7 @@ habitación con termostato (`NATherm1`, modulante `OTM`, Smarther `BNS`) o una
 habitación solo con válvulas de radiador (`NRV`).
 
 Para ello, **un dispositivo por habitación calefactada** — su termostato o, en
-una habitación sin termostato, una de sus válvulas — incluye tres
+una habitación sin termostato, una de sus válvulas — incluye dos
 funcionalidades con el nombre de la habitación (los nombres de las
 funcionalidades están en inglés en Gladys):
 
@@ -182,12 +184,11 @@ funcionalidades están en inglés en Gladys):
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Heating state - _habitación_**   | estado de calefacción: **Calentando** mientras la habitación pide calor (o, en un termostato de caldera, mientras la caldera funciona), **Inactivo** si no (**Enfriando** mientras funciona el aire acondicionado de un Smarther) |
 | **Thermostat mode - _habitación_** | **Apagado** o **Calor**, controlable: Apagado apaga la habitación en Netatmo, Calor la devuelve a su programación Netatmo. No se envía nada a Netatmo si la habitación ya está en ese modo                                        |
-| **Window open - _habitación_**     | **Abierto** / **Cerrado**, según la detección de ventana abierta de Netatmo (nada mientras Netatmo no la informa)                                                                                                                 |
 
-La antigua funcionalidad **Detecting open window** de los termostatos y las
-válvulas se mantiene tal cual (vale 1 cuando la ventana está abierta); utilice
-**Window open** con la integración Termostato, sigue la convención de los
-sensores de apertura de Gladys.
+El sensor de ventana es la funcionalidad **Detecting open window** que ya
+tienen todos los termostatos y válvulas: la detección de ventana abierta de
+Netatmo para su habitación, **Abierto** / **Cerrado** — 0 abierto, 1 cerrado,
+como todo sensor de apertura de Gladys (nada mientras Netatmo no la informa).
 
 > ⚠️ **Si sus termostatos y válvulas ya existían en Gladys**, las nuevas
 > funcionalidades no aparecen solas: vaya a la pantalla **Descubrimiento** y
@@ -202,13 +203,13 @@ sensores de apertura de Gladys.
    mismo)**.
 3. Elija las funcionalidades del dispositivo que incluye las de la habitación:
 
-| Campo en Gladys                       | Funcionalidad Netatmo que elegir                         |
-| ------------------------------------- | -------------------------------------------------------- |
-| **Consigna del termostato real**      | **Setpoint temperature** de ese dispositivo              |
-| **Sensor de temperatura**             | **Temperature - room _habitación_**                      |
-| **Estado de calefacción (opcional)**  | **Heating state - _habitación_**                         |
-| **Modo de funcionamiento (opcional)** | **Thermostat mode - _habitación_**                       |
-| **Sensor de apertura de ventana**     | **Window open - _habitación_** (opcional, vea más abajo) |
+| Campo en Gladys                       | Funcionalidad Netatmo que elegir                                                                    |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Consigna del termostato real**      | **Setpoint temperature** de ese dispositivo                                                         |
+| **Sensor de temperatura**             | **Temperature - room _habitación_**                                                                 |
+| **Estado de calefacción (opcional)**  | **Heating state - _habitación_**                                                                    |
+| **Modo de funcionamiento (opcional)** | **Thermostat mode - _habitación_**                                                                  |
+| **Sensor de apertura de ventana**     | **Detecting open window** de un termostato o una válvula de la habitación (opcional, vea más abajo) |
 
 4. Defina los preajustes y una programación, guarde y añada el widget
    **Termostato** a un panel.
@@ -229,9 +230,9 @@ termostato lea un solo dispositivo.
   habitación está apagada, así que la habitación sigue apagada. **Puesta en
   marcha**: la habitación vuelve a encenderse (con su programación Netatmo) y
   luego Gladys escribe su consigna;
-- la **ventana**: cuando **Window open** pasa a Abierto, Gladys detiene la
-  habitación y la vuelve a poner en marcha al cerrarse la ventana. Es
-  **opcional**: los termostatos y las válvulas Netatmo ya cortan la calefacción
+- la **ventana**: cuando **Detecting open window** pasa a Abierto, Gladys
+  detiene la habitación y la vuelve a poner en marcha al cerrarse la ventana.
+  Es **opcional**: los termostatos y las válvulas Netatmo ya cortan la calefacción
   por sí mismos cuando detectan una ventana abierta. Elíjala si quiere ver la
   parada en Gladys.
 
@@ -562,8 +563,10 @@ Un widget solo muestra los dispositivos creados en Gladys.
 Cuando la familia Seguridad está activada, también se descubren los accesorios
 vinculados a sus cámaras:
 
-- **Sensor de puerta / ventana** (`NACamDoorTag`) — un sensor de apertura
-  (abierto/cerrado), más la batería y la señal RF.
+- **Sensor de puerta / ventana** (`NACamDoorTag`) — un sensor de apertura, más
+  la batería y la señal RF. Como todo sensor de apertura de Gladys (y la
+  funcionalidad **Detecting open window** de los termostatos y las válvulas),
+  vale **0 cuando está abierto** y **1 cuando está cerrado**.
 - **Sirena de interior** (`NIS`) — un sensor de sirena sonando, de solo lectura,
   más la batería y la señal RF.
 - **Detector de humo** (`NSD`) — descubierto con su batería y su señal, más la
@@ -809,6 +812,13 @@ relanzarse: solo mueve lo que queda.
 
 ## Solución de problemas
 
+- **Una escena sobre una ventana o puerta abierta ya no se dispara
+  (actualización desde la 2.4.0 o anterior):** **Detecting open window**
+  (termostatos, válvulas) y el **Opening** del sensor de puerta / ventana
+  siguen ahora la convención de los sensores de apertura de Gladys — **0
+  abierto, 1 cerrado**. Antes valían 1 cuando estaba abierto, por lo que el
+  panel mostraba una ventana o puerta abierta como cerrada. Una escena que
+  comprobaba `= 1` para «abierto» debe comprobar ahora `= 0`.
 - **"Guarde primero" al conectar:** guarde el ID de cliente / secreto y luego
   vuelva a hacer clic en Conectar.
 - **Sesión expirada:** vuelva a hacer clic en Conectar para volver a autorizar

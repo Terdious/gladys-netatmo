@@ -40,9 +40,10 @@ capabilities land (Home + Security cameras, webhooks, …).
   room's **Heating state** (`thermostat`/`operating-state`, from the room's
   `heating_power_request` or the boiler status), a writable **Thermostat
   mode** off / heating (`thermostat`/`mode`, setroomthermpoint `off` /
-  `home`, skipped when the room is already so) and **Window open**
-  (`opening-sensor`, 0 open / 1 closed): an external thermostat of the
-  Thermostat integration gets the heating halo, the Gladys schedule and
+  `home`, skipped when the room is already so); the window sensor is the
+  **Detecting open window** of its thermostats and valves (`opening-sensor`,
+  0 open / 1 closed like the door / window tag): an external thermostat of
+  the Thermostat integration gets the heating halo, the Gladys schedule and
   presets, a real stop and the window cut on every Netatmo room. A setpoint
   reaching an off room is not sent (it would switch the room back on).
 - **Scene triggers and actions** (Gladys 5.1+): "a known person arrives /

@@ -125,7 +125,8 @@ gehört zur Familie Energie. Seine beiden Module werden jeweils als Gerät
 angelegt:
 
 - das **Thermostat** (`OTM`): Raumtemperatur, ein steuerbarer **Sollwert**, der
-  **Heizmodus** (siehe oben), der **Kesselstatus** (an, während der Kessel
+  **Heizmodus** (siehe oben), die **Fenster-offen-Erkennung** seines Raums
+  (**Detecting open window**), der **Kesselstatus** (an, während der Kessel
   heizt), Akku und Funksignal, wie beim älteren `NATherm1`;
 - das **OpenTherm-Relais** (`OTH`), das mit dem Kessel verbunden ist: seine
   WLAN-Qualität, die **Außentemperatur**, nach der Netatmo die Heizung
@@ -146,7 +147,8 @@ Verbindung.
 
 Das Thermostat **BTicino Smarther with Netatmo** (`BNS`) gehört zur Familie
 Energie. Es wird mit seiner Raumtemperatur, einem steuerbaren **Sollwert**, dem
-**Heizmodus** (siehe oben), dem **Kesselstatus** (an, während es heizt), dem
+**Heizmodus** (siehe oben), der **Fenster-offen-Erkennung** seines Raums
+(**Detecting open window**), dem **Kesselstatus** (an, während es heizt), dem
 **Klimastatus** (an, während die Klimaanlage läuft), einem schreibgeschützten
 Zustand **Komfort-Boost** (das Netatmo-Feld `boiler_valve_comfort_boost`, wie
 gemeldet) und seiner WLAN-Qualität angelegt. Sein Raum erscheint im Widget
@@ -174,19 +176,18 @@ eines: ein Raum mit Thermostat (`NATherm1`, modulierendes `OTM`, Smarther
 `BNS`) oder ein Raum nur mit Heizkörperventilen (`NRV`).
 
 Dafür trägt **ein Gerät pro beheiztem Raum** — sein Thermostat oder, in einem
-Raum ohne Thermostat, eines seiner Ventile — drei Funktionen mit dem Namen des
+Raum ohne Thermostat, eines seiner Ventile — zwei Funktionen mit dem Namen des
 Raums (die Funktionsnamen sind in Gladys englisch):
 
 | Funktion                     | Was sie anzeigt                                                                                                                                                                                    |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Heating state - _Raum_**   | Heizzustand: **Heizt**, solange der Raum Wärme anfordert (oder, bei einem Kesselthermostat, solange der Kessel läuft), sonst **Inaktiv** (**Kühlt**, solange die Klimaanlage eines Smarther läuft) |
 | **Thermostat mode - _Raum_** | **Aus** oder **Heizen**, steuerbar: Aus schaltet den Raum in Netatmo aus, Heizen gibt ihn an seinen Netatmo-Zeitplan zurück. Ist der Raum schon in diesem Modus, wird nichts an Netatmo gesendet   |
-| **Window open - _Raum_**     | **Geöffnet** / **Geschlossen**, aus der Netatmo-Fenster-offen-Erkennung (nichts, solange Netatmo sie nicht meldet)                                                                                 |
 
-Die ältere Funktion **Detecting open window** der Thermostate und Ventile
-bleibt unverändert (sie zeigt 1, wenn das Fenster offen ist); verwende
-**Window open** mit der Thermostat-Integration, sie folgt der
-Gladys-Konvention für Öffnungssensoren.
+Der Fensterkontakt ist die Funktion **Detecting open window**, die jedes
+Thermostat und jedes Ventil bereits hat: die Netatmo-Fenster-offen-Erkennung
+seines Raums, **Geöffnet** / **Geschlossen** — 0 offen, 1 geschlossen, wie
+jeder Öffnungssensor in Gladys (nichts, solange Netatmo sie nicht meldet).
 
 > ⚠️ **Wenn deine Thermostate und Ventile bereits in Gladys existierten**,
 > erscheinen die neuen Funktionen nicht von selbst: Öffne den Bildschirm
@@ -201,13 +202,13 @@ Gladys-Konvention für Öffnungssensoren.
    selbst)**.
 3. Wähle die Funktionen des Geräts, das die Raumfunktionen trägt:
 
-| Feld in Gladys                      | Zu wählende Netatmo-Funktion                     |
-| ----------------------------------- | ------------------------------------------------ |
-| **Sollwert des echten Thermostats** | **Setpoint temperature** dieses Geräts           |
-| **Temperatursensor**                | **Temperature - room _Raum_**                    |
-| **Heizzustand (optional)**          | **Heating state - _Raum_**                       |
-| **Betriebsmodus (optional)**        | **Thermostat mode - _Raum_**                     |
-| **Fensterkontakt**                  | **Window open - _Raum_** (optional, siehe unten) |
+| Feld in Gladys                      | Zu wählende Netatmo-Funktion                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------------ |
+| **Sollwert des echten Thermostats** | **Setpoint temperature** dieses Geräts                                                     |
+| **Temperatursensor**                | **Temperature - room _Raum_**                                                              |
+| **Heizzustand (optional)**          | **Heating state - _Raum_**                                                                 |
+| **Betriebsmodus (optional)**        | **Thermostat mode - _Raum_**                                                               |
+| **Fensterkontakt**                  | **Detecting open window** eines Thermostats oder Ventils des Raums (optional, siehe unten) |
 
 4. Stelle die Voreinstellungen und einen Zeitplan ein, speichere und füge dann
    das Widget **Thermostat** zu einem Dashboard hinzu.
@@ -228,8 +229,8 @@ Gerät liest.
   solange der Raum aus ist; der Raum bleibt also aus. **Wiederanlauf**: Der Raum
   geht wieder an (auf seinen Netatmo-Zeitplan), dann schreibt Gladys ihren
   Sollwert;
-- **Fenster**: Zeigt **Window open** Geöffnet, stoppt Gladys den Raum und
-  startet ihn wieder, sobald das Fenster geschlossen ist. Sie ist **optional**:
+- **Fenster**: Zeigt **Detecting open window** Geöffnet, stoppt Gladys den
+  Raum und startet ihn wieder, sobald das Fenster geschlossen ist. Sie ist **optional**:
   Netatmo-Thermostate und -Ventile schalten die Heizung schon selbst ab, wenn
   sie ein offenes Fenster erkennen. Wähle sie, wenn du den Stopp in Gladys
   sehen möchtest.
@@ -559,8 +560,10 @@ Gladys angelegten Geräte.
 Wenn die Familie Sicherheit aktiviert ist, wird auch das mit deinen Kameras
 verknüpfte Zubehör erkannt:
 
-- **Tür-/Fenstersensor** (`NACamDoorTag`) — ein Öffnungssensor
-  (offen/geschlossen), dazu Batterie und Funksignal (RF).
+- **Tür-/Fenstersensor** (`NACamDoorTag`) — ein Öffnungssensor, dazu Batterie
+  und Funksignal (RF). Wie jeder Öffnungssensor in Gladys (und die Funktion
+  **Detecting open window** der Thermostate und Ventile) zeigt er **0, wenn
+  offen**, und **1, wenn geschlossen**.
 - **Innensirene** (`NIS`) — ein schreibgeschützter Sirenen-Sensor, dazu
   Batterie und RF.
 - **Rauchmelder** (`NSD`) — erkannt mit Batterie und Signal, dazu die
@@ -806,6 +809,13 @@ verschiebt nur, was noch übrig ist.
 
 ## Fehlerbehebung
 
+- **Eine Szene zu einem offenen Fenster oder einer offenen Tür löst nicht mehr
+  aus (Update von 2.4.0 oder älter):** **Detecting open window** (Thermostate,
+  Ventile) und **Opening** des Tür-/Fenstersensors folgen jetzt der
+  Gladys-Konvention für Öffnungssensoren — **0 offen, 1 geschlossen**. Früher
+  zeigten sie 1, wenn offen, und das Dashboard zeigte ein offenes Fenster oder
+  eine offene Tür als geschlossen an. Eine Szene, die für „offen“ auf `= 1`
+  geprüft hat, muss jetzt auf `= 0` prüfen.
 - **„Zuerst speichern“ beim Verbinden:** Speichere Client-ID / Client-Secret und
   klicke dann erneut auf Verbinden.
 - **Sitzung abgelaufen:** Klicke erneut auf Verbinden, um dein Netatmo-Konto neu

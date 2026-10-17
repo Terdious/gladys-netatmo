@@ -1,7 +1,8 @@
 // -----------------------------------------------------------------------------
 // Heated room features for the Gladys Thermostat service and widget (issue
-// #77): one device per room carries the room's heating state, mode (off /
-// heating) and open window; the mode command (setroomthermpoint `off` /
+// #77): one device per room carries the room's heating state and mode (off /
+// heating), every thermostat and valve its open window (0 open / 1 closed,
+// the Gladys opening sensor convention); the mode command (setroomthermpoint `off` /
 // `home`, skipped when already in that mode), the setpoint left unsent on an
 // off room, and the stop / start sequences the Thermostat service writes
 // (Gladys spec thermostat.md C.0: the mode first, then the setpoint).
@@ -26,7 +27,7 @@ const ENERGY_ONLY = normalizeConfig({ weather_api: false });
 const THERM = 'ext:netatmo:therm-1';
 const VALVE = 'ext:netatmo:valve-1';
 const VALVE_OFF = 'ext:netatmo:valve-2';
-const ROOM_SUFFIXES = ['room_operating_state', 'room_mode', 'room_window'];
+const ROOM_SUFFIXES = ['room_operating_state', 'room_mode'];
 
 let netatmo;
 let client;
@@ -117,7 +118,7 @@ test('discovery: the room features ride on one device per room, named after the 
   // Salon: the NATherm1. Chambre: two valves, the first by id carries them.
   for (const externalId of [THERM, VALVE]) {
     const device = deviceOf(externalId);
-    assert.deepEqual(suffixesOf(device).slice(-3), ROOM_SUFFIXES, externalId);
+    assert.deepEqual(suffixesOf(device).slice(-2), ROOM_SUFFIXES, externalId);
   }
   assert.ok(!suffixesOf(deviceOf(VALVE_OFF)).some((suffix) => ROOM_SUFFIXES.includes(suffix)));
 
@@ -143,11 +144,15 @@ test('discovery: the room features ride on one device per room, named after the 
     { value: 1, label: 'Heating', sort_order: 1 },
   ]);
 
-  const window = featureOf(valve, 'room_window');
-  assert.equal(window.name, 'Window open - Chambre');
-  assert.equal(window.category, 'opening-sensor');
-  assert.equal(window.type, 'binary');
-  assert.equal(window.read_only, true);
+  // The window sensor of the widget is the existing open_window feature, on
+  // every thermostat and valve of the room (no room-level duplicate).
+  for (const device of [deviceOf(THERM), valve, deviceOf(VALVE_OFF)]) {
+    const window = featureOf(device, 'open_window');
+    assert.equal(window.category, 'opening-sensor', device.external_id);
+    assert.equal(window.type, 'binary');
+    assert.equal(window.read_only, true);
+    assert.ok(!suffixesOf(device).includes('room_window'));
+  }
 
   // Each room keeps a writable setpoint on the elected device.
   assert.equal(featureOf(deviceOf(THERM), 'therm_setpoint_temperature').read_only, false);
@@ -161,7 +166,7 @@ test('convert: no room features without the election, nor without a commandable 
   const plain = convertDevice(ext, { ...base, room });
   assert.ok(!suffixesOf(plain).includes('room_mode'));
   const elected = convertDevice(ext, { ...base, room, room_thermostat: true });
-  assert.deepEqual(suffixesOf(elected).slice(-3), ROOM_SUFFIXES);
+  assert.deepEqual(suffixesOf(elected).slice(-2), ROOM_SUFFIXES);
   // Legacy-only thermostat: no home, no room — nothing to command.
   const legacy = convertDevice(ext, { _id: 'therm-2', type: 'NATherm1', room_thermostat: true });
   assert.ok(!suffixesOf(legacy).includes('room_mode'));
@@ -172,16 +177,16 @@ test('convert: no room features without the election, nor without a commandable 
 test('telemetry: heating state, mode and window from the room (pyatmo homestatus rooms)', async () => {
   await discover();
   // Salon: heating_power_request 0 but the boiler runs (NATherm1), schedule,
-  // window closed.
+  // window closed (1).
   assert.deepEqual(stateOf(`${THERM}:room_operating_state`), [1]);
   assert.deepEqual(stateOf(`${THERM}:room_mode`), [1]);
-  assert.deepEqual(stateOf(`${THERM}:room_window`), [1]);
-  // Chambre: heating_power_request 42, manual setpoint, window open (0).
+  assert.deepEqual(stateOf(`${THERM}:open_window`), [1]);
+  // Chambre: heating_power_request 42, manual setpoint, window open (0), on
+  // both valves of the room.
   assert.deepEqual(stateOf(`${VALVE}:room_operating_state`), [1]);
   assert.deepEqual(stateOf(`${VALVE}:room_mode`), [1]);
-  assert.deepEqual(stateOf(`${VALVE}:room_window`), [0]);
-  // The older open_window feature keeps its own convention (1 = open).
-  assert.deepEqual(stateOf(`${VALVE}:open_window`), [1]);
+  assert.deepEqual(stateOf(`${VALVE}:open_window`), [0]);
+  assert.deepEqual(stateOf(`${VALVE_OFF}:open_window`), [0]);
 
   // The boiler stops, the window closes, the room is switched off.
   netatmo.state.homeStatuses['home-1'].home.modules.find((m) => m.id === 'therm-1').boiler_status =
@@ -196,7 +201,8 @@ test('telemetry: heating state, mode and window from the room (pyatmo homestatus
   assert.deepEqual(stateOf(`${THERM}:room_operating_state`), [1, 0]);
   assert.deepEqual(stateOf(`${VALVE}:room_operating_state`), [1, 0]);
   assert.deepEqual(stateOf(`${VALVE}:room_mode`), [1, 0]);
-  assert.deepEqual(stateOf(`${VALVE}:room_window`), [0, 1]);
+  assert.deepEqual(stateOf(`${VALVE}:open_window`), [0, 1]);
+  assert.deepEqual(stateOf(`${VALVE_OFF}:open_window`), [0, 1]);
   // An off room aims at no temperature: its setpoint is not published, on
   // any device of the room.
   assert.deepEqual(stateOf(`${VALVE}:therm_setpoint_temperature`), [19]);
@@ -212,8 +218,27 @@ test('telemetry: heating state, mode and window from the room (pyatmo homestatus
   telemetry.resetDedup();
   await telemetry.refreshValues(ENERGY_ONLY);
   const republished = gladys.published.slice(before).map((s) => s.device_feature_external_id);
-  for (const suffix of ROOM_SUFFIXES) {
+  for (const suffix of [...ROOM_SUFFIXES, 'open_window']) {
     assert.ok(!republished.includes(`${THERM}:${suffix}`), suffix);
+  }
+});
+
+test('opening sensors follow the Gladys convention: 0 open, 1 closed, nothing when unknown', () => {
+  // open_window of every thermostat and valve (room `open_window`).
+  for (const type of ['NATherm1', 'OTM', 'BNS', 'NRV']) {
+    const extract = UPDATE_MAPPINGS[type].open_window;
+    assert.equal(extract({ room: { open_window: true } }), 0, type);
+    assert.equal(extract({ room: { open_window: false } }), 1, type);
+    assert.equal(extract({ room: {} }), undefined, type);
+    assert.equal(extract({ room: { open_window: null } }), undefined, type);
+    assert.equal(extract({}), undefined, type);
+  }
+  // opening of the door / window tag (homestatus `status`).
+  const opening = UPDATE_MAPPINGS.NACamDoorTag.opening;
+  assert.equal(opening({ status: 'open' }), 0);
+  assert.equal(opening({ status: 'closed' }), 1);
+  for (const status of ['no_news', 'calibrating', 'undefined', undefined, null]) {
+    assert.equal(opening({ status }), undefined, String(status));
   }
 });
 

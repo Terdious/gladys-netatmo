@@ -21,7 +21,6 @@ import {
   THERMOSTAT_OPERATING_STATE,
   ROOM_OPERATING_STATE_SUFFIX,
   ROOM_MODE_SUFFIX,
-  ROOM_WINDOW_SUFFIX,
   PERSON_PRESENCE_SUFFIX_PREFIX,
   BTICINO_LIGHT_SUFFIX,
 } from './constants.js';
@@ -169,22 +168,6 @@ export function buildFeatureRoomMode(roomName, externalId) {
       label: THERMOSTAT_MODE_LABELS[value],
       sort_order: index,
     })),
-  });
-}
-
-// Open window detected in the room (`opening-sensor/binary`, read-only),
-// with the Gladys convention OPENING_SENSOR_STATE: 0 open, 1 closed — unlike
-// the older `open_window` feature, kept as is (1 when open) not to break the
-// scenes built on it.
-export function buildFeatureRoomWindow(roomName, externalId) {
-  return feature({
-    name: `Window open - ${roomName}`,
-    external_id: `${externalId}:${ROOM_WINDOW_SUFFIX}`,
-    selector: `${externalId}:${ROOM_WINDOW_SUFFIX}`,
-    category: DEVICE_FEATURE_CATEGORIES.OPENING_SENSOR,
-    type: DEVICE_FEATURE_TYPES.SENSOR.BINARY,
-    min: 0,
-    max: 1,
   });
 }
 
@@ -479,7 +462,8 @@ export function buildFeatureCarbonMonoxide(name, externalId) {
 }
 
 // Door/window tag (NACamDoorTag): open/closed contact, read from homestatus
-// `status` (issue #9). Distinct suffix from the thermostat `open_window`.
+// `status` (issue #9), 0 open / 1 closed (OPENING_SENSOR_STATE). Distinct
+// suffix from the thermostat `open_window`.
 export function buildFeatureOpeningSensor(name, externalId) {
   return feature({
     name: `Opening - ${name}`,
@@ -506,6 +490,9 @@ export function buildFeatureSiren(name, externalId) {
   });
 }
 
+// Open window detected in the room (thermostats and valves), 0 open /
+// 1 closed like every Gladys opening sensor (OPENING_SENSOR_STATE). It is the
+// window sensor the Gladys Thermostat widget watches (issue #77).
 export function buildFeatureOpenWindow(name, externalId) {
   return feature({
     name: `Detecting open window - ${name}`,
