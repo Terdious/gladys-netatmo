@@ -28,11 +28,30 @@ export const FAKE_AUTH_CODE = 'fake-auth-code';
 // (legitimate zero — must be published). An unsupported NACamera rides along.
 // -----------------------------------------------------------------------------
 
+/** The same day, seven times: night 0, comfort 360, eco 480, comfort 1080, night 1350. */
+function buildWeekTimetable() {
+  const day = [
+    [0, 1],
+    [360, 0],
+    [480, 4],
+    [1080, 0],
+    [1350, 1],
+  ];
+  const timetable = [];
+  for (let index = 0; index < 7; index += 1) {
+    for (const [minutes, zone] of day) {
+      timetable.push({ zone_id: zone, m_offset: index * 1440 + minutes });
+    }
+  }
+  return timetable;
+}
+
 function buildDefaultHomes() {
   return [
     {
       id: 'home-1',
       name: 'Maison',
+      timezone: 'Europe/Paris',
       rooms: [
         { id: 'room-1', name: 'Salon' },
         { id: 'room-2', name: 'Chambre' },
@@ -72,7 +91,49 @@ function buildDefaultHomes() {
       // Schedules (issue #58), pyatmo homesdata.json shape: two heating
       // schedules (one selected) and a cooling one that is not a heating schedule.
       schedules: [
-        { id: 'schedule-week', name: 'Semaine', type: 'therm', selected: true, default: false },
+        {
+          id: 'schedule-week',
+          name: 'Semaine',
+          type: 'therm',
+          selected: true,
+          default: false,
+          // Timetable and zones (pyatmo homesdata.json shape): `m_offset` in
+          // minutes from Monday 00:00 in the home's timezone, the zone that
+          // applies from then. Every day: night until 06:00, comfort until
+          // 08:00, eco until 18:00, comfort until 22:30, then night. Eco
+          // keeps the Chambre at its comfort temperature.
+          timetable: buildWeekTimetable(),
+          zones: [
+            {
+              id: 0,
+              name: 'Comfort',
+              type: 0,
+              rooms: [
+                { id: 'room-1', therm_setpoint_temperature: 21 },
+                { id: 'room-2', therm_setpoint_temperature: 19 },
+              ],
+            },
+            {
+              id: 1,
+              name: 'Night',
+              type: 1,
+              rooms: [
+                { id: 'room-1', therm_setpoint_temperature: 17 },
+                { id: 'room-2', therm_setpoint_temperature: 16 },
+              ],
+            },
+            {
+              id: 4,
+              name: 'Eco',
+              type: 5,
+              // The older shape of the room temperatures.
+              rooms_temp: [
+                { room_id: 'room-1', temp: 18 },
+                { room_id: 'room-2', temp: 19 },
+              ],
+            },
+          ],
+        },
         { id: 'schedule-holidays', name: 'Vacances', type: 'therm', default: false },
         { id: 'schedule-cooling', name: 'Default', type: 'cooling', default: false },
       ],

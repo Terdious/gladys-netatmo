@@ -3,7 +3,8 @@
 //
 // Writable features:
 //   - thermostat setpoint: POST /api/setroomthermpoint with the device's
-//     home_id/room_id params and mode `manual`;
+//     home_id/room_id params and mode `manual`, for the duration the
+//     `setpoint_duration` setting chooses (see roomSetpoint.js);
 //   - heating mode (thermostat preset, issue #38): POST /api/setthermmode
 //     with the home_id param — the mode is the HOME's, so it applies to the
 //     whole home; an immediate refresh then republishes it on every device;
@@ -58,6 +59,7 @@ import {
   NETATMO_SETPOINT_MODES,
 } from './constants.js';
 import { writeValues } from './deviceMapping.js';
+import { endtimeForDuration, sendRoomThermpoint } from './roomSetpoint.js';
 
 const logger = createLogger({ name: 'netatmo-set-value' });
 
@@ -315,17 +317,30 @@ async function setLegrandModule(
 /**
  * Apply a user command on a Netatmo device.
  * @param {object} deps `{gladys, client, refresh?, scheduleRefresh?,
- * getRawDevice?, patchRoom?, rememberState?}` SDK instance, Netatmo API
- * client, the immediate refresh after a heating mode or floodlight change, the
- * delayed refresh to arm after a shutter or Legrand command
- * (`(delayMs?, key?)`), the last raw Netatmo payload of a module (by id), the
- * patch of a room's last payload after a room mode command and the telemetry
- * dedup update after a Legrand command (`(featureExternalId, state)`)
+ * getRawDevice?, patchRoom?, rememberState?, setpointDuration?, getHomes?,
+ * now?}` SDK instance, Netatmo API client, the immediate refresh after a
+ * heating mode or floodlight change, the delayed refresh to arm after a
+ * shutter or Legrand command (`(delayMs?, key?)`), the last raw Netatmo
+ * payload of a module (by id), the patch of a room's last payload after a
+ * room mode command, the telemetry dedup update after a Legrand command
+ * (`(featureExternalId, state)`), the `setpoint_duration` setting, the home
+ * summaries (the schedule of `next_change`) and the clock (ms)
  * @param {object} command `{device, feature, value}` from the SDK
  * @returns {Promise<void>} resolves when Netatmo acknowledged the command
  */
 export async function setDeviceValue(
-  { gladys, client, refresh, scheduleRefresh, getRawDevice, patchRoom, rememberState },
+  {
+    gladys,
+    client,
+    refresh,
+    scheduleRefresh,
+    getRawDevice,
+    patchRoom,
+    rememberState,
+    setpointDuration,
+    getHomes,
+    now = Date.now,
+  },
   { device, feature, value },
 ) {
   const transform = writeValues[feature.category]?.[feature.type];
@@ -483,8 +498,19 @@ export async function setDeviceValue(
     );
     return;
   }
+  // How long the setpoint lasts: the `setpoint_duration` setting (Netatmo's
+  // default duration unless configured).
+  const home = getHomes?.().find((entry) => entry.id === homeId);
+  const { endtime, noEnd } = endtimeForDuration(setpointDuration, { home, roomId, now });
   try {
-    await client.setRoomThermpoint({ homeId, roomId, temp: transform(value) });
+    await sendRoomThermpoint(client, {
+      homeId,
+      roomId,
+      temp: transform(value),
+      endtime,
+      noEnd,
+      now,
+    });
   } catch (err) {
     rethrowScopeError(err);
   }

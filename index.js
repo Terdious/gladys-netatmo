@@ -300,6 +300,8 @@ export function setupIntegration(
         scheduleRefresh: (delayMs, key) => telemetry.scheduleRefresh(config, delayMs, key),
         getRawDevice: (id) => telemetry.getRawDevice(id),
         patchRoom: (homeId, roomId, patch) => telemetry.patchRoom(homeId, roomId, patch),
+        setpointDuration: config.setpoint_duration,
+        getHomes: () => telemetry.getHomes(),
         rememberState: (featureExternalId, state) => {
           remembered = true;
           telemetry.rememberState(featureExternalId, state);
@@ -338,6 +340,7 @@ export function setupIntegration(
     gladys,
     client,
     telemetry,
+    config,
     refresh: () => telemetry.refreshNow(config),
   });
   for (const [widgetKey, widget] of Object.entries(WIDGETS)) {

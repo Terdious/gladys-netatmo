@@ -19,6 +19,8 @@
 // rest of the code never has to deal with `undefined`.
 // -----------------------------------------------------------------------------
 
+import { normalizeSetpointDuration } from './netatmo/roomSetpoint.js';
+
 // Defaults: they MUST stay consistent with the `default` values declared in the
 // `config_schema` of the manifest.
 export const DEFAULT_CONFIG = {
@@ -32,6 +34,7 @@ export const DEFAULT_CONFIG = {
   bticino_api: false, // discover the BTicino door entry (Classe 300) + diagnostic log, opt-in (issue #59)
   legrand_api: false, // discover the Legrand Home + Control modules (lights, plugs, relays), opt-in (issue #60)
   camera_quality: 'high', // live stream quality (per-camera device param overrides)
+  setpoint_duration: 'default', // how long a setpoint sent by Gladys lasts (see roomSetpoint.js)
 
   // Internal keys (NOT in the config_schema), persisted through setConfig():
   access_token: '', // OAuth2 access token
@@ -76,6 +79,7 @@ export function normalizeConfig(raw = {}) {
     bticino_api: toBoolean(raw.bticino_api, DEFAULT_CONFIG.bticino_api),
     legrand_api: toBoolean(raw.legrand_api, DEFAULT_CONFIG.legrand_api),
     camera_quality: String(raw.camera_quality ?? DEFAULT_CONFIG.camera_quality).trim(),
+    setpoint_duration: normalizeSetpointDuration(raw.setpoint_duration),
     access_token: String(raw.access_token ?? DEFAULT_CONFIG.access_token).trim(),
     refresh_token: String(raw.refresh_token ?? DEFAULT_CONFIG.refresh_token).trim(),
     expires_at: Number(raw.expires_at ?? DEFAULT_CONFIG.expires_at) || 0,

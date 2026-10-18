@@ -870,10 +870,10 @@
         "es": "Calefacción Netatmo"
       },
       "description": {
-        "en": "Room temperatures and setpoints, and the heating mode of the home.",
-        "fr": "Températures et consignes des pièces, et le mode du chauffage de la maison.",
-        "de": "Raumtemperaturen und Sollwerte sowie der Heizmodus des Zuhauses.",
-        "es": "Temperaturas y consignas de las habitaciones, y el modo de calefacción de la casa."
+        "en": "Room temperatures, setpoints and heating state, the heating mode, and a room setpoint form.",
+        "fr": "Températures, consignes et chauffe des pièces, mode du chauffage, et réglage d'une pièce.",
+        "de": "Raumtemperaturen, Sollwerte und Heizzustand, der Heizmodus und ein Raum-Sollwert-Formular.",
+        "es": "Temperaturas, consignas y calefacción de las habitaciones, el modo y un ajuste por habitación."
       },
       "icon": "thermometer",
       "settings": [
@@ -1272,6 +1272,105 @@
             "fr": "Haute",
             "de": "Hoch",
             "es": "Alta"
+          }
+        }
+      ]
+    },
+    {
+      "key": "section_heating",
+      "type": "section",
+      "label": {
+        "en": "Heating",
+        "fr": "Chauffage",
+        "de": "Heizung",
+        "es": "Calefacción"
+      },
+      "description": {
+        "en": "How the setpoints Gladys sends to your Netatmo rooms behave.",
+        "fr": "Le comportement des consignes que Gladys envoie à vos pièces Netatmo.",
+        "de": "Wie sich die Sollwerte verhalten, die Gladys an deine Netatmo-Räume sendet.",
+        "es": "Cómo se comportan las consignas que Gladys envía a sus habitaciones Netatmo."
+      }
+    },
+    {
+      "key": "setpoint_duration",
+      "type": "select",
+      "label": {
+        "en": "Duration of a setpoint sent by Gladys",
+        "fr": "Durée d'une consigne envoyée par Gladys",
+        "de": "Dauer eines von Gladys gesendeten Sollwerts",
+        "es": "Duración de una consigna enviada por Gladys"
+      },
+      "description": {
+        "en": "Netatmo ends every manual setpoint and returns to its own schedule. Applies to the setpoints Gladys writes (dashboard, scenes, Gladys Thermostat), not to the scene actions that set their own duration nor to a boost. Using the Gladys Thermostat integration? Choose \"No end\": Gladys drives the schedule, and a setpoint Netatmo ends on its own would look like a manual change.",
+        "fr": "Netatmo termine chaque consigne manuelle et revient à son propre planning. S'applique aux consignes écrites par Gladys (tableau de bord, scènes, Thermostat Gladys), pas aux actions de scène qui fixent leur propre durée ni au boost. Vous utilisez l'intégration Thermostat de Gladys ? Choisissez « Sans fin » : Gladys pilote le planning, et une consigne que Netatmo termine d'elle-même passerait pour un changement manuel.",
+        "de": "Netatmo beendet jeden manuellen Sollwert und kehrt zu seinem eigenen Zeitplan zurück. Gilt für die Sollwerte, die Gladys schreibt (Dashboard, Szenen, Gladys-Thermostat), nicht für Szenenaktionen mit eigener Dauer und nicht für einen Boost. Du nutzt die Thermostat-Integration von Gladys? Wähle „Ohne Ende“: Gladys steuert den Zeitplan, und ein Sollwert, den Netatmo selbst beendet, sähe wie eine manuelle Änderung aus.",
+        "es": "Netatmo termina cada consigna manual y vuelve a su propia programación. Se aplica a las consignas que escribe Gladys (panel, escenas, Termostato de Gladys), no a las acciones de escena que fijan su propia duración ni al boost. ¿Utiliza la integración Termostato de Gladys? Elija «Sin fin»: Gladys controla la programación, y una consigna que Netatmo termina por sí sola parecería un cambio manual."
+      },
+      "required": false,
+      "default": "default",
+      "options": [
+        {
+          "value": "default",
+          "label": {
+            "en": "Netatmo default duration",
+            "fr": "Durée par défaut de Netatmo",
+            "de": "Netatmo-Standarddauer",
+            "es": "Duración predeterminada de Netatmo"
+          }
+        },
+        {
+          "value": "1h",
+          "label": {
+            "en": "1 hour",
+            "fr": "1 heure",
+            "de": "1 Stunde",
+            "es": "1 hora"
+          }
+        },
+        {
+          "value": "3h",
+          "label": {
+            "en": "3 hours",
+            "fr": "3 heures",
+            "de": "3 Stunden",
+            "es": "3 horas"
+          }
+        },
+        {
+          "value": "6h",
+          "label": {
+            "en": "6 hours",
+            "fr": "6 heures",
+            "de": "6 Stunden",
+            "es": "6 horas"
+          }
+        },
+        {
+          "value": "12h",
+          "label": {
+            "en": "12 hours",
+            "fr": "12 heures",
+            "de": "12 Stunden",
+            "es": "12 horas"
+          }
+        },
+        {
+          "value": "next_change",
+          "label": {
+            "en": "Until the next schedule change",
+            "fr": "Jusqu'au prochain créneau du planning",
+            "de": "Bis zur nächsten Zeitplanänderung",
+            "es": "Hasta el próximo cambio de programación"
+          }
+        },
+        {
+          "value": "no_end",
+          "label": {
+            "en": "No end",
+            "fr": "Sans fin",
+            "de": "Ohne Ende",
+            "es": "Sin fin"
           }
         }
       ]
