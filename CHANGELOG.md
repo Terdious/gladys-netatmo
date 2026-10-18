@@ -10,6 +10,34 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Added
+
+- Richer **Netatmo heating** widget: a caption with the home and its active
+  schedule, two tiles (heating mode, rooms heating `n/total`), one compact row
+  per room — measured → setpoint, then the markers Manual / Boost / Off,
+  Window (`open_window`) and Heating (the room's heating state of #77:
+  `heating_power_request` above 0 or the boiler thermostat running), the icon
+  colored alike; with more than ten rooms the tenth row sums up the others.
+  The buttons are the heating modes but the active one, **Change schedule**
+  and a new **Room setpoint** button whose form (widget action fields) takes
+  the room, the action (set the setpoint, boost, back to the schedule, off),
+  the setpoint (7–30 °C, rounded to 0.5 °C; empty keeps the current one) and
+  the duration, sent with `setroomthermpoint` (a boost keeps Netatmo's boost
+  duration for "default" and "no end")
+  ([#40](https://github.com/Terdious/gladys-netatmo/issues/40)).
+- **Duration of a setpoint sent by Gladys** setting (`setpoint_duration`,
+  new **Heating** section of the Configuration screen): Netatmo default
+  (unchanged behaviour, the default), 1 h, 3 h, 6 h, 12 h, until the next
+  change of the active Netatmo schedule for the room (computed from the
+  homesdata timetable in the home's timezone, DST included) or no end (30
+  days, stepped down to 7 days, 2 days, 12 hours when Netatmo refuses the
+  endtime, without endtime as a last resort). It applies to the setpoint
+  feature writes — device page, "Set device value", the Gladys Thermostat
+  service — not to the scene actions that carry their own duration nor to a
+  boost. "No end" is the choice for the Gladys Thermostat integration: a
+  setpoint Netatmo ends on its own looks like a manual hold to the core
+  ([#77](https://github.com/Terdious/gladys-netatmo/issues/77)).
+
 ## [2.5.0] - 2026-10-17
 
 ### Added

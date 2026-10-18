@@ -112,6 +112,33 @@ Use it in a scene ("everybody left → heating to Away") with the standard
 
 ---
 
+## Duration of a setpoint sent by Gladys
+
+Netatmo ends every manual setpoint: after the default duration set in the
+Netatmo app, the room goes back to its Netatmo schedule. The **Duration of a
+setpoint sent by Gladys** setting (**Heating** section of the
+**Configuration** screen) chooses how long the setpoints Gladys writes last —
+the **Setpoint temperature** of a thermostat or valve, set from the device
+page, a "Set device value" scene action or the Gladys Thermostat:
+
+| Choice                             | The setpoint lasts                                                                                                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Netatmo default duration**       | the default duration of the Netatmo app (the behaviour before this setting, the default)                                                                                |
+| **1 hour** … **12 hours**          | that long                                                                                                                                                               |
+| **Until the next schedule change** | until the next slot of the active Netatmo schedule that changes the room's temperature, in the home's timezone (Netatmo's default duration when no schedule is known)   |
+| **No end**                         | as long as Netatmo accepts: 30 days, shorter if Netatmo refuses that end, without an end time as a last resort — in practice until Gladys (or someone) changes it again |
+
+The **Set a room setpoint** and **Boost a room** scene actions keep the
+duration you give them, and a boost always keeps its own duration.
+
+> **Using the Gladys Thermostat integration? Choose No end.** Gladys drives
+> the weekly schedule and writes every change itself. With a limited duration,
+> Netatmo goes back to its own schedule when the setpoint ends, and Gladys
+> sees the new setpoint as a change made on the thermostat: a **manual hold**
+> (see **Netatmo's own schedule keeps running** below).
+
+---
+
 ## Modulating thermostat (OpenTherm)
 
 The current Netatmo thermostat, the **modulating** (OpenTherm) model, comes
@@ -232,8 +259,8 @@ duration** of the thermostat, or until the next slot), then takes over again
 with its own schedule. Netatmo is read every 2 minutes and reports the same
 setpoint again and again: Gladys recognises its own setpoint in these reads,
 so an unchanged report never counts as a change. For the most predictable
-result, set a long default duration of manual setpoints in the Netatmo app, or
-make the Netatmo schedule match the Gladys one.
+result, set the **Duration of a setpoint sent by Gladys** to **No end** (see **Duration of a setpoint sent by Gladys** above):
+the setpoints Gladys writes then stay until Gladys changes them.
 
 Two more things to know:
 
@@ -501,11 +528,34 @@ the schedules of the home. It also returns the **Schedule** name.
 Three widgets join the dashboard widget picker (Gladys **5.1** or later): **Edit
 dashboard**, add a widget and search for "Netatmo".
 
-| Widget              | Shows                                                                                                                                                                                                                                                                                                     | Settings                                                                                               |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Netatmo weather** | live tiles of the station (temperatures, humidity, CO2, noise, pressure, rain, wind) and a health row per module with a low battery or out of reach                                                                                                                                                       | the station (empty: the first one) and the readings shown: Overview, Indoor, or Outdoor, rain and wind |
-| **Netatmo heating** | the heating mode and the active schedule of the home, one row per room (measured → setpoint temperature, marked Manual or Boost when the setpoint does not come from the schedule), the Schedule / Frost protection / Away buttons and, with several schedules, a **Change schedule** button listing them | a thermostat or valve of the home (empty: your single home)                                            |
-| **Netatmo cameras** | the latest picture of each camera, its monitoring, and buttons to turn it on / off                                                                                                                                                                                                                        | one camera shown large (empty: every camera in a list)                                                 |
+| Widget              | Shows                                                                                                                                               | Settings                                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Netatmo weather** | live tiles of the station (temperatures, humidity, CO2, noise, pressure, rain, wind) and a health row per module with a low battery or out of reach | the station (empty: the first one) and the readings shown: Overview, Indoor, or Outdoor, rain and wind     |
+| **Netatmo heating** | the heating mode of the home, how many rooms heat, the active schedule, one row per room and buttons — see below                                    | a thermostat or valve of the home (empty: your single home); its room is the one the room form pre-selects |
+| **Netatmo cameras** | the latest picture of each camera, its monitoring, and buttons to turn it on / off                                                                  | one camera shown large (empty: every camera in a list)                                                     |
+
+### The Netatmo heating widget
+
+- **Caption**: the home and its active schedule. **Tiles**: the heating mode
+  (Schedule, Frost guard, Away) and the rooms heating (`2/11`).
+- **One compact row per room**: measured → setpoint temperature, then the
+  markers **Manual**, **Boost** or **Off** (setpoint not from the schedule;
+  an off room shows no setpoint), **Window** (Netatmo detected an open
+  window) and **Heating** (the room asks for heat, or its boiler thermostat
+  runs — the **Heating state** of the room). The icon and its color follow:
+  orange while the room heats, blue for an open window. Up to ten rooms have
+  their row; with more, the tenth row sums up the others.
+- **Buttons**: the heating modes but the active one (**Schedule**, **Frost
+  protection**, **Away**), **Room setpoint** and, with several schedules,
+  **Change schedule** (a form listing them).
+- **Room setpoint** opens a short form in the card: the **room**, the
+  **action** — **Set the setpoint**, **Boost**, **Back to schedule** or
+  **Off** —, the **setpoint** (7 to 30 °C, rounded to 0.5 °C; left empty, the
+  room's current setpoint is kept — handy to change only its duration) and the
+  **duration** (the choices of the **Duration of a setpoint sent by Gladys** setting, which pre-selects it). The duration applies to a setpoint, a boost
+  and Off; a boost with **Netatmo default duration** or **No end** lasts the
+  Netatmo boost duration. Dashboard rows cannot be tapped and a card holds
+  four buttons: one form serves every room.
 
 The tiles follow the values live; the rest refreshes with the integration (2
 minutes, or as soon as the heating mode, the monitoring or a picture changes).

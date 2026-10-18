@@ -115,6 +115,36 @@ avec l'action standard « Contrôler un appareil ».
 
 ---
 
+## Durée d'une consigne envoyée par Gladys
+
+Netatmo termine chaque consigne manuelle : après la durée par défaut réglée
+dans l'application Netatmo, la pièce revient à son planning Netatmo. Le
+réglage **Durée d'une consigne envoyée par Gladys** (section **Chauffage** de
+l'écran **Configuration**) choisit combien de temps durent les consignes que
+Gladys écrit — la **Setpoint temperature** d'un thermostat ou d'une vanne,
+réglée depuis la page de l'appareil, une action de scène « Contrôler un
+appareil » ou le Thermostat de Gladys :
+
+| Choix                                     | La consigne dure                                                                                                                                                                              |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Durée par défaut de Netatmo**           | la durée par défaut de l'application Netatmo (le comportement d'avant ce réglage, par défaut)                                                                                                 |
+| **1 heure** … **12 heures**               | ce temps-là                                                                                                                                                                                   |
+| **Jusqu'au prochain créneau du planning** | jusqu'au prochain créneau du planning Netatmo actif qui change la température de la pièce, dans le fuseau horaire de la maison (durée par défaut de Netatmo quand aucun planning n'est connu) |
+| **Sans fin**                              | aussi longtemps que Netatmo l'accepte : 30 jours, moins si Netatmo refuse cette fin, sans heure de fin en dernier recours — en pratique jusqu'à ce que Gladys (ou quelqu'un) la change        |
+
+Les actions de scène **Régler la consigne d'une pièce** et **Booster une
+pièce** gardent la durée que vous leur donnez, et un boost garde toujours sa
+propre durée.
+
+> **Vous utilisez l'intégration Thermostat de Gladys ? Choisissez Sans fin.**
+> Gladys pilote le planning hebdomadaire et écrit elle-même chaque changement.
+> Avec une durée limitée, Netatmo revient à son propre planning à la fin de la
+> consigne, et Gladys voit la nouvelle consigne comme un changement fait sur le
+> thermostat : une **dérogation manuelle** (voir **Le planning Netatmo continue
+> de tourner** plus bas).
+
+---
+
 ## Thermostat modulant (OpenTherm)
 
 Le thermostat Netatmo vendu aujourd'hui, le modèle **modulant** (OpenTherm),
@@ -245,8 +275,9 @@ thermostat, ou jusqu'au créneau suivant), puis reprend la main avec sa propre
 programmation. Netatmo est lu toutes les 2 minutes et rapporte la même consigne
 encore et encore : Gladys reconnaît sa propre consigne dans ces lectures, un
 rapport inchangé ne compte donc jamais comme un changement. Pour le résultat le
-plus prévisible, réglez une longue durée par défaut des consignes manuelles
-dans l'application Netatmo, ou alignez le planning Netatmo sur celui de Gladys.
+plus prévisible, réglez la **Durée d'une consigne envoyée par Gladys** sur
+**Sans fin** (voir **Durée d'une consigne envoyée par Gladys** plus haut) : les
+consignes que Gladys écrit restent alors jusqu'à ce que Gladys les change.
 
 Deux choses encore :
 
@@ -539,11 +570,37 @@ Trois widgets rejoignent le choix des widgets du tableau de bord (Gladys **5.1**
 ou plus récent) : **Éditer le tableau de bord**, ajoutez un widget et cherchez «
 Netatmo ».
 
-| Widget                | Affiche                                                                                                                                                                                                                                                                                                   | Réglages                                                                                                          |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Météo Netatmo**     | les tuiles en direct de la station (températures, humidité, CO2, bruit, pression, pluie, vent) et une ligne d'état par module à la batterie faible ou injoignable                                                                                                                                         | la station (vide : la première) et les mesures affichées : Vue d'ensemble, Intérieur, ou Extérieur, pluie et vent |
-| **Chauffage Netatmo** | le mode du chauffage et le planning actif de la maison, une ligne par pièce (température mesurée → consigne, marquée Manuel ou Boost quand la consigne ne vient pas du planning), les boutons Planning / Hors-gel / Absence et, avec plusieurs plannings, un bouton **Changer de planning** qui les liste | un thermostat ou une vanne de la maison (vide : votre unique maison)                                              |
-| **Caméras Netatmo**   | la dernière image de chaque caméra, sa surveillance, et des boutons pour l'activer / la couper                                                                                                                                                                                                            | une caméra affichée en grand (vide : toutes les caméras en liste)                                                 |
+| Widget                | Affiche                                                                                                                                                           | Réglages                                                                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Météo Netatmo**     | les tuiles en direct de la station (températures, humidité, CO2, bruit, pression, pluie, vent) et une ligne d'état par module à la batterie faible ou injoignable | la station (vide : la première) et les mesures affichées : Vue d'ensemble, Intérieur, ou Extérieur, pluie et vent          |
+| **Chauffage Netatmo** | le mode du chauffage de la maison, le nombre de pièces en chauffe, le planning actif, une ligne par pièce et des boutons — voir ci-dessous                        | un thermostat ou une vanne de la maison (vide : votre unique maison) ; sa pièce est celle que le formulaire présélectionne |
+| **Caméras Netatmo**   | la dernière image de chaque caméra, sa surveillance, et des boutons pour l'activer / la couper                                                                    | une caméra affichée en grand (vide : toutes les caméras en liste)                                                          |
+
+### Le widget Chauffage Netatmo
+
+- **Légende** : la maison et son planning actif. **Tuiles** : le mode du
+  chauffage (Planning, Hors-gel, Absence) et les pièces en chauffe (`2/11`).
+- **Une ligne compacte par pièce** : température mesurée → consigne, puis les
+  marqueurs **Manuel**, **Boost** ou **Arrêt** (consigne qui ne vient pas du
+  planning ; une pièce éteinte n'affiche pas de consigne), **Fenêtre** (Netatmo
+  a détecté une fenêtre ouverte) et **Chauffe** (la pièce demande de la
+  chaleur, ou sa chaudière tourne — le **Heating state** de la pièce). L'icône
+  et sa couleur suivent : orange quand la pièce chauffe, bleu pour une fenêtre
+  ouverte. Jusqu'à dix pièces ont leur ligne ; au-delà, la dixième ligne
+  résume les autres.
+- **Boutons** : les modes du chauffage sauf le mode actif (**Planning**,
+  **Hors-gel**, **Absence**), **Consigne d'une pièce** et, avec plusieurs
+  plannings, **Changer de planning** (un formulaire qui les liste).
+- **Consigne d'une pièce** ouvre un court formulaire dans la carte : la
+  **pièce**, l'**action** — **Régler la consigne**, **Boost**, **Retour au
+  planning** ou **Éteindre** —, la **consigne** (7 à 30 °C, arrondie au
+  0,5 °C ; laissée vide, la consigne actuelle de la pièce est gardée — pratique
+  pour ne changer que sa durée) et la **durée** (les choix du réglage **Durée
+  d'une consigne envoyée par Gladys**, qui la présélectionne). La durée
+  s'applique à une consigne, un boost et à l'arrêt ; un boost avec **Durée par
+  défaut de Netatmo** ou **Sans fin** dure la durée de boost de Netatmo. Les
+  lignes du tableau de bord ne se touchent pas et une carte tient quatre
+  boutons : un seul formulaire sert toutes les pièces.
 
 Les tuiles suivent les valeurs en direct ; le reste se rafraîchit avec
 l'intégration (2 minutes, ou dès que le mode du chauffage, la surveillance ou
