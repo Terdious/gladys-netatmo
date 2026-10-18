@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-10-18
+
 ### Added
 
 - Richer **Netatmo heating** widget: a caption with the home and its active
@@ -533,7 +535,8 @@ the notes of the version's GitHub Release.
 - First stable release: OAuth2 connection, Weather and Energy devices,
   thermostat setpoint, cameras (image, monitoring, live stream).
 
-[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/Terdious/gladys-netatmo/compare/v2.3.0...v2.3.1
