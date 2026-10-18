@@ -252,6 +252,16 @@ zählt also nie als Änderung. Für das vorhersehbarste Ergebnis stelle in der
 Netatmo-App eine lange Standarddauer für manuelle Sollwerte ein oder gleiche
 den Netatmo-Zeitplan an den von Gladys an.
 
+Ein von Gladys gesendeter Sollwert braucht einige Sekunden bis einige Dutzend
+Sekunden, bis das Relais ihn an das Thermostat oder Ventil weitergibt. Die
+Integration liest Netatmo 3, 10 und dann 30 Sekunden nach dem Senden erneut und
+hört auf, sobald Netatmo den neuen Sollwert meldet. In der Zwischenzeit wird der
+alte Wert nie erneut veröffentlicht: weder die Geräteseite noch der
+Thermostat-Dienst halten ihn für eine manuelle Abweichung. Meldet Netatmo nach
+30 Sekunden noch einen anderen Sollwert, erscheint dieser bei der nächsten
+Aktualisierung. Ein in der Netatmo-App geänderter Sollwert, Modus oder Zeitplan
+wird mit den Gladys-Plus-Webhooks genauso erneut gelesen.
+
 Noch zwei Dinge:
 
 - ein in der Netatmo-App **ausgeschalteter** Raum wird von Gladys beim nächsten

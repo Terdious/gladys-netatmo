@@ -26,7 +26,11 @@
 //     tooltip) and reports it through `onDegradedChange` (connection status
 //     message) — until the first complete load (issue #33);
 //   - every cycle ends with the getevents poll (src/netatmo/eventsPoll.js):
-//     the momentary detections when the webhooks deliver nothing.
+//     the momentary detections when the webhooks deliver nothing;
+//   - a room setpoint command or an Energy webhook event re-reads the account
+//     on a short ladder (3 s, 10 s, 30 s): the relay reaches the thermostat
+//     after the cloud acknowledged, and a commanded setpoint is never
+//     overwritten by the old value Netatmo still reports meanwhile.
 // -----------------------------------------------------------------------------
 
 import {
@@ -45,6 +49,7 @@ import {
   DEFAULT_CAMERA_LIVE_QUALITY,
   ROOM_DERIVED_SUFFIXES,
   SHUTTER_REFRESH_DELAY_MS,
+  THERMOSTAT_REFRESH_DELAYS_MS,
   PARAMS,
   SUPPORTED_CATEGORY_TYPE,
   DEGRADED_AFTER_FAILED_LOADS,
@@ -101,6 +106,8 @@ function withTimeout(promise, ms, message) {
  *   stream-protocol param of the WebRTC cameras in the discovery (issue #70)
  * @param {object} [deps.eventsPoll] getevents poll (src/netatmo/eventsPoll.js),
  *   run at the end of every cycle; its `events` family joins the health
+ * @param {number[]} [deps.thermostatRefreshDelaysMs] re-read ladder after a
+ *   setpoint command or an Energy event (tests)
  */
 export function createTelemetry({
   gladys,
@@ -113,6 +120,7 @@ export function createTelemetry({
   bticinoDiagnostic = createBticinoDiagnostic(),
   webRtc = null,
   eventsPoll = null,
+  thermostatRefreshDelaysMs = THERMOSTAT_REFRESH_DELAYS_MS,
 }) {
   // Last published value per feature external_id: {state, at}.
   const published = new Map();
@@ -121,6 +129,11 @@ export function createTelemetry({
   // Pending one-shot refreshes, by key: a shutter command (30 s) and a
   // Legrand command (2 s) each keep their own timer.
   const delayedRefreshTimers = new Map();
+  // Setpoints commanded from Gladys that Netatmo does not report yet, by
+  // feature external id: the old value is held back until the ladder ends.
+  const awaitedStates = new Map();
+  // Current ladder of each key: a superseded or stopped ladder stops stepping.
+  const ladderGenerations = new Map();
 
   const cameras = createCameraImages({ fetchImpl, now });
   // Last raw Netatmo payload per camera id (vpn_url, is_local...), refreshed
@@ -518,6 +531,12 @@ export function createTelemetry({
       if (state === undefined || state === null || Number.isNaN(state)) {
         continue;
       }
+      if (awaitedStates.has(featureExternalId)) {
+        if (state !== awaitedStates.get(featureExternalId)) {
+          continue; // the relay has not reached the thermostat yet
+        }
+        awaitedStates.delete(featureExternalId);
+      }
       const previous = published.get(featureExternalId);
       if (previous && previous.state === state && now() - previous.at < STATE_KEEP_ALIVE_MS) {
         continue; // unchanged and fresh: dedup
@@ -900,6 +919,60 @@ export function createTelemetry({
     delayedRefreshTimers.set(key, timer);
   }
 
+  /**
+   * Re-read the account on the THERMOSTAT_REFRESH_DELAYS_MS ladder, each step
+   * from a fresh load. With `expected` (a setpoint command), the old value is
+   * held back meanwhile and the ladder stops once Netatmo reports the
+   * commanded one; past the last step, the next load publishes whatever
+   * Netatmo reports (a setpoint it did not apply shows again). Without it (an
+   * Energy event, new value unknown), the whole ladder runs. Arming a key
+   * again restarts its ladder.
+   * @param {object} config normalized integration config
+   * @param {string} key which ladder to (re)arm
+   * @param {{featureExternalId: string, state: number}} [expected] the
+   *   commanded state
+   */
+  function scheduleThermostatRefreshes(config, key, expected) {
+    clearDelayedRefresh(key);
+    const generation = (ladderGenerations.get(key) ?? 0) + 1;
+    ladderGenerations.set(key, generation);
+    const current = () => ladderGenerations.get(key) === generation;
+    if (expected) {
+      awaitedStates.set(expected.featureExternalId, expected.state);
+    }
+    const step = (index) => {
+      const timer = setTimeout(async () => {
+        delayedRefreshTimers.delete(key);
+        try {
+          await refreshNow(config);
+        } catch (err) {
+          logger.warn(`Netatmo thermostat refresh failed: ${err.message}`);
+        }
+        if (!current()) {
+          return; // superseded by a newer command, or stopped
+        }
+        if (expected && !awaitedStates.has(expected.featureExternalId)) {
+          logger.debug(`${expected.featureExternalId} confirmed by Netatmo`);
+          return;
+        }
+        if (index + 1 < thermostatRefreshDelaysMs.length) {
+          step(index + 1);
+          return;
+        }
+        if (expected) {
+          logger.info(
+            `${expected.featureExternalId}: Netatmo still reports another value — published at the next cycle`,
+          );
+          awaitedStates.delete(expected.featureExternalId);
+          published.delete(expected.featureExternalId);
+        }
+      }, thermostatRefreshDelaysMs[index]);
+      timer.unref?.();
+      delayedRefreshTimers.set(key, timer);
+    };
+    step(0);
+  }
+
   /** Stop the periodic refresh loop (and any pending one-shot refresh). */
   function stop() {
     if (refreshTimer) {
@@ -907,6 +980,8 @@ export function createTelemetry({
       refreshTimer = null;
     }
     clearDelayedRefresh();
+    ladderGenerations.clear();
+    awaitedStates.clear();
   }
 
   /**
@@ -1014,6 +1089,7 @@ export function createTelemetry({
     getCameraImage,
     onUpdate,
     scheduleRefresh,
+    scheduleThermostatRefreshes,
     getCameraSnapshot,
     getDegradedMessage,
     rememberState,

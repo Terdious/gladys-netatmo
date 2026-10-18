@@ -45,6 +45,7 @@
 import { createLogger } from '@gladysassistant/integration-sdk';
 
 import {
+  ENERGY_EVENT_TYPES,
   EVENT_FEATURE_SUFFIXES,
   EVENT_RESET_MS,
   EVENT_CLEARED_SUB_TYPES,
@@ -100,6 +101,25 @@ export function eventNameOf(payload) {
   const fromPushType = pushType.includes('-') ? pushType.slice(pushType.indexOf('-') + 1) : '';
   const name = fromPushType || payload?.event_type;
   return typeof name === 'string' && name.length > 0 ? name.toLowerCase() : undefined;
+}
+
+/**
+ * Whether a webhook body is an Energy event (a setpoint, the thermostat mode
+ * or the schedule changed). Matched on `event_type`: the `push_type` of these
+ * events names no event.
+ * @param {object|string} body webhook body, parsed or raw
+ * @returns {boolean} true for an Energy event
+ */
+export function isEnergyEvent(body) {
+  let payload = body;
+  if (typeof body === 'string') {
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      return false;
+    }
+  }
+  return ENERGY_EVENT_TYPES.includes(payload?.event_type);
 }
 
 /**

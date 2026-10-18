@@ -254,6 +254,17 @@ previsible, defina una duración predeterminada larga de las consignas manuales
 en la aplicación Netatmo, o haga coincidir la programación Netatmo con la de
 Gladys.
 
+Una consigna enviada desde Gladys tarda de unos segundos a unas decenas de
+segundos en llegar al termostato o a la válvula, mientras el relé la transmite.
+La integración vuelve a leer Netatmo 3, 10 y luego 30 segundos después del envío,
+y se detiene en cuanto Netatmo informa la nueva consigna. Mientras tanto, el
+valor anterior nunca se vuelve a publicar: ni la página del dispositivo ni el
+servicio Termostato lo toman por una derogación manual. Si Netatmo sigue
+informando otra consigna después de 30 segundos, esa es la que aparece en la
+siguiente actualización. Una consigna, un modo o una programación cambiados
+desde la aplicación Netatmo se vuelven a leer de la misma forma con los webhooks
+de Gladys Plus.
+
 Dos cosas más:
 
 - una habitación **apagada** desde la aplicación Netatmo vuelve a encenderla

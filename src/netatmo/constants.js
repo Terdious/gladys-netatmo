@@ -662,6 +662,19 @@ export const REFRESH_VALUES_INTERVAL_MS = 120 * 1000;
 // state history at every 120s cycle.
 export const STATE_KEEP_ALIVE_MS = 30 * 60 * 1000;
 
+// Energy webhook events (`event_type`, as pyatmo and Home Assistant read
+// them): a room setpoint, the thermostat mode or the schedule just changed,
+// from the Netatmo app, a thermostat dial or the schedule itself. Their
+// `push_type` ("display_change", "home_event_changed") carries no event name.
+export const ENERGY_EVENT_TYPES = ['set_point', 'cancel_set_point', 'therm_mode', 'schedule'];
+
+// After a room setpoint command or an Energy event, the cloud has the new
+// value at once, but homestatus reports it only once the relay reached the
+// thermostat or valve on its own radio schedule: a single early read often
+// still sees the OLD value. The state is re-read on this ladder instead,
+// stopped as soon as Netatmo reports the commanded setpoint.
+export const THERMOSTAT_REFRESH_DELAYS_MS = [3 * 1000, 10 * 1000, 30 * 1000];
+
 // How many homes are detailed concurrently (mirrors the core Promise.map).
 export const HOMES_CONCURRENCY = 2;
 

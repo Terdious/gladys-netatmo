@@ -315,17 +315,28 @@ async function setLegrandModule(
 /**
  * Apply a user command on a Netatmo device.
  * @param {object} deps `{gladys, client, refresh?, scheduleRefresh?,
- * getRawDevice?, patchRoom?, rememberState?}` SDK instance, Netatmo API
+ * getRawDevice?, patchRoom?, rememberState?, awaitSetpoint?}` SDK instance, Netatmo API
  * client, the immediate refresh after a heating mode or floodlight change, the
  * delayed refresh to arm after a shutter or Legrand command
  * (`(delayMs?, key?)`), the last raw Netatmo payload of a module (by id), the
  * patch of a room's last payload after a room mode command and the telemetry
- * dedup update after a Legrand command (`(featureExternalId, state)`)
+ * dedup update after a Legrand command (`(featureExternalId, state)`), and
+ * the re-reads until Netatmo reports a sent room setpoint
+ * (`(featureExternalId, state)`)
  * @param {object} command `{device, feature, value}` from the SDK
  * @returns {Promise<void>} resolves when Netatmo acknowledged the command
  */
 export async function setDeviceValue(
-  { gladys, client, refresh, scheduleRefresh, getRawDevice, patchRoom, rememberState },
+  {
+    gladys,
+    client,
+    refresh,
+    scheduleRefresh,
+    getRawDevice,
+    patchRoom,
+    rememberState,
+    awaitSetpoint,
+  },
   { device, feature, value },
 ) {
   const transform = writeValues[feature.category]?.[feature.type];
@@ -488,4 +499,5 @@ export async function setDeviceValue(
   } catch (err) {
     rethrowScopeError(err);
   }
+  awaitSetpoint?.(feature.external_id, Number(transform(value)));
 }
