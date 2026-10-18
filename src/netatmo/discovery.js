@@ -39,11 +39,16 @@ import {
   HEATING_SCHEDULE_TYPE,
   VIRTUAL_DEVICE_TYPE,
   KNOWN_PERSONS_ID_PREFIX,
+  THERMOSTAT_OPERATING_STATE,
 } from './constants.js';
+import { roomOperatingState } from './updateMappings.js';
 import { bticinoEntriesOf } from './bticino.js';
 import { resolveLegrandReachability } from './legrand.js';
 
 const logger = createLogger({ name: 'netatmo-discovery' });
+
+// A heating timetable spans one week, in minutes from Monday 00:00.
+const MINUTES_PER_WEEK = 7 * 24 * 60;
 
 /** Stable id of a Netatmo payload (homesdata uses `id`, legacy APIs `_id`). */
 export function netatmoId(payload) {
@@ -470,6 +475,58 @@ export function heatingSchedulesOf(homeData) {
 }
 
 /**
+ * The timetable of the active heating schedule of a homesdata home (pyatmo
+ * `Schedule`): the slots (`m_offset`, minutes from Monday 00:00 in the home's
+ * timezone, and the `zone_id` that applies from then) in time order, and the
+ * temperature of each room in each zone (`rooms[].therm_setpoint_temperature`,
+ * or the older `rooms_temp[].temp`).
+ * @param {object} homeData one entry of the homesdata `homes` array
+ * @returns {{slots: Array<{m_offset: number, zone_id: number}>,
+ *   zones: Array<{id: number, rooms: Object<string, number>}>}|undefined} the
+ *   timetable, undefined when there is no active heating schedule with slots
+ */
+export function activeTimetableOf(homeData) {
+  const schedule = (homeData.schedules ?? []).find(
+    (entry) =>
+      entry &&
+      entry.selected === true &&
+      (entry.type === undefined || entry.type === HEATING_SCHEDULE_TYPE),
+  );
+  const slots = (Array.isArray(schedule?.timetable) ? schedule.timetable : [])
+    .filter(
+      (slot) =>
+        slot &&
+        Number.isInteger(slot.m_offset) &&
+        slot.m_offset >= 0 &&
+        slot.m_offset < MINUTES_PER_WEEK &&
+        slot.zone_id !== undefined &&
+        slot.zone_id !== null,
+    )
+    .map((slot) => ({ m_offset: slot.m_offset, zone_id: slot.zone_id }))
+    .sort((a, b) => a.m_offset - b.m_offset);
+  if (slots.length === 0) {
+    return undefined;
+  }
+  const zones = (Array.isArray(schedule.zones) ? schedule.zones : [])
+    .filter((zone) => zone && zone.id !== undefined && zone.id !== null)
+    .map((zone) => {
+      const rooms = {};
+      for (const room of zone.rooms_temp ?? []) {
+        if (room && typeof room.temp === 'number') {
+          rooms[room.room_id] = room.temp;
+        }
+      }
+      for (const room of zone.rooms ?? []) {
+        if (room && typeof room.therm_setpoint_temperature === 'number') {
+          rooms[room.id] = room.therm_setpoint_temperature;
+        }
+      }
+      return { id: zone.id, rooms };
+    });
+  return { slots, zones };
+}
+
+/**
  * Summary of one homesdata home for the features that are not device states
  * (issue #39 scene triggers and actions, issue #40 widgets): its name, its
  * known persons (face recognition, homesdata `persons`), its modules, its
@@ -481,6 +538,7 @@ export function heatingSchedulesOf(homeData) {
  *   modules: Array<{id: string, name: string, type: string, bridge?: string}>,
  *   rooms: Array<object>,
  *   schedules: Array<{id: string, name: string, selected: boolean}>,
+ *   timetable: object|undefined, timezone: string|undefined,
  *   therm_mode: string|undefined, therm_mode_endtime: number|undefined}} the home summary
  */
 export function summarizeHome(homeData, devices = []) {
@@ -492,6 +550,15 @@ export function summarizeHome(homeData, devices = []) {
   for (const device of devices) {
     const room = device.room ?? {};
     const heated = HEATED_ROOM_MODULE_TYPES.includes(device.type);
+    // Whether the room heats (heating widget): the room's operating state of
+    // issue #77 — heat requested, or the boiler of its thermostat running —
+    // true as soon as one module of the room says so.
+    const heating = heated
+      ? roomOperatingState(device) === THERMOSTAT_OPERATING_STATE.HEATING
+      : false;
+    if (heated && room.id && rooms.has(room.id) && heating) {
+      rooms.get(room.id).heating = true;
+    }
     if (heated && room.id && !rooms.has(room.id)) {
       rooms.set(room.id, {
         id: room.id,
@@ -504,6 +571,7 @@ export function summarizeHome(homeData, devices = []) {
         // `max` (boost), or the home mode (`away`, `hg`, `off`), and until when.
         therm_setpoint_mode: room.therm_setpoint_mode,
         therm_setpoint_end_time: room.therm_setpoint_end_time,
+        heating,
       });
     }
   }
@@ -521,6 +589,10 @@ export function summarizeHome(homeData, devices = []) {
     })),
     rooms: [...rooms.values()],
     schedules: heatingSchedulesOf(homeData),
+    // What a setpoint "until the next schedule change" needs: the timetable
+    // of the active heating schedule and the home's timezone.
+    timetable: activeTimetableOf(homeData),
+    timezone: typeof homeData.timezone === 'string' ? homeData.timezone : undefined,
     therm_mode: withMode ? withMode.therm_mode : homeData.therm_mode,
     therm_mode_endtime: withMode ? withMode.therm_mode_endtime : homeData.therm_mode_endtime,
   };

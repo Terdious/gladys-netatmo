@@ -269,6 +269,8 @@ test('the OTM room is a heated room of the home summary', async () => {
       open_window: false,
       therm_setpoint_mode: 'schedule',
       therm_setpoint_end_time: undefined,
+      // Heat requested (heating_power_request 30): the room heats.
+      heating: true,
     },
   ]);
   // The relay alone heats no room of its own.
@@ -289,8 +291,8 @@ test('the heating widget and the heating scene action reach the OTM home', async
   assert.equal(content.components[0].text, 'MYHOME');
   const [status] = content.components.filter((c) => c.type === 'status');
   assert.deepEqual(
-    status.items.slice(1).map((item) => [item.label, item.value, item.color]),
-    [['Bureau', '19.6 °C → 20 °C', 'warning']],
+    status.items.map((item) => [item.label, item.value, item.color]),
+    [['Bureau', '19.6 → 20 °C · Heating', 'warning']],
   );
 
   const outputs = await SCENE_ACTIONS.set_heating_mode(

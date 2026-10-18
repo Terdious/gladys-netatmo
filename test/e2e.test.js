@@ -242,7 +242,8 @@ test('a dashboard widget content comes through the real SDK wiring', async () =>
   });
   assert.equal(result.success, true);
   const { components } = result.data.content;
-  assert.equal(components[0].text, 'Maison');
+  // The home and its active schedule (caption), the rooms (status).
+  assert.equal(components[0].text.en, 'Maison · Schedule: Semaine');
   assert.ok(components.some((component) => component.type === 'status'));
 });
 

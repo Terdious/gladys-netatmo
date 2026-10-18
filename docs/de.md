@@ -119,6 +119,36 @@ Standardaktion „Gerätewert setzen“.
 
 ---
 
+## Dauer eines von Gladys gesendeten Sollwerts
+
+Netatmo beendet jeden manuellen Sollwert: Nach der in der Netatmo-App
+eingestellten Standarddauer kehrt der Raum zu seinem Netatmo-Zeitplan zurück.
+Die Einstellung **Dauer eines von Gladys gesendeten Sollwerts** (Abschnitt
+**Heizung** des Bildschirms **Konfiguration**) legt fest, wie lange die
+Sollwerte gelten, die Gladys schreibt — die **Setpoint temperature** eines
+Thermostats oder Ventils, gesetzt über die Geräteseite, eine Szenenaktion
+„Gerätewert setzen“ oder das Gladys-Thermostat:
+
+| Auswahl                               | Der Sollwert gilt                                                                                                                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Netatmo-Standarddauer**             | die Standarddauer der Netatmo-App (das Verhalten vor dieser Einstellung, die Voreinstellung)                                                                                          |
+| **1 Stunde** … **12 Stunden**         | so lange                                                                                                                                                                              |
+| **Bis zur nächsten Zeitplanänderung** | bis zum nächsten Zeitfenster des aktiven Netatmo-Zeitplans, das die Temperatur des Raums ändert, in der Zeitzone des Zuhauses (Netatmo-Standarddauer, wenn kein Zeitplan bekannt ist) |
+| **Ohne Ende**                         | so lange, wie Netatmo es annimmt: 30 Tage, kürzer, wenn Netatmo dieses Ende ablehnt, als letzter Ausweg ohne Endzeit — in der Praxis, bis Gladys (oder jemand) ihn wieder ändert      |
+
+Die Szenenaktionen **Sollwert eines Raums einstellen** und **Raum boosten**
+behalten die Dauer, die du ihnen gibst, und ein Boost behält immer seine
+eigene Dauer.
+
+> **Du nutzt die Thermostat-Integration von Gladys? Wähle Ohne Ende.** Gladys
+> steuert den Wochenzeitplan und schreibt jede Änderung selbst. Mit einer
+> begrenzten Dauer kehrt Netatmo am Ende des Sollwerts zu seinem eigenen
+> Zeitplan zurück, und Gladys sieht den neuen Sollwert als eine am Thermostat
+> gemachte Änderung: eine **manuelle Übersteuerung** (siehe **Der
+> Netatmo-Zeitplan läuft weiter** weiter unten).
+
+---
+
 ## Modulierendes Thermostat (OpenTherm)
 
 Das aktuelle Netatmo-Thermostat, das **modulierende** Modell (OpenTherm),
@@ -248,9 +278,10 @@ als **manuelle Übersteuerung**, genau wie einen Dreh am Widget-Regler (für die
 Zeitfenster), und übernimmt dann wieder mit ihrem eigenen Zeitplan. Netatmo
 wird alle 2 Minuten gelesen und meldet immer wieder denselben Sollwert: Gladys
 erkennt ihren eigenen Sollwert in diesen Abfragen, eine unveränderte Meldung
-zählt also nie als Änderung. Für das vorhersehbarste Ergebnis stelle in der
-Netatmo-App eine lange Standarddauer für manuelle Sollwerte ein oder gleiche
-den Netatmo-Zeitplan an den von Gladys an.
+zählt also nie als Änderung. Für das vorhersehbarste Ergebnis stelle die
+**Dauer eines von Gladys gesendeten Sollwerts** auf **Ohne Ende** (siehe
+**Dauer eines von Gladys gesendeten Sollwerts** weiter oben): Die Sollwerte,
+die Gladys schreibt, bleiben dann, bis Gladys sie ändert.
 
 Noch zwei Dinge:
 
@@ -542,11 +573,38 @@ Drei Widgets erscheinen in der Widget-Auswahl des Dashboards (Gladys **5.1**
 oder neuer): **Dashboard bearbeiten**, ein Widget hinzufügen und nach „Netatmo“
 suchen.
 
-| Widget              | Zeigt                                                                                                                                                                                                                                                                                                                                 | Einstellungen                                                                                             |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung                                                                                                                                                                            | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind |
-| **Netatmo-Heizung** | den Heizmodus und den aktiven Zeitplan des Zuhauses, eine Zeile pro Raum (gemessene Temperatur → Sollwert, mit Manuell oder Boost markiert, wenn der Sollwert nicht vom Zeitplan kommt), die Schaltflächen Zeitplan / Frostschutz / Abwesend und, bei mehreren Zeitplänen, eine Schaltfläche **Zeitplan wechseln**, die sie auflistet | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause)                                     |
-| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                                                                                                                                                                                               | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                |
+| Widget              | Zeigt                                                                                                                                                      | Einstellungen                                                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind                  |
+| **Netatmo-Heizung** | den Heizmodus des Zuhauses, wie viele Räume heizen, den aktiven Zeitplan, eine Zeile pro Raum und Schaltflächen — siehe unten                              | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause); sein Raum ist der, den das Raumformular vorauswählt |
+| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                    | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                                 |
+
+### Das Widget Netatmo-Heizung
+
+- **Untertitel**: das Zuhause und sein aktiver Zeitplan. **Kacheln**: der
+  Heizmodus (Zeitplan, Frostschutz, Abwesend) und die heizenden Räume
+  (`2/11`).
+- **Eine kompakte Zeile pro Raum**: gemessene Temperatur → Sollwert, dann die
+  Markierungen **Manuell**, **Boost** oder **Aus** (Sollwert nicht vom
+  Zeitplan; ein ausgeschalteter Raum zeigt keinen Sollwert), **Fenster**
+  (Netatmo hat ein offenes Fenster erkannt) und **Heizt** (der Raum fordert
+  Wärme an oder sein Kesselthermostat läuft — der **Heating state** des Raums).
+  Symbol und Farbe folgen: orange, solange der Raum heizt, blau bei offenem
+  Fenster. Bis zu zehn Räume haben ihre Zeile; bei mehr fasst die zehnte Zeile
+  die übrigen zusammen.
+- **Schaltflächen**: die Heizmodi außer dem aktiven (**Zeitplan**,
+  **Frostschutz**, **Abwesend**), **Raum-Sollwert** und, bei mehreren
+  Zeitplänen, **Zeitplan wechseln** (ein Formular, das sie auflistet).
+- **Raum-Sollwert** öffnet ein kurzes Formular in der Karte: den **Raum**, die
+  **Aktion** — **Sollwert einstellen**, **Boost**, **Zurück zum Zeitplan** oder
+  **Ausschalten** —, den **Sollwert** (7 bis 30 °C, auf 0,5 °C gerundet; leer
+  gelassen, bleibt der aktuelle Sollwert des Raums — praktisch, um nur seine
+  Dauer zu ändern) und die **Dauer** (die Auswahl der Einstellung **Dauer eines
+  von Gladys gesendeten Sollwerts**, die sie vorauswählt). Die Dauer gilt für
+  einen Sollwert, einen Boost und Ausschalten; ein Boost mit
+  **Netatmo-Standarddauer** oder **Ohne Ende** dauert die Netatmo-Boostdauer.
+  Die Zeilen des Dashboards lassen sich nicht antippen und eine Karte fasst
+  vier Schaltflächen: Ein Formular dient allen Räumen.
 
 Die Kacheln folgen den Werten live; der Rest wird mit der Integration
 aktualisiert (2 Minuten, oder sobald sich der Heizmodus, die Überwachung oder

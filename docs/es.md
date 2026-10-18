@@ -118,6 +118,36 @@ acción estándar «Establecer valor del dispositivo».
 
 ---
 
+## Duración de una consigna enviada por Gladys
+
+Netatmo termina cada consigna manual: tras la duración predeterminada definida
+en la aplicación Netatmo, la habitación vuelve a su programación Netatmo. El
+ajuste **Duración de una consigna enviada por Gladys** (sección **Calefacción**
+de la pantalla **Configuración**) elige cuánto duran las consignas que escribe
+Gladys — la **Setpoint temperature** de un termostato o una válvula, fijada
+desde la página del dispositivo, una acción de escena «Establecer valor
+del dispositivo» o el Termostato de Gladys:
+
+| Opción                                      | La consigna dura                                                                                                                                                                                             |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Duración predeterminada de Netatmo**      | la duración predeterminada de la aplicación Netatmo (el comportamiento anterior a este ajuste, por defecto)                                                                                                  |
+| **1 hora** … **12 horas**                   | ese tiempo                                                                                                                                                                                                   |
+| **Hasta el próximo cambio de programación** | hasta el próximo tramo de la programación Netatmo activa que cambia la temperatura de la habitación, en la zona horaria de la casa (duración predeterminada de Netatmo si no se conoce ninguna programación) |
+| **Sin fin**                                 | tanto como Netatmo lo acepte: 30 días, menos si Netatmo rechaza ese final, sin hora de fin como último recurso — en la práctica hasta que Gladys (o alguien) la cambie                                       |
+
+Las acciones de escena **Ajustar la consigna de una habitación** y **Potenciar
+una habitación** conservan la duración que usted les da, y un boost conserva
+siempre su propia duración.
+
+> **¿Utiliza la integración Termostato de Gladys? Elija Sin fin.** Gladys
+> controla la programación semanal y escribe ella misma cada cambio. Con una
+> duración limitada, Netatmo vuelve a su propia programación al terminar la
+> consigna, y Gladys ve la nueva consigna como un cambio hecho en el
+> termostato: una **anulación manual** (vea **La programación de Netatmo sigue
+> funcionando** más abajo).
+
+---
+
 ## Termostato modulante (OpenTherm)
 
 El termostato Netatmo actual, el modelo **modulante** (OpenTherm), forma parte
@@ -250,9 +280,9 @@ termostato, o hasta el tramo siguiente), y luego retoma el control con su
 propia programación. Netatmo se lee cada 2 minutos y informa la misma consigna
 una y otra vez: Gladys reconoce su propia consigna en estas lecturas, así que
 un informe sin cambios nunca cuenta como un cambio. Para el resultado más
-previsible, defina una duración predeterminada larga de las consignas manuales
-en la aplicación Netatmo, o haga coincidir la programación Netatmo con la de
-Gladys.
+previsible, ponga la **Duración de una consigna enviada por Gladys** en **Sin
+fin** (vea **Duración de una consigna enviada por Gladys** más arriba): las
+consignas que escribe Gladys se mantienen entonces hasta que Gladys las cambie.
 
 Dos cosas más:
 
@@ -545,11 +575,39 @@ escena citan las programaciones de la casa. También devuelve el nombre de la
 Tres widgets se suman al selector de widgets del panel (Gladys **5.1** o
 posterior): **Editar panel**, añada un widget y busque «Netatmo».
 
-| Widget                  | Muestra                                                                                                                                                                                                                                                                                                                   | Ajustes                                                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Tiempo Netatmo**      | las fichas en directo de la estación (temperaturas, humedad, CO2, ruido, presión, lluvia, viento) y una fila de estado por módulo con batería baja o inaccesible                                                                                                                                                          | la estación (vacío: la primera) y las mediciones mostradas: Resumen, Interior, o Exterior, lluvia y viento |
-| **Calefacción Netatmo** | el modo de calefacción y la programación activa de la casa, una fila por habitación (temperatura medida → consigna, marcada Manual o Boost cuando la consigna no viene de la programación), los botones Programación / Antihielo / Ausencia y, con varias programaciones, un botón **Cambiar programación** que las lista | un termostato o una válvula de la casa (vacío: su única casa)                                              |
-| **Cámaras Netatmo**     | la última imagen de cada cámara, su vigilancia y botones para activarla / desactivarla                                                                                                                                                                                                                                    | una cámara mostrada en grande (vacío: todas las cámaras en lista)                                          |
+| Widget                  | Muestra                                                                                                                                                          | Ajustes                                                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Tiempo Netatmo**      | las fichas en directo de la estación (temperaturas, humedad, CO2, ruido, presión, lluvia, viento) y una fila de estado por módulo con batería baja o inaccesible | la estación (vacío: la primera) y las mediciones mostradas: Resumen, Interior, o Exterior, lluvia y viento         |
+| **Calefacción Netatmo** | el modo de calefacción de la casa, cuántas habitaciones calientan, la programación activa, una fila por habitación y botones — vea más abajo                     | un termostato o una válvula de la casa (vacío: su única casa); su habitación es la que el formulario preselecciona |
+| **Cámaras Netatmo**     | la última imagen de cada cámara, su vigilancia y botones para activarla / desactivarla                                                                           | una cámara mostrada en grande (vacío: todas las cámaras en lista)                                                  |
+
+### El widget Calefacción Netatmo
+
+- **Subtítulo**: la casa y su programación activa. **Fichas**: el modo de
+  calefacción (Programación, Antihielo, Ausencia) y las habitaciones que
+  calientan (`2/11`).
+- **Una fila compacta por habitación**: temperatura medida → consigna, luego
+  los marcadores **Manual**, **Boost** o **Apagado** (consigna que no viene de
+  la programación; una habitación apagada no muestra consigna), **Ventana**
+  (Netatmo detectó una ventana abierta) y **Calienta** (la habitación pide
+  calor, o su caldera funciona — el **Heating state** de la
+  habitación). El icono y su color siguen: naranja mientras la habitación
+  calienta, azul con una ventana abierta. Hasta diez habitaciones tienen su
+  fila; con más, la décima fila resume las demás.
+- **Botones**: los modos de calefacción salvo el activo (**Programación**,
+  **Antihielo**, **Ausencia**), **Consigna de habitación** y, con varias
+  programaciones, **Cambiar programación** (un formulario que las lista).
+- **Consigna de habitación** abre un formulario corto en la tarjeta: la
+  **habitación**, la **acción** — **Fijar la consigna**, **Boost**, **Volver a
+  la programación** o **Apagar** —, la **consigna** (7 a 30 °C, redondeada a
+  0,5 °C; si se deja vacía, se mantiene la consigna actual de la habitación —
+  útil para cambiar solo su duración) y la **duración** (las opciones del
+  ajuste **Duración de una consigna enviada por Gladys**, que la
+  preselecciona). La duración se aplica a una consigna, un boost y al apagado;
+  un boost con **Duración predeterminada de Netatmo** o **Sin fin** dura la
+  duración de boost de Netatmo. Las filas del panel no se pueden tocar y una
+  tarjeta admite cuatro botones: un solo formulario sirve para todas las
+  habitaciones.
 
 Las fichas siguen los valores en directo; el resto se actualiza con la
 integración (2 minutos, o en cuanto cambian el modo de calefacción, la
