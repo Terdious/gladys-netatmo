@@ -10,6 +10,20 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- A room setpoint sent from Gladys is re-read 3, 10 and 30 seconds after
+  Netatmo acknowledged it, stopping as soon as `homestatus` reports it: the
+  relay reaches the thermostat or valve after the cloud answered, so a single
+  early read could still see the old value. Until then the old value is never
+  published (no snap back on the device page, no false manual override in the
+  Gladys Thermostat service); past the last read, the next cycle publishes
+  whatever Netatmo reports.
+- An Energy webhook event (`set_point`, `cancel_set_point`, `therm_mode`,
+  `schedule`, matched on `event_type` like pyatmo) re-reads the state on the
+  same 3 / 10 / 30 s ladder instead of a single refresh after 2 seconds, so a
+  change made from the Netatmo app is not missed when the relay lags.
+
 ## [2.5.0] - 2026-10-17
 
 ### Added

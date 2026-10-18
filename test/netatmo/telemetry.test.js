@@ -852,6 +852,104 @@ test('setDeviceValue posts the setpoint with the device params', async () => {
   ]);
 });
 
+// The setpoint re-read ladder, short enough for a test.
+const LADDER_MS = [20, 40, 60];
+const SETPOINT = 'ext:netatmo:therm-1:therm_setpoint_temperature';
+
+/** A telemetry with the short ladder, the room of therm-1 and a homestatus counter. */
+async function setupLadder() {
+  const ladder = createTelemetry({
+    gladys,
+    client,
+    now: () => clock,
+    loadTtlMs: 0,
+    thermostatRefreshDelaysMs: LADDER_MS,
+  });
+  gladys.devices = await ladder.syncDiscovery(config);
+  await ladder.refreshValues(config);
+  const room = netatmo.state.homeStatuses['home-1'].home.rooms.find((r) => r.id === 'room-1');
+  const homestatusCalls = () =>
+    netatmo.state.apiRequests.filter((r) => r.path.startsWith('/api/homestatus')).length;
+  return { ladder, room, homestatusCalls };
+}
+
+/** The setpoint command as index.js runs it. */
+async function sendSetpoint(ladder, value) {
+  const device = gladys.devices.find((d) => d.external_id === 'ext:netatmo:therm-1');
+  const feature = device.features.find((f) => f.external_id === SETPOINT);
+  await setDeviceValue(
+    {
+      gladys,
+      client,
+      getRawDevice: (id) => ladder.getRawDevice(id),
+      awaitSetpoint: (featureExternalId, state) =>
+        ladder.scheduleThermostatRefreshes(config, `setpoint:${featureExternalId}`, {
+          featureExternalId,
+          state,
+        }),
+    },
+    { device, feature, value },
+  );
+  ladder.forgetPublished(SETPOINT);
+}
+
+test('a setpoint command is re-read until Netatmo reports it, the old value held back', async () => {
+  const { ladder, room, homestatusCalls } = await setupLadder();
+  assert.deepEqual(stateOf(SETPOINT), [21]);
+
+  await sendSetpoint(ladder, 22.5);
+  // The relay has not reached the thermostat: homestatus still says 21.
+  room.therm_setpoint_temperature = 21;
+  const before = homestatusCalls();
+  await waitFor(() => homestatusCalls() > before);
+  await ladder.refreshValues(config); // a regular cycle meanwhile
+  assert.deepEqual(stateOf(SETPOINT), [21]);
+
+  // The relay delivered: the next step publishes it and ends the ladder.
+  room.therm_setpoint_temperature = 22.5;
+  await waitFor(() => stateOf(SETPOINT).length === 2);
+  assert.deepEqual(stateOf(SETPOINT), [21, 22.5]);
+  const settled = homestatusCalls();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  assert.equal(homestatusCalls(), settled);
+  ladder.stop();
+});
+
+test('a setpoint Netatmo never reports is published once the ladder ends', async () => {
+  const { ladder, room, homestatusCalls } = await setupLadder();
+  const before = homestatusCalls();
+
+  await sendSetpoint(ladder, 22.5);
+  room.therm_setpoint_temperature = 21;
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.equal(homestatusCalls(), before + LADDER_MS.length);
+  assert.deepEqual(stateOf(SETPOINT), [21]);
+
+  // Past the ladder, the next cycle shows what Netatmo applied.
+  await ladder.refreshValues(config);
+  assert.deepEqual(stateOf(SETPOINT), [21, 21]);
+  ladder.stop();
+});
+
+test('an Energy event runs the whole ladder; stop() cancels it', async () => {
+  const { ladder, room, homestatusCalls } = await setupLadder();
+  const before = homestatusCalls();
+
+  // Changed from the Netatmo app: homestatus reports it between two steps.
+  ladder.scheduleThermostatRefreshes(config, 'energy');
+  await waitFor(() => homestatusCalls() > before);
+  room.therm_setpoint_temperature = 18;
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.equal(homestatusCalls(), before + LADDER_MS.length);
+  assert.deepEqual(stateOf(SETPOINT), [21, 18]);
+
+  const stopped = homestatusCalls();
+  ladder.scheduleThermostatRefreshes(config, 'energy');
+  ladder.stop();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(homestatusCalls(), stopped);
+});
+
 test('setDeviceValue rejects read-only features and missing params', async () => {
   gladys.devices = await telemetry.syncDiscovery(config);
   const device = gladys.devices.find((d) => d.external_id === 'ext:netatmo:therm-1');

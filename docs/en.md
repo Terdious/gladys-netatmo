@@ -235,6 +235,15 @@ so an unchanged report never counts as a change. For the most predictable
 result, set a long default duration of manual setpoints in the Netatmo app, or
 make the Netatmo schedule match the Gladys one.
 
+A setpoint sent from Gladys takes a few seconds to a few dozen seconds to reach
+the thermostat or valve, while the relay passes it on. The integration re-reads
+Netatmo 3, 10 and then 30 seconds after sending it, and stops as soon as Netatmo
+reports the new setpoint. Meanwhile the old value is never published again: the
+device page and the Thermostat service never take it for a manual override. If
+Netatmo still reports another setpoint after 30 seconds, that one shows at the
+next refresh. A setpoint, mode or schedule changed from the Netatmo app is
+re-read the same way with the Gladys Plus webhooks.
+
 Two more things to know:
 
 - a room switched **off** from the Netatmo app is switched back on by Gladys

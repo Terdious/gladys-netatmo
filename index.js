@@ -28,7 +28,7 @@ import { createNetatmoOAuth, NotConnectedError } from './src/netatmo/oauth.js';
 import { createNetatmoClient } from './src/netatmo/client.js';
 import { createTelemetry } from './src/netatmo/telemetry.js';
 import { createWebhooks } from './src/netatmo/webhooks.js';
-import { createEvents } from './src/netatmo/events.js';
+import { createEvents, isEnergyEvent } from './src/netatmo/events.js';
 import { createEventsPoll } from './src/netatmo/eventsPoll.js';
 import { createWebRtc } from './src/netatmo/webrtc.js';
 import { setDeviceValue } from './src/netatmo/setValue.js';
@@ -304,6 +304,14 @@ export function setupIntegration(
           remembered = true;
           telemetry.rememberState(featureExternalId, state);
         },
+        // The relay reaches the thermostat after the cloud acknowledged:
+        // re-read until Netatmo reports the setpoint, without letting the old
+        // value overwrite it meanwhile.
+        awaitSetpoint: (featureExternalId, state) =>
+          telemetry.scheduleThermostatRefreshes(config, `setpoint:${featureExternalId}`, {
+            featureExternalId,
+            state,
+          }),
       },
       { device, feature, value },
     );
@@ -392,6 +400,12 @@ export function setupIntegration(
       }
     }
     await events.handleWebhook(request?.body);
+    // A setpoint, mode or schedule change: homestatus reports it only once
+    // the relay reached the thermostat, often after the debounced refresh.
+    if (isEnergyEvent(request?.body)) {
+      telemetry.scheduleThermostatRefreshes(config, 'energy');
+      return;
+    }
     webhooks.handleEvent();
   });
   // The Gladys Plus availability changed (Plus linked/unlinked, key changed):
