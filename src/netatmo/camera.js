@@ -32,10 +32,20 @@ const SNAPSHOT_TIMEOUT_MS = 20 * 1000;
 // ~100 and 150 KB died with a 413 before reaching the route — this shipped
 // with a 96 KB workaround. The core now parses the host API with a dedicated
 // 20 MB bound (jsonBodyMiddleware), so the application bound is the only one
-// left: the budget is back to the full 150 KB. The raw JPEG budget accounts
-// for the base64 expansion (4/3) and the prefix.
+// left for this route. The raw JPEG budget accounts for the base64 expansion
+// (4/3) and the prefix.
+//
+// The budget is nevertheless held at 72 KB, for another route: the Devices
+// tab of an external integration saves a device (name, room) by posting the
+// WHOLE device to POST /api/v1/device, the image of its camera feature
+// included, and that route keeps the default 100 KB parser. A camera whose
+// image weighs more than ~85 KB could not be saved at all (413, forum
+// report). 72 KB leaves room for the other features and params of the
+// richest camera (NOC: 13 features). Back to 150 KB once the device page
+// stops posting the states (GladysAssistant/Gladys#3228) is in the minimum
+// Gladys version.
 const IMAGE_PREFIX = 'image/jpg;base64,';
-const MAX_IMAGE_STRING_SIZE = 150 * 1024;
+export const MAX_IMAGE_STRING_SIZE = 72 * 1024;
 export const MAX_RAW_JPEG_SIZE = Math.floor(
   ((MAX_IMAGE_STRING_SIZE - IMAGE_PREFIX.length) * 3) / 4,
 );

@@ -10,6 +10,17 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A camera can be saved again from the Devices tab** (name, room): the
+  camera image is now kept under 72 KB instead of 150 KB. The Devices tab
+  saves a device by posting it whole, its image included, to a Gladys route
+  limited to 100 KB, so a camera with a recent image always failed with
+  « Une erreur s'est produite lors de l'enregistrement de cet appareil »
+  (413, forum report). The dashboard image is a little lighter. The budget
+  goes back to 150 KB once Gladys stops posting the states on save
+  (GladysAssistant/Gladys#3228).
+
 ## [2.6.0] - 2026-10-18
 
 ### Added

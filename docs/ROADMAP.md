@@ -104,6 +104,8 @@ forum topic.
   HTTP bridge inside the integration that `CAMERA_URL` points to.
 - Floodlight mode as one feature: proposed core light operating-mode type
   (off / on / auto); the two provisional features (#56) will be migrated.
+- Camera image budget back to 150 KB (held at 72 KB so a camera can be
+  saved from the Devices tab) — core PR GladysAssistant/Gladys#3228.
 - [#41](https://github.com/Terdious/gladys-netatmo/issues/41) Siren control
   — blocked: the public API rejects `siren_status`.
 
