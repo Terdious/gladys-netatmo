@@ -1001,10 +1001,10 @@
         "es": "Aplicación Netatmo Connect"
       },
       "description": {
-        "en": "Gladys talks to Netatmo through YOUR own Netatmo Connect application. Create a Netatmo account, then a developer application to obtain the client id and client secret below. The scopes (read + write) are requested automatically at connection — nothing to configure on the portal. See the step-by-step in the Documentation.",
-        "fr": "Gladys communique avec Netatmo via VOTRE propre application Netatmo Connect. Créez un compte Netatmo, puis une application développeur pour obtenir l'identifiant et le secret client ci-dessous. Les scopes (lecture + écriture) sont demandés automatiquement à la connexion — rien à configurer sur le portail. Voir le pas-à-pas dans la Documentation.",
-        "de": "Gladys kommuniziert mit Netatmo über DEINE eigene Netatmo-Connect-Anwendung. Erstelle ein Netatmo-Konto und anschließend eine Entwickleranwendung, um die unten verlangte Client-ID und das Client-Secret zu erhalten. Die Berechtigungen (Lesen + Schreiben) werden beim Verbinden automatisch angefordert — im Portal ist nichts zu konfigurieren. Die Schritt-für-Schritt-Anleitung findest du in der Dokumentation.",
-        "es": "Gladys se comunica con Netatmo a través de SU propia aplicación Netatmo Connect. Cree una cuenta Netatmo y luego una aplicación de desarrollador para obtener el ID de cliente y el secreto de cliente que se piden abajo. Los permisos (lectura + escritura) se solicitan automáticamente al conectar — no hay nada que configurar en el portal. Consulte el paso a paso en la Documentación."
+        "en": "Gladys talks to Netatmo through YOUR own Netatmo Connect application (free, 2 minutes):\n1. Open \"Create an application\" below and sign in with the account you use in the Netatmo app.\n2. Fill in the required fields: name (e.g. \"Gladys\"), description, data protection officer name and email (yours). Leave \"Redirect URI\" and \"Webhook URI\" empty.\n3. Save: the page shows a \"client ID\" and a \"client secret\". Copy them into the two fields below.\n4. Click \"Save configuration\" at the bottom, then \"Connect\", and accept on the Netatmo page.\nThen open the \"Discover\" tab and click \"Add to Gladys\" on each device you want.",
+        "fr": "Gladys communique avec Netatmo via VOTRE propre application Netatmo Connect (gratuit, 2 minutes) :\n1. Ouvrez « Créer une application » ci-dessous et connectez-vous avec le compte de l'application Netatmo.\n2. Remplissez les champs obligatoires : nom (ex. « Gladys »), description, nom et e-mail du responsable des données (les vôtres). Laissez vides « Redirect URI » et « Webhook URI ».\n3. Enregistrez : la page affiche un « client ID » et un « client secret ». Copiez-les dans les deux champs ci-dessous.\n4. Cliquez sur « Enregistrer la configuration » en bas, puis sur « Connecter », et acceptez sur la page Netatmo.\nOuvrez ensuite l'onglet « Découverte » et cliquez sur « Ajouter à Gladys » pour chaque appareil voulu.",
+        "de": "Gladys spricht mit Netatmo über DEINE eigene Netatmo-Connect-Anwendung (kostenlos, 2 Minuten):\n1. Öffne unten „Anwendung erstellen“ und melde dich mit dem Konto an, das du in der Netatmo-App nutzt.\n2. Fülle die Pflichtfelder aus: Name (z. B. „Gladys“), Beschreibung, Name und E-Mail des Datenschutzbeauftragten (deine). Lass „Redirect URI“ und „Webhook URI“ leer.\n3. Speichern: Die Seite zeigt eine „client ID“ und ein „client secret“. Kopiere beide in die zwei Felder unten.\n4. Klicke unten auf „Konfiguration speichern“, dann auf „Verbinden“, und bestätige auf der Netatmo-Seite.\nÖffne danach den Tab „Entdecken“ und klicke bei jedem gewünschten Gerät auf „Zu Gladys hinzufügen“.",
+        "es": "Gladys se comunica con Netatmo a través de SU propia aplicación Netatmo Connect (gratuita, 2 minutos):\n1. Abra «Crear una aplicación» abajo e inicie sesión con la cuenta que usa en la app Netatmo.\n2. Rellene los campos obligatorios: nombre (p. ej. «Gladys»), descripción, nombre y correo del responsable de protección de datos (los suyos). Deje vacíos «Redirect URI» y «Webhook URI».\n3. Guarde: la página muestra un «client ID» y un «client secret». Cópielos en los dos campos de abajo.\n4. Haga clic en «Guardar configuración» abajo, luego en «Conectar», y acepte en la página de Netatmo.\nDespués abra la pestaña «Descubrir» y haga clic en «Añadir a Gladys» en cada dispositivo que quiera."
       },
       "links": [
         {
@@ -1037,10 +1037,10 @@
         "es": "ID de cliente de la aplicación Netatmo"
       },
       "description": {
-        "en": "The client id of the application created on dev.netatmo.com (Netatmo Connect).",
-        "fr": "L'identifiant client de l'application créée sur dev.netatmo.com (Netatmo Connect).",
-        "de": "Die Client-ID der auf dev.netatmo.com (Netatmo Connect) erstellten Anwendung.",
-        "es": "El ID de cliente de la aplicación creada en dev.netatmo.com (Netatmo Connect)."
+        "en": "The \"client ID\" line of your application's page on dev.netatmo.com (a string of letters and digits).",
+        "fr": "La ligne « client ID » de la page de votre application sur dev.netatmo.com (une suite de lettres et de chiffres).",
+        "de": "Die Zeile „client ID“ auf der Seite deiner Anwendung auf dev.netatmo.com (eine Folge aus Buchstaben und Ziffern).",
+        "es": "La línea «client ID» de la página de su aplicación en dev.netatmo.com (una serie de letras y números)."
       },
       "required": true
     },
@@ -1054,10 +1054,10 @@
         "es": "Secreto de cliente de la aplicación Netatmo"
       },
       "description": {
-        "en": "The client secret of the application created on dev.netatmo.com (Netatmo Connect).",
-        "fr": "Le secret client de l'application créée sur dev.netatmo.com (Netatmo Connect).",
-        "de": "Das Client-Secret der auf dev.netatmo.com (Netatmo Connect) erstellten Anwendung.",
-        "es": "El secreto de cliente de la aplicación creada en dev.netatmo.com (Netatmo Connect)."
+        "en": "The \"client secret\" line of the same page. Once saved it is no longer displayed: leave the field empty to keep it.",
+        "fr": "La ligne « client secret » de la même page. Une fois enregistré, il n'est plus affiché : laissez le champ vide pour le conserver.",
+        "de": "Die Zeile „client secret“ derselben Seite. Nach dem Speichern wird es nicht mehr angezeigt: Lass das Feld leer, um es zu behalten.",
+        "es": "La línea «client secret» de la misma página. Una vez guardado ya no se muestra: deje el campo vacío para conservarlo."
       },
       "required": true
     },
@@ -1071,10 +1071,10 @@
         "es": "Cuenta Netatmo"
       },
       "description": {
-        "en": "Sign in with your Netatmo account to authorize Gladys to access your devices.",
-        "fr": "Connectez-vous avec votre compte Netatmo pour autoriser Gladys à accéder à vos appareils.",
-        "de": "Melde dich mit deinem Netatmo-Konto an, um Gladys den Zugriff auf deine Geräte zu erlauben.",
-        "es": "Inicie sesión con su cuenta Netatmo para autorizar a Gladys a acceder a sus dispositivos."
+        "en": "Once the client ID and secret are saved, click \"Connect\": the Netatmo page opens, sign in and accept. The status turns to \"Connected\".\nThe redirect address shown above does not need to be declared at Netatmo. If Netatmo refuses the connection because of the redirect address (redirect_uri), paste it into the \"Redirect URI\" field of your application.\nClick \"Connect\" again whenever the status asks for it: some families (roller shutters, BTicino, Legrand…) add permissions.",
+        "fr": "Une fois l'identifiant et le secret enregistrés, cliquez sur « Connecter » : la page Netatmo s'ouvre, connectez-vous et acceptez. Le statut passe à « Connecté ».\nL'adresse de redirection affichée au-dessus n'a pas besoin d'être déclarée chez Netatmo. Si Netatmo refuse la connexion à cause de l'adresse de redirection (redirect_uri), collez-la dans le champ « Redirect URI » de votre application.\nRecliquez sur « Connecter » chaque fois que le statut le demande : certaines familles (volets, BTicino, Legrand…) ajoutent des autorisations.",
+        "de": "Sobald Client-ID und Secret gespeichert sind, klicke auf „Verbinden“: Die Netatmo-Seite öffnet sich, melde dich an und bestätige. Der Status wechselt auf „Verbunden“.\nDie oben angezeigte Weiterleitungsadresse muss bei Netatmo nicht eingetragen werden. Lehnt Netatmo die Verbindung wegen der Weiterleitungsadresse (redirect_uri) ab, füge sie in das Feld „Redirect URI“ deiner Anwendung ein.\nKlicke erneut auf „Verbinden“, wann immer der Status es verlangt: Einige Familien (Rollläden, BTicino, Legrand…) fügen Berechtigungen hinzu.",
+        "es": "Una vez guardados el ID y el secreto, haga clic en «Conectar»: se abre la página de Netatmo, inicie sesión y acepte. El estado pasa a «Conectado».\nLa dirección de redirección mostrada arriba no hace falta declararla en Netatmo. Si Netatmo rechaza la conexión por la dirección de redirección (redirect_uri), péguela en el campo «Redirect URI» de su aplicación.\nVuelva a hacer clic en «Conectar» cada vez que el estado lo pida: algunas familias (persianas, BTicino, Legrand…) añaden permisos."
       },
       "required": true
     },
@@ -1088,10 +1088,10 @@
         "es": "Dispositivos a descubrir"
       },
       "description": {
-        "en": "Choose which Netatmo device families Gladys should discover. Enabling a family and saving re-runs the discovery automatically — no manual re-scan needed. Security covers the cameras, the video doorbell and their accessories (door/window tag, siren, smoke alarm, CO alarm).",
-        "fr": "Choisissez les familles d'appareils Netatmo que Gladys doit découvrir. Activer une famille et sauvegarder relance la découverte automatiquement — pas besoin de re-scanner. La Sécurité couvre les caméras, la sonnette vidéo et leurs accessoires (capteur porte/fenêtre, sirène, détecteurs de fumée et de CO).",
-        "de": "Wähle aus, welche Netatmo-Gerätefamilien Gladys erkennen soll. Wenn du eine Familie aktivierst und speicherst, wird die Erkennung automatisch neu gestartet — kein manueller Scan nötig. Sicherheit umfasst die Kameras, die Video-Türklingel und ihr Zubehör (Tür-/Fenstersensor, Sirene, Rauch- und CO-Melder).",
-        "es": "Elija qué familias de dispositivos Netatmo debe descubrir Gladys. Al activar una familia y guardar, el descubrimiento se vuelve a ejecutar automáticamente — no hace falta volver a escanear. Seguridad incluye las cámaras, el timbre con vídeo y sus accesorios (sensor de puerta/ventana, sirena, detectores de humo y de CO)."
+        "en": "Turn on the families you own, then click \"Save configuration\": the discovery runs again by itself. Then open the \"Discover\" tab and click \"Add to Gladys\" on each device you want. On a device added with an older version, \"Update\" brings the new features.\nValues are refreshed every 2 minutes (Netatmo API limits), within seconds with the Gladys Plus webhooks (end of this form).",
+        "fr": "Activez les familles que vous possédez, puis cliquez sur « Enregistrer la configuration » : la découverte se relance seule. Ouvrez ensuite l'onglet « Découverte » et cliquez sur « Ajouter à Gladys » pour chaque appareil voulu. Sur un appareil ajouté avec une version précédente, « Mettre à jour » apporte les nouvelles fonctionnalités.\nLes valeurs sont rafraîchies toutes les 2 minutes (limites de l'API Netatmo), en quelques secondes avec les webhooks Gladys Plus (fin de ce formulaire).",
+        "de": "Aktiviere die Familien, die du besitzt, und klicke auf „Konfiguration speichern“: Die Erkennung startet von selbst neu. Öffne dann den Tab „Entdecken“ und klicke bei jedem gewünschten Gerät auf „Zu Gladys hinzufügen“. Bei einem mit einer früheren Version hinzugefügten Gerät bringt „Aktualisieren“ die neuen Funktionen.\nDie Werte werden alle 2 Minuten aktualisiert (Limits der Netatmo-API), mit den Gladys-Plus-Webhooks in Sekunden (Ende dieses Formulars).",
+        "es": "Active las familias que tenga y haga clic en «Guardar configuración»: el descubrimiento se vuelve a ejecutar solo. Después abra la pestaña «Descubrir» y haga clic en «Añadir a Gladys» en cada dispositivo que quiera. En un dispositivo añadido con una versión anterior, «Actualizar» trae las nuevas funciones.\nLos valores se actualizan cada 2 minutos (límites de la API de Netatmo), en segundos con los webhooks de Gladys Plus (final de este formulario)."
       }
     },
     {
@@ -1104,10 +1104,10 @@
         "es": "Dispositivos de Energía (termostatos, válvulas)"
       },
       "description": {
-        "en": "Discover the Netatmo Energy devices: thermostats, relay plugs and radiator valves.",
-        "fr": "Découvrir les appareils Netatmo Énergie : thermostats, relais et vannes de radiateur.",
-        "de": "Netatmo-Energie-Geräte erkennen: Thermostate, Relais und Heizkörperventile.",
-        "es": "Descubrir los dispositivos Netatmo Energía: termostatos, relés y válvulas de radiador."
+        "en": "Thermostats (classic, modulating OpenTherm, BTicino Smarther), relay plugs and radiator valves. Each heated room also shows in the \"Netatmo heating\" widget.",
+        "fr": "Thermostats (classique, modulant OpenTherm, BTicino Smarther), relais et vannes de radiateur. Chaque pièce chauffée apparaît aussi dans le widget « Chauffage Netatmo ».",
+        "de": "Thermostate (klassisch, modulierend OpenTherm, BTicino Smarther), Relais und Heizkörperventile. Jeder beheizte Raum erscheint auch im Widget „Netatmo-Heizung“.",
+        "es": "Termostatos (clásico, modulante OpenTherm, BTicino Smarther), relés y válvulas de radiador. Cada habitación con calefacción aparece también en el widget «Calefacción Netatmo»."
       },
       "required": false,
       "default": true
@@ -1134,16 +1134,16 @@
       "key": "security_api",
       "type": "boolean",
       "label": {
-        "en": "Security devices (cameras)",
-        "fr": "Appareils Sécurité (caméras)",
-        "de": "Sicherheits-Geräte (Kameras)",
-        "es": "Dispositivos de Seguridad (cámaras)"
+        "en": "Security devices (cameras, doorbell, alarms)",
+        "fr": "Appareils Sécurité (caméras, sonnette, détecteurs)",
+        "de": "Sicherheits-Geräte (Kameras, Türklingel, Melder)",
+        "es": "Dispositivos de Seguridad (cámaras, timbre, detectores)"
       },
       "description": {
-        "en": "Discover the Netatmo Security devices: indoor (NACamera), Indoor Camera Advance (NPC) and outdoor (NOC) cameras.",
-        "fr": "Découvrir les appareils Netatmo Sécurité : caméras intérieure (NACamera), intérieure Advance (NPC) et extérieure (NOC).",
-        "de": "Netatmo-Sicherheits-Geräte erkennen: Innenkameras (NACamera), Innenkamera Advance (NPC) und Außenkameras (NOC).",
-        "es": "Descubrir los dispositivos Netatmo Seguridad: cámaras de interior (NACamera), de interior Advance (NPC) y de exterior (NOC)."
+        "en": "Indoor (NACamera), Indoor Camera Advance (NPC) and outdoor (NOC) cameras, video doorbell (NDB) and their accessories: door/window tags, siren, smoke and carbon monoxide alarms, plus the presence of the known persons. Detections (motion, person, doorbell…) can trigger scenes.",
+        "fr": "Caméras intérieure (NACamera), intérieure Advance (NPC) et extérieure (NOC), sonnette vidéo (NDB) et leurs accessoires : capteurs porte/fenêtre, sirène, détecteurs de fumée et de monoxyde de carbone, plus la présence des personnes connues. Les détections (mouvement, personne, sonnette…) peuvent déclencher des scènes.",
+        "de": "Innenkameras (NACamera), Innenkamera Advance (NPC) und Außenkameras (NOC), Video-Türklingel (NDB) und ihr Zubehör: Tür-/Fenstersensoren, Sirene, Rauch- und Kohlenmonoxidmelder sowie die Anwesenheit bekannter Personen. Erkennungen (Bewegung, Person, Klingel…) können Szenen auslösen.",
+        "es": "Cámaras de interior (NACamera), de interior Advance (NPC) y de exterior (NOC), timbre con vídeo (NDB) y sus accesorios: sensores de puerta/ventana, sirena, detectores de humo y de monóxido de carbono, además de la presencia de las personas conocidas. Las detecciones (movimiento, persona, timbre…) pueden activar escenas."
       },
       "required": false,
       "default": false
@@ -1230,10 +1230,10 @@
         "es": "Calidad de la transmisión en directo de las cámaras"
       },
       "description": {
-        "en": "Quality of the camera live stream (per-camera override via the camera_quality device param).",
-        "fr": "Qualité du flux vidéo des caméras (surcharge par caméra via le paramètre camera_quality).",
-        "de": "Qualität des Kamera-Livestreams (pro Kamera über den Geräteparameter camera_quality überschreibbar).",
-        "es": "Calidad de la transmisión en directo de las cámaras (se puede cambiar por cámara con el parámetro de dispositivo camera_quality)."
+        "en": "Quality of the indoor and outdoor camera live stream in Gladys. Lower it if the live stream stutters or is slow to start, especially remotely through Gladys Plus.",
+        "fr": "Qualité du direct des caméras intérieure et extérieure dans Gladys. Baissez-la si le direct saccade ou tarde à démarrer, surtout à distance via Gladys Plus.",
+        "de": "Qualität des Livestreams der Innen- und Außenkameras in Gladys. Senke sie, wenn der Livestream ruckelt oder langsam startet, vor allem aus der Ferne über Gladys Plus.",
+        "es": "Calidad de la transmisión en directo de las cámaras de interior y exterior en Gladys. Bájela si el directo se entrecorta o tarda en arrancar, sobre todo a distancia a través de Gladys Plus."
       },
       "required": false,
       "default": "high",
@@ -1371,6 +1371,33 @@
             "fr": "Sans fin",
             "de": "Ohne Ende",
             "es": "Sin fin"
+          }
+        }
+      ]
+    },
+    {
+      "key": "section_webhooks",
+      "type": "section",
+      "label": {
+        "en": "Real time with Gladys Plus (optional)",
+        "fr": "Temps réel avec Gladys Plus (optionnel)",
+        "de": "Echtzeit mit Gladys Plus (optional)",
+        "es": "Tiempo real con Gladys Plus (opcional)"
+      },
+      "description": {
+        "en": "Without anything to do, Gladys polls Netatmo every 2 minutes. With a Gladys Plus subscription, Netatmo notifies Gladys within seconds (detections, doorbell, setpoint changed in the Netatmo app). The key takes 3 steps:\n1. Open Gladys from plus.gladysassistant.com: the Open API tab does not exist on the local address.\n2. Settings → Open API: type a name (e.g. \"Netatmo\"), click \"Generate\" and copy the key, shown only once. It is not the RSA key of the Gladys Plus tab.\n3. Paste it into the \"Gladys Plus webhooks\" block below this form and click its own \"Save\" button.\nNothing to enter on dev.netatmo.com: the integration registers the address there itself. To check: \"Device diagnostic\" action, line \"Webhook URL held by Netatmo\".",
+        "fr": "Sans rien faire, Gladys interroge Netatmo toutes les 2 minutes. Avec un abonnement Gladys Plus, Netatmo prévient Gladys en quelques secondes (détections, sonnette, consigne changée dans l'application Netatmo). La clé se crée en 3 étapes :\n1. Ouvrez Gladys depuis plus.gladysassistant.com : l'onglet Open API n'existe pas sur l'adresse locale.\n2. Paramètres → Open API : saisissez un nom (ex. « Netatmo »), cliquez sur « Générer » et copiez la clé, affichée une seule fois. Ce n'est pas la clé RSA de l'onglet Gladys Plus.\n3. Collez-la dans le bloc « Webhooks Gladys Plus » sous ce formulaire et cliquez sur son propre bouton « Enregistrer ».\nRien à saisir sur dev.netatmo.com : l'intégration y enregistre l'adresse elle-même. Pour vérifier : action « Diagnostic d'un appareil », ligne « Webhook URL held by Netatmo ».",
+        "de": "Ohne weiteres Zutun fragt Gladys Netatmo alle 2 Minuten ab. Mit einem Gladys-Plus-Abo benachrichtigt Netatmo Gladys in Sekunden (Erkennungen, Klingel, in der Netatmo-App geänderter Sollwert). Der Schlüssel in 3 Schritten:\n1. Öffne Gladys über plus.gladysassistant.com: Den Tab Open API gibt es unter der lokalen Adresse nicht.\n2. Einstellungen → Open API: Gib einen Namen ein (z. B. „Netatmo“), klicke auf „Generieren“ und kopiere den Schlüssel, er wird nur einmal angezeigt. Es ist nicht der RSA-Schlüssel aus dem Tab Gladys Plus.\n3. Füge ihn im Block „Gladys-Plus-Webhooks“ unter diesem Formular ein und klicke auf dessen eigene Schaltfläche „Speichern“.\nAuf dev.netatmo.com ist nichts einzutragen: Die Integration registriert die Adresse dort selbst. Prüfen: Aktion „Gerätediagnose“, Zeile „Webhook URL held by Netatmo“.",
+        "es": "Sin hacer nada, Gladys consulta Netatmo cada 2 minutos. Con una suscripción a Gladys Plus, Netatmo avisa a Gladys en segundos (detecciones, timbre, consigna cambiada en la app Netatmo). La clave se crea en 3 pasos:\n1. Abra Gladys desde plus.gladysassistant.com: la pestaña Open API no existe en la dirección local.\n2. Configuración → Open API: escriba un nombre (p. ej. «Netatmo»), haga clic en «Generar» y copie la clave, que solo se muestra una vez. No es la clave RSA de la pestaña Gladys Plus.\n3. Péguela en el bloque «Webhooks de Gladys Plus» debajo de este formulario y haga clic en su propio botón «Guardar».\nNada que introducir en dev.netatmo.com: la integración registra la dirección ella misma. Para comprobarlo: acción «Diagnóstico de un dispositivo», línea «Webhook URL held by Netatmo»."
+      },
+      "links": [
+        {
+          "url": "https://plus.gladysassistant.com/",
+          "label": {
+            "en": "Open Gladys Plus",
+            "fr": "Ouvrir Gladys Plus",
+            "de": "Gladys Plus öffnen",
+            "es": "Abrir Gladys Plus"
           }
         }
       ]

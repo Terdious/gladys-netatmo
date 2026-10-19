@@ -10,6 +10,28 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- **Clearer setup, step by step** (forum feedback): the documentation (en,
+  fr, de, es) opens with an "In short" checklist and walks through each screen
+  with the exact button names: the Netatmo Connect form (what to fill in,
+  Redirect URI and Webhook URI left empty, where the client ID and secret
+  show), saving then connecting, the redirect address Gladys shows above
+  Connect (not needed for Netatmo, with the fallback if Netatmo refuses it),
+  a new step 4 to add the devices from the **Discover** tab and show them on
+  the dashboard, and the usual connection errors.
+- **Gladys Plus webhooks setup made concrete**: the Open API key is created
+  from plus.gladysassistant.com (the **Open API** tab does not exist on the
+  local address), under **Settings** → **Open API** (« Paramètres » in
+  French, not « Réglages »), shown only once, and it is not the RSA key of
+  the Gladys Plus tab; it goes into the **Gladys Plus webhooks** block with
+  that block's own Save button.
+- **Configuration screen texts**: numbered steps in the Netatmo Connect
+  section, precise client ID / secret / account descriptions, what to do
+  after saving the families (Discover tab, Update button), a precise Security
+  toggle (cameras, doorbell, alarms) and a new last section, **Real time with
+  Gladys Plus (optional)**, that explains the Open API key in three steps.
+
 ### Fixed
 
 - **A camera can be saved again from the Devices tab** (name, room): the
