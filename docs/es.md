@@ -10,56 +10,109 @@ descubre sus dispositivos y mantiene sus valores actualizados.
 
 ---
 
+## En resumen
+
+1. Cree una aplicación gratuita en
+   [dev.netatmo.com/apps](https://dev.netatmo.com/apps/) y copie su **client
+   ID** y su **client secret** (paso 1).
+2. En Gladys: **Integraciones** → **Netatmo** → pestaña **Configuración**.
+   Péguelos, haga clic en **Guardar configuración** y luego en **Conectar**
+   (paso 2).
+3. Active las familias de dispositivos que tenga y guarde (paso 3).
+4. Pestaña **Descubrir** → **Añadir a Gladys** en cada dispositivo que quiera
+   (paso 4).
+5. Opcional, con Gladys Plus: cree una clave de **Open API** y péguela en el
+   bloque **Webhooks de Gladys Plus** para el tiempo real (sección _Webhooks
+   de Gladys Plus_).
+
+---
+
 ## Requisitos previos
 
 - Una **cuenta Netatmo**, con sus dispositivos ya instalados y funcionando en la
   aplicación Netatmo (Gladys lee lo que Netatmo expone — un dispositivo debe
   estar primero en línea en Netatmo).
 - Gladys Assistant **5.2 o posterior**.
+- Opcional: una suscripción a **Gladys Plus**, solo para recibir los eventos
+  en tiempo real (vea _Webhooks de Gladys Plus_). Sin ella todo funciona, con
+  una actualización cada 2 minutos.
 
 ---
 
 ## Paso 1 — Cree su aplicación Netatmo Connect
 
-Gladys nunca incluye una clave Netatmo compartida: usted utiliza **su propia**
-aplicación Netatmo Connect, de modo que sus datos quedan entre su Gladys y su
-cuenta Netatmo.
+Gladys no incluye ninguna clave de Netatmo compartida: usted usa **su propia**
+aplicación Netatmo Connect, gratuita, para que sus datos queden entre su
+Gladys y su cuenta Netatmo. Se tarda 2 minutos.
 
-1. Vaya a **[Netatmo Connect](https://dev.netatmo.com/)** e inicie sesión con su
-   cuenta Netatmo.
-2. Abra **[My Apps → Create](https://dev.netatmo.com/apps/)** y cree una nueva
-   aplicación (cualquier nombre y descripción — p. ej., "Gladys").
-3. Una vez creada, la página de la aplicación muestra dos valores que deberá
-   copiar en Gladys:
-   - **client id** (ID de cliente)
-   - **client secret** (secreto de cliente)
+1. Abra **[dev.netatmo.com/apps](https://dev.netatmo.com/apps/)** e inicie
+   sesión con **la misma cuenta que en la aplicación Netatmo** (la que ve sus
+   dispositivos).
+2. Haga clic en **Create** para crear una aplicación y rellene el formulario:
+   - **nombre de la aplicación** y **descripción**: lo que quiera, por ejemplo
+     `Gladys` y `Mi domótica`;
+   - **nombre y correo del responsable de protección de datos** (_data
+     protection officer_): los suyos;
+   - **Redirect URI**: **déjelo vacío**;
+   - **Webhook URI**: **déjelo vacío**. Netatmo acepta un webhook por
+     aplicación, y la integración registra el suyo (vea _Webhooks de Gladys
+     Plus_): una dirección escrita aquí lo sustituiría.
 
-**No** necesita configurar permisos (scopes) ni una URI de redirección en el
-portal: Gladys solicita automáticamente los permisos necesarios (lectura +
-escritura, que cubren Energía, Meteorología, Seguridad, cámaras y timbre con
-vídeo incluidos, y las persianas enrollables) durante la conexión, y gestiona
-por sí mismo la redirección OAuth2.
+   Acepte las condiciones de uso y guarde (**Save**).
+
+3. La página de la aplicación muestra entonces dos valores:
+   - el **client ID**: una serie de letras y números;
+   - el **client secret**: otra serie, más larga.
+
+   Deje esta página abierta: los va a copiar en Gladys.
+
+**No** hace falta configurar permisos (scopes) en el portal: Gladys solicita
+automáticamente los permisos necesarios (lectura + escritura, para Energía,
+Meteorología, Seguridad incluidas las cámaras y el timbre con vídeo, y las
+persianas enrollables) al conectar.
 
 ---
 
-## Paso 2 — Configure y conecte en Gladys
+## Paso 2 — Pegue las credenciales y conecte su cuenta
 
-En la pestaña **Configuración** de la integración:
+1. En Gladys, abra **Integraciones**, busque **Netatmo** (insignia «externa»)
+   y abra la pestaña **Configuración**.
+2. En el bloque **Aplicación Netatmo Connect**:
+   - pegue el **client ID** en **ID de cliente de la aplicación Netatmo**;
+   - pegue el **client secret** en **Secreto de cliente de la aplicación
+     Netatmo**.
+3. Baje al final del formulario y haga clic en **Guardar configuración**.
+4. Vuelva al campo **Cuenta Netatmo** y haga clic en **Conectar**. Se abre la
+   página de Netatmo: inicie sesión si hace falta y acepte los permisos
+   solicitados. Vuelve a Gladys y el estado pasa a **Conectado**.
 
-1. Pegue su **ID de cliente** y su **secreto de cliente**.
-2. Haga clic en **Guardar configuración**.
-3. Haga clic en **Conectar**: se abre una ventana de Netatmo; inicie sesión y
-   autorice a Gladys. Se le redirige de vuelta y el estado pasa a **Conectado**.
+> **La dirección de redirección mostrada encima del botón Conectar:** Gladys
+> la muestra para todas las integraciones que se conectan a una cuenta. Con
+> Netatmo no hace falta declararla: el campo **Redirect URI** de su
+> aplicación queda vacío. Solo si Netatmo rechaza la conexión por la dirección
+> de redirección (`redirect_uri`), cópiela con el botón de copiar, péguela en
+> **Redirect URI** en dev.netatmo.com, guarde y vuelva a hacer clic en
+> **Conectar**.
 
-> **Consejo:** haga clic siempre en **Guardar configuración** con el ID de
-> cliente / secreto _antes_ de hacer clic en Conectar. Si Conectar indica que
-> primero deben guardarse las credenciales, guarde el formulario y vuelva a
-> hacer clic en Conectar.
+**Si no funciona:**
 
-Los tokens de acceso y de actualización los almacena la propia integración y
+- **«Introduzca Y GUARDE el ID / secreto de cliente de Netatmo…»**: hizo clic en
+  Conectar antes de guardar. Haga clic en **Guardar configuración** y luego otra
+  vez en **Conectar**.
+- **Netatmo muestra un error en lugar de su página de inicio de sesión**: el
+  client ID o el secreto se copiaron mal (un espacio de más, un carácter que
+  falta). Vuelva a copiarlos desde dev.netatmo.com, guarde y vuelva a conectar.
+  Un secreto guardado ya no se muestra: deje su campo vacío para conservarlo, o
+  pegue uno nuevo para sustituirlo.
+- **«Conectado, pero faltan permisos de Netatmo añadidos recientemente…»**: una
+  familia que acaba de activar (persianas, portero BTicino, Legrand…) necesita
+  permisos adicionales. Vuelva a hacer clic en **Conectar** y acepte: sus
+  dispositivos y ajustes se conservan.
+
+Los tokens de acceso y de actualización los guarda la propia integración y
 nunca aparecen en el formulario. Gladys los renueva automáticamente; si la
-sesión llegara a expirar sin posibilidad de renovación, la pestaña Configuración
-le indica que vuelva a conectarse.
+sesión caduca definitivamente, la pantalla de Configuración le invita a
+volver a conectarse.
 
 ---
 
@@ -77,16 +130,40 @@ En **Dispositivos a descubrir**, active las familias que posee:
 | **Portero BTicino**        | Portero BTicino Classe 300X / Classe 300 EOS, un solo dispositivo (`BNCX` + sus `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — vista previa, desactivado por defecto |
 | **Legrand Home + Control** | Luces, reguladores, enchufes y relés Legrand with Netatmo de una pasarela Home + Control (`NL*`) — vista previa, desactivado por defecto                        |
 
-Al activar una familia y **guardar**, el descubrimiento se vuelve a ejecutar
-automáticamente — no hace falta volver a escanear manualmente. Los dispositivos
-nuevos aparecen en la pestaña **Descubrir**, donde puede crear los que desee.
+Active los interruptores de las familias que tenga y haga clic en **Guardar
+configuración**: el descubrimiento se vuelve a ejecutar solo, no hace falta
+hacer clic en Buscar.
 
 **Calidad de la transmisión en directo de las cámaras** (`poor` / `low` /
-`medium` / `high`, por defecto `high`) define la calidad de la transmisión en
-directo de las cámaras.
+`medium` / `high`, por defecto `high`) define la calidad del directo de las
+cámaras de interior y exterior. Bájela si el directo se entrecorta o tarda en
+arrancar, sobre todo a distancia a través de Gladys Plus.
 
 Los valores se actualizan cada **2 minutos** (límites de uso de la API de
-Netatmo).
+Netatmo), o en segundos con los webhooks de Gladys Plus.
+
+---
+
+## Paso 4 — Añada sus dispositivos a Gladys
+
+1. Abra la pestaña **Descubrir** de la integración. Cada dispositivo Netatmo
+   encontrado aparece allí, con sus funciones.
+2. Haga clic en **Añadir a Gladys** en cada dispositivo que quiera. Pasa a la
+   pestaña **Dispositivos**, donde puede cambiarle el nombre y elegir su
+   habitación.
+3. Muéstrelo en el panel: **Panel** → **Editar**, y añada una caja
+   (Dispositivos, Cámara, Termostato…) o uno de los widgets de la integración
+   (**Tiempo Netatmo**, **Calefacción Netatmo**, **Cámaras Netatmo**, vea
+   _Widgets del panel_).
+
+Un dispositivo marcado **Ya añadido** ya está en Gladys. Tras una
+actualización de la integración, puede aparecer un botón **Actualizar** en un
+dispositivo ya añadido: le aporta las nuevas funciones, sin perder su
+historial.
+
+**¿No aparece nada?** Compruebe que el estado es **Conectado**, que la familia
+está activada **y guardada**, y que el dispositivo está en línea en la
+aplicación Netatmo; luego haga clic en **Buscar**.
 
 ---
 
@@ -436,11 +513,31 @@ aumentar el número de llamadas a la API de Netatmo.
 Como un Gladys local no es accesible desde Internet, **Gladys Plus** retransmite
 los eventos, por lo que se requiere una suscripción activa a Gladys Plus.
 
-### Configuración (un solo paso)
+### Configuración (3 minutos)
 
-1. En la pestaña **Configuración** de la integración, busque el bloque
-   **"Webhooks de Gladys Plus"** (se muestra automáticamente).
-2. Pegue allí su **clave de Open API** de Gladys Plus. Eso es todo.
+Necesita una suscripción activa a **Gladys Plus** y su Gladys vinculado a
+Gladys Plus (**Configuración** → **Gladys Plus**).
+
+1. **Abra Gladys desde
+   [plus.gladysassistant.com](https://plus.gladysassistant.com/)** e inicie
+   sesión con su cuenta de Gladys Plus. La pestaña **Open API** solo aparece
+   allí: no existe cuando abre Gladys por su dirección local (por ejemplo
+   `http://192.168.1.10`).
+2. Vaya a **Configuración** → **Open API**. Escriba un **nombre** (por ejemplo
+   `Netatmo`), haga clic en **Generar** y **copie la clave** que aparece: solo
+   se muestra **una vez**. Si la ha perdido, revóquela y genere otra.
+
+   > **No** es la «clave RSA» de la pestaña **Gladys Plus**: esa sirve para el
+   > cifrado de extremo a extremo de Gladys Plus y no funciona aquí.
+
+3. Abra **Integraciones** → **Netatmo** → pestaña **Configuración** (desde
+   Gladys Plus o desde la dirección local, da igual). Debajo del formulario,
+   en el bloque **«Webhooks de Gladys Plus»**, pegue la clave en **Clave de
+   Open API de Gladys Plus** y haga clic en el botón **Guardar** de ese bloque
+   (no en «Guardar configuración»).
+
+El bloque muestra después la dirección del webhook. Contiene su clave: no la
+comparta.
 
 **No hay nada que pegar en el sitio web de Netatmo:** la propia integración
 registra la URL en Netatmo, y la vuelve a registrar en cada reconexión. Para
@@ -455,19 +552,18 @@ Después, cada evento entregado por Netatmo añade una línea como
 
 **¿Registrado pero no llega nada?** Ejecute la acción **Diagnóstico de un
 dispositivo** (pantalla Configuración, ambos campos vacíos): la línea **Webhook
-URL held by Netatmo** indica si Netatmo sigue teniendo la URL de la
-integración. Un solo webhook por aplicación Netatmo: si otro cliente la
-sustituyó (el campo "webhook URI" de dev.netatmo.com, el antiguo servicio
-Netatmo del core), vuelva a guardar la clave de Gladys Plus. Netatmo también
-deja de enviar durante 24 horas a una aplicación cuyo webhook falló 5 veces
-seguidas (solo dev.netatmo.com lo muestra y permite levantarlo). Si la URL es
-la de la integración y aun así no llega nada, cree una **nueva clave Open API**
-en Gladys Plus (Ajustes → Open API) y guárdela aquí: una clave antigua (por
+URL held by Netatmo** indica si Netatmo sigue teniendo la URL de la integración.
+Un solo webhook por aplicación Netatmo: si otro cliente la sustituyó (el campo
+"webhook URI" de dev.netatmo.com, el antiguo servicio Netatmo del core), vuelva
+a guardar la clave de Gladys Plus. Netatmo también deja de enviar durante 24
+horas a una aplicación cuyo webhook falló 5 veces seguidas (solo dev.netatmo.com
+lo muestra y permite levantarlo). Si la URL es la de la integración y aun así no
+llega nada, cree una **nueva clave Open API** (desde plus.gladysassistant.com,
+**Configuración** → **Open API**) y guárdela aquí: una clave antigua (por
 ejemplo tomada de la URL del antiguo servicio Netatmo del core) puede
-autenticarse sin entregar nunca los webhooks. Las
-detecciones solo existen mientras la vigilancia de la cámara está activada.
-Sea cual sea la causa, las detecciones siguen llegando, en unos 2 minutos (ver más
-abajo).
+autenticarse sin entregar nunca los webhooks. Las detecciones solo existen
+mientras la vigilancia de la cámara está activada. Sea cual sea la causa, las
+detecciones siguen llegando, en unos 2 minutos (ver más abajo).
 
 Sin clave (o sin Gladys Plus), la integración se comporta exactamente como
 antes, consultando cada 2 minutos — detecciones incluidas.
