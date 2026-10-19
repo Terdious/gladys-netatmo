@@ -74,7 +74,8 @@ test('a camera device with its image stays under the 100 KB body of a device sav
   // The Devices tab posts the whole device to POST /api/v1/device (default
   // 100 KB parser, until GladysAssistant/Gladys#3228): the image must leave
   // room for the other features of the richest camera (NOC, 13 features).
-  const image = encodeUnderLimit(noiseJpeg(1280, 720, 100));
+  // Worst case: an image exactly at the budget.
+  const image = `image/jpg;base64,${'A'.repeat(MAX_IMAGE_STRING_SIZE - 'image/jpg;base64,'.length)}`;
   const feature = (index, value) => ({
     id: '00000000-0000-0000-0000-000000000000',
     device_id: '00000000-0000-0000-0000-000000000000',
