@@ -10,6 +10,18 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A roller shutter command Netatmo refuses is no longer silent** (forum
+  report: the shutter never moved, nothing in the logs). Netatmo acknowledges
+  `/api/setstate` with HTTP 200 even when the iDiamant gateway does not apply
+  the command, listing a module error in its answer: the shutter command now
+  fails with that error code, the shutter, gateway and home ids, instead of
+  passing as done. An accepted command logs one line.
+- **Every failed command now leaves a line in the integration logs**
+  (`Command <feature> = <value> failed: …`): the SDK relays the failure to
+  Gladys without logging it.
+
 ## [2.6.1] - 2026-10-19
 
 ### Changed

@@ -252,6 +252,26 @@ test('setDeviceValue rejects an unknown shutter state and a missing bridge', asy
   assert.equal(netatmo.state.setStateRequests.length, 0);
 });
 
+test('a module error in the setstate answer fails the shutter command, no refresh armed', async () => {
+  // Forum report: Netatmo answered HTTP 200 with a module error, the shutter
+  // never moved and nothing was logged.
+  const shutter = await discoverShutter('0009999992');
+  netatmo.state.overrides['/api/setstate'] = {
+    body: { status: 'ok', body: { errors: [{ code: 6, id: SHUTTER_BRIDGE_ID }] } },
+  };
+  let refreshes = 0;
+  await assert.rejects(
+    setDeviceValue(
+      { gladys, client, scheduleRefresh: () => (refreshes += 1) },
+      { device: shutter, feature: featureOf(shutter, 'state'), value: -1 },
+    ),
+    new RegExp(
+      `did not apply target_position 0 to shutter 0009999992 \\(bridge ${SHUTTER_BRIDGE_ID}, home home-1\\): error 6 on ${SHUTTER_BRIDGE_ID}`,
+    ),
+  );
+  assert.equal(refreshes, 0);
+});
+
 test('a missing shutter scope asks to reconnect, on the command and the Configuration screen', async () => {
   const shutter = await discoverShutter('0009999992');
   netatmo.state.failSetStateWith = { status: 403, body: { error: { code: 13, message: 'scope' } } };
