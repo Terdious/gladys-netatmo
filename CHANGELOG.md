@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [2.6.3] - 2026-10-22
+
 ### Fixed
 
 - **Roller shutter, camera monitoring, floodlight, BTicino light and Legrand
@@ -595,7 +597,8 @@ the notes of the version's GitHub Release.
 - First stable release: OAuth2 connection, Weather and Energy devices,
   thermostat setpoint, cameras (image, monitoring, live stream).
 
-[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.2...HEAD
+[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.3...HEAD
+[2.6.3]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.2...v2.6.3
 [2.6.2]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.1...v2.6.2
 [2.6.1]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.5.0...v2.6.0
