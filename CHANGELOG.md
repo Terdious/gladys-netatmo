@@ -10,6 +10,17 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Roller shutter, camera monitoring, floodlight, BTicino light and Legrand
+  commands work again from Gladys** (forum report: they were refused with "is
+  not writable"). Gladys sends a command with the device's external id, selector
+  and params only, without its model, and the integration recognised these
+  devices by their model: every such command was refused before reaching
+  Netatmo. The model is now taken from the devices Gladys lists, or from the
+  last Netatmo data of the module. Thermostat setpoints and heating modes were
+  not affected.
+
 ## [2.6.2] - 2026-10-22
 
 ### Fixed

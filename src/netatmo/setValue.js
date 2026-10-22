@@ -315,6 +315,29 @@ async function setLegrandModule(
 }
 
 /**
+ * The device of a command, with its `model`. Gladys sends a command with the
+ * device's external_id, selector and params only (core
+ * externalIntegration.registerProxyService), while the branches below route
+ * on the model: without it every shutter, camera monitoring, floodlight,
+ * BTicino light and Legrand command was refused as "not writable" (forum
+ * report). Resolved from the devices the SDK keeps (`gladys.devices`), then
+ * from the last raw Netatmo payload of the module.
+ * @param {object} gladys SDK instance
+ * @param {Function|undefined} getRawDevice last raw Netatmo payload by id
+ * @param {object} device the device of the command
+ * @returns {object} the device, with its model when it could be resolved
+ */
+function withModel(gladys, getRawDevice, device) {
+  if (device.model) {
+    return device;
+  }
+  const known = (gladys.devices ?? []).find((entry) => entry.external_id === device.external_id);
+  const model =
+    known?.model ?? getRawDevice?.(device.external_id.replace(gladys.externalId(''), ''))?.type;
+  return model ? { ...device, model } : device;
+}
+
+/**
  * Apply a user command on a Netatmo device.
  * @param {object} deps `{gladys, client, refresh?, scheduleRefresh?,
  * getRawDevice?, patchRoom?, rememberState?, setpointDuration?, getHomes?,
@@ -341,8 +364,9 @@ export async function setDeviceValue(
     getHomes,
     now = Date.now,
   },
-  { device, feature, value },
+  { device: commandDevice, feature, value },
 ) {
+  const device = withModel(gladys, getRawDevice, commandDevice);
   const transform = writeValues[feature.category]?.[feature.type];
   const isFloodlight =
     device.model === SUPPORTED_MODULE_TYPE.NOC &&

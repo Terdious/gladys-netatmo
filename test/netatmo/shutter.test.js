@@ -229,6 +229,32 @@ test('setDeviceValue: open / close / stop and position go through setstate with 
   assert.equal(refreshes, 5);
 });
 
+test('a command as Gladys sends it (no model on the device) still drives the shutter', async () => {
+  // Forum report: the core relays a command with the device's external_id,
+  // selector and params only, and the feature's external_id, category and
+  // type; without the model the shutter command was refused as "not writable".
+  const shutter = await discoverShutter('0009999992');
+  const asSent = (device, feature) => ({
+    device: { external_id: device.external_id, selector: device.selector, params: device.params },
+    feature: { external_id: feature.external_id, category: feature.category, type: feature.type },
+  });
+  const deps = { gladys, client };
+
+  // The model comes from the devices the SDK keeps…
+  await setDeviceValue(deps, { ...asSent(shutter, featureOf(shutter, 'state')), value: -1 });
+  // …or, when they are not loaded yet, from the last raw Netatmo payload.
+  gladys.devices = [];
+  await setDeviceValue(
+    { ...deps, getRawDevice: (id) => (id === '0009999992' ? { id, type: 'NBR' } : undefined) },
+    { ...asSent(shutter, featureOf(shutter, 'position')), value: 40 },
+  );
+
+  assert.deepEqual(
+    netatmo.state.setStateRequests.map((request) => request.home.modules[0].target_position),
+    [0, 40],
+  );
+});
+
 test('setDeviceValue rejects an unknown shutter state and a missing bridge', async () => {
   const shutter = await discoverShutter('0009999992');
   const state = featureOf(shutter, 'state');
