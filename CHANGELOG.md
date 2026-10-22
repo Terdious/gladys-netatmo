@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [2.6.2] - 2026-10-22
+
 ### Fixed
 
 - **A roller shutter command Netatmo refuses is no longer silent** (forum
@@ -582,7 +584,8 @@ the notes of the version's GitHub Release.
 - First stable release: OAuth2 connection, Weather and Energy devices,
   thermostat setpoint, cameras (image, monitoring, live stream).
 
-[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.1...HEAD
+[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.2...HEAD
+[2.6.2]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.1...v2.6.2
 [2.6.1]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.4.0...v2.5.0
