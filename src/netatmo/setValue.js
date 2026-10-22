@@ -391,8 +391,9 @@ export async function setDeviceValue(
     }
     const targetPosition = transform(value);
     const moduleId = device.external_id.replace(gladys.externalId(''), '');
+    let answer;
     try {
-      await client.setState({
+      answer = await client.setState({
         homeId,
         moduleId,
         target_position: targetPosition,
@@ -401,6 +402,20 @@ export async function setDeviceValue(
     } catch (err) {
       await rethrowFamilyScopeError(gladys, err, CONNECTION_MESSAGES.SHUTTER_SCOPE_MISSING);
     }
+    // Netatmo acknowledges with HTTP 200 even when the iDiamant gateway did
+    // not relay the command (forum report: the shutter never moved, nothing
+    // in the logs): the module errors of the answer fail the command.
+    const errors = setStateErrorsOf(answer);
+    if (errors.length > 0) {
+      throw new Error(
+        `Netatmo did not apply target_position ${targetPosition} to shutter ${moduleId} (bridge ${bridgeId}, home ${homeId}): ${errors
+          .map((error) => `error ${error.code} on ${error.id}`)
+          .join(', ')}`,
+      );
+    }
+    logger.info(
+      `Netatmo accepted target_position ${targetPosition} for shutter ${moduleId} (bridge ${bridgeId})`,
+    );
     scheduleRefresh?.();
     return;
   }
