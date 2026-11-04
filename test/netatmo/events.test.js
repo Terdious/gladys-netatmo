@@ -12,6 +12,7 @@ import {
   createEvents,
   eventNameOf,
   eventDeviceIdOf,
+  isEnergyEvent,
   normalizeWebhookEvent,
 } from '../../src/netatmo/events.js';
 
@@ -73,6 +74,25 @@ test('the event name comes from push_type, with event_type as a fallback', () =>
   assert.equal(eventNameOf({ push_type: 'NCO-co_detected' }), 'co_detected');
   assert.equal(eventNameOf({ event_type: 'movement' }), 'movement');
   assert.equal(eventNameOf({}), undefined);
+});
+
+test('Energy events are recognized by event_type, raw or parsed (pyatmo payloads)', () => {
+  const setPoint = {
+    event_type: 'set_point',
+    push_type: 'display_change',
+    home: { id: 'home-1' },
+  };
+  assert.equal(isEnergyEvent(setPoint), true);
+  assert.equal(isEnergyEvent(JSON.stringify(setPoint)), true);
+  assert.equal(
+    isEnergyEvent({ event_type: 'cancel_set_point', push_type: 'display_change' }),
+    true,
+  );
+  assert.equal(isEnergyEvent({ event_type: 'therm_mode', push_type: 'home_event_changed' }), true);
+  assert.equal(isEnergyEvent({ event_type: 'schedule', push_type: 'home_event_changed' }), true);
+  assert.equal(isEnergyEvent({ push_type: 'NACamera-movement', event_type: 'movement' }), false);
+  assert.equal(isEnergyEvent('not json'), false);
+  assert.equal(isEnergyEvent(undefined), false);
 });
 
 test('the module id accepts the camera, module and device fields', () => {

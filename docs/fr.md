@@ -362,6 +362,16 @@ plus prévisible, réglez la **Durée d'une consigne envoyée par Gladys** sur
 **Sans fin** (voir **Durée d'une consigne envoyée par Gladys** plus haut) : les
 consignes que Gladys écrit restent alors jusqu'à ce que Gladys les change.
 
+Une consigne envoyée depuis Gladys met quelques secondes à quelques dizaines
+de secondes à atteindre le thermostat ou la vanne, le temps que le relais la
+transmette. L'intégration relit Netatmo 3, 10 puis 30 secondes après l'envoi et
+s'arrête dès que Netatmo rapporte la nouvelle consigne. En attendant, l'ancienne
+valeur n'est jamais republiée : ni la page de l'appareil ni le service
+Thermostat ne la prennent pour une dérogation manuelle. Si Netatmo rapporte
+encore une autre consigne après 30 secondes, c'est elle qui s'affiche au
+rafraîchissement suivant. Une consigne, un mode ou un planning changé depuis
+l'application Netatmo est relu de la même façon avec les webhooks Gladys Plus.
+
 Deux choses encore :
 
 - une pièce **éteinte** depuis l'application Netatmo est rallumée par Gladys à

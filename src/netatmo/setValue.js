@@ -340,14 +340,16 @@ function withModel(gladys, getRawDevice, device) {
 /**
  * Apply a user command on a Netatmo device.
  * @param {object} deps `{gladys, client, refresh?, scheduleRefresh?,
- * getRawDevice?, patchRoom?, rememberState?, setpointDuration?, getHomes?,
- * now?}` SDK instance, Netatmo API client, the immediate refresh after a
- * heating mode or floodlight change, the delayed refresh to arm after a
- * shutter or Legrand command (`(delayMs?, key?)`), the last raw Netatmo
+ * getRawDevice?, patchRoom?, rememberState?, awaitSetpoint?, setpointDuration?,
+ * getHomes?, now?}` SDK instance, Netatmo API client, the immediate refresh
+ * after a heating mode or floodlight change, the delayed refresh to arm after
+ * a shutter or Legrand command (`(delayMs?, key?)`), the last raw Netatmo
  * payload of a module (by id), the patch of a room's last payload after a
  * room mode command, the telemetry dedup update after a Legrand command
- * (`(featureExternalId, state)`), the `setpoint_duration` setting, the home
- * summaries (the schedule of `next_change`) and the clock (ms)
+ * (`(featureExternalId, state)`), the re-reads until Netatmo reports a sent
+ * room setpoint (`(featureExternalId, state)`), the `setpoint_duration`
+ * setting, the home summaries (the schedule of `next_change`) and the clock
+ * (ms)
  * @param {object} command `{device, feature, value}` from the SDK
  * @returns {Promise<void>} resolves when Netatmo acknowledged the command
  */
@@ -360,6 +362,7 @@ export async function setDeviceValue(
     getRawDevice,
     patchRoom,
     rememberState,
+    awaitSetpoint,
     setpointDuration,
     getHomes,
     now = Date.now,
@@ -553,4 +556,5 @@ export async function setDeviceValue(
   } catch (err) {
     rethrowScopeError(err);
   }
+  awaitSetpoint?.(feature.external_id, Number(transform(value)));
 }
