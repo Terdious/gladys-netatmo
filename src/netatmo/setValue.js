@@ -3,7 +3,8 @@
 //
 // Writable features:
 //   - thermostat setpoint: POST /api/setroomthermpoint with the device's
-//     home_id/room_id params and mode `manual`;
+//     home_id/room_id params and mode `manual`, for the duration the
+//     `setpoint_duration` setting chooses (see roomSetpoint.js);
 //   - heating mode (thermostat preset, issue #38): POST /api/setthermmode
 //     with the home_id param — the mode is the HOME's, so it applies to the
 //     whole home; an immediate refresh then republishes it on every device;
@@ -58,6 +59,7 @@ import {
   NETATMO_SETPOINT_MODES,
 } from './constants.js';
 import { writeValues } from './deviceMapping.js';
+import { endtimeForDuration, sendRoomThermpoint } from './roomSetpoint.js';
 
 const logger = createLogger({ name: 'netatmo-set-value' });
 
@@ -313,16 +315,41 @@ async function setLegrandModule(
 }
 
 /**
+ * The device of a command, with its `model`. Gladys sends a command with the
+ * device's external_id, selector and params only (core
+ * externalIntegration.registerProxyService), while the branches below route
+ * on the model: without it every shutter, camera monitoring, floodlight,
+ * BTicino light and Legrand command was refused as "not writable" (forum
+ * report). Resolved from the devices the SDK keeps (`gladys.devices`), then
+ * from the last raw Netatmo payload of the module.
+ * @param {object} gladys SDK instance
+ * @param {Function|undefined} getRawDevice last raw Netatmo payload by id
+ * @param {object} device the device of the command
+ * @returns {object} the device, with its model when it could be resolved
+ */
+function withModel(gladys, getRawDevice, device) {
+  if (device.model) {
+    return device;
+  }
+  const known = (gladys.devices ?? []).find((entry) => entry.external_id === device.external_id);
+  const model =
+    known?.model ?? getRawDevice?.(device.external_id.replace(gladys.externalId(''), ''))?.type;
+  return model ? { ...device, model } : device;
+}
+
+/**
  * Apply a user command on a Netatmo device.
  * @param {object} deps `{gladys, client, refresh?, scheduleRefresh?,
- * getRawDevice?, patchRoom?, rememberState?, awaitSetpoint?}` SDK instance, Netatmo API
- * client, the immediate refresh after a heating mode or floodlight change, the
- * delayed refresh to arm after a shutter or Legrand command
- * (`(delayMs?, key?)`), the last raw Netatmo payload of a module (by id), the
- * patch of a room's last payload after a room mode command and the telemetry
- * dedup update after a Legrand command (`(featureExternalId, state)`), and
- * the re-reads until Netatmo reports a sent room setpoint
- * (`(featureExternalId, state)`)
+ * getRawDevice?, patchRoom?, rememberState?, awaitSetpoint?, setpointDuration?,
+ * getHomes?, now?}` SDK instance, Netatmo API client, the immediate refresh
+ * after a heating mode or floodlight change, the delayed refresh to arm after
+ * a shutter or Legrand command (`(delayMs?, key?)`), the last raw Netatmo
+ * payload of a module (by id), the patch of a room's last payload after a
+ * room mode command, the telemetry dedup update after a Legrand command
+ * (`(featureExternalId, state)`), the re-reads until Netatmo reports a sent
+ * room setpoint (`(featureExternalId, state)`), the `setpoint_duration`
+ * setting, the home summaries (the schedule of `next_change`) and the clock
+ * (ms)
  * @param {object} command `{device, feature, value}` from the SDK
  * @returns {Promise<void>} resolves when Netatmo acknowledged the command
  */
@@ -336,9 +363,13 @@ export async function setDeviceValue(
     patchRoom,
     rememberState,
     awaitSetpoint,
+    setpointDuration,
+    getHomes,
+    now = Date.now,
   },
-  { device, feature, value },
+  { device: commandDevice, feature, value },
 ) {
+  const device = withModel(gladys, getRawDevice, commandDevice);
   const transform = writeValues[feature.category]?.[feature.type];
   const isFloodlight =
     device.model === SUPPORTED_MODULE_TYPE.NOC &&
@@ -387,8 +418,9 @@ export async function setDeviceValue(
     }
     const targetPosition = transform(value);
     const moduleId = device.external_id.replace(gladys.externalId(''), '');
+    let answer;
     try {
-      await client.setState({
+      answer = await client.setState({
         homeId,
         moduleId,
         target_position: targetPosition,
@@ -397,6 +429,20 @@ export async function setDeviceValue(
     } catch (err) {
       await rethrowFamilyScopeError(gladys, err, CONNECTION_MESSAGES.SHUTTER_SCOPE_MISSING);
     }
+    // Netatmo acknowledges with HTTP 200 even when the iDiamant gateway did
+    // not relay the command (forum report: the shutter never moved, nothing
+    // in the logs): the module errors of the answer fail the command.
+    const errors = setStateErrorsOf(answer);
+    if (errors.length > 0) {
+      throw new Error(
+        `Netatmo did not apply target_position ${targetPosition} to shutter ${moduleId} (bridge ${bridgeId}, home ${homeId}): ${errors
+          .map((error) => `error ${error.code} on ${error.id}`)
+          .join(', ')}`,
+      );
+    }
+    logger.info(
+      `Netatmo accepted target_position ${targetPosition} for shutter ${moduleId} (bridge ${bridgeId})`,
+    );
     scheduleRefresh?.();
     return;
   }
@@ -494,8 +540,19 @@ export async function setDeviceValue(
     );
     return;
   }
+  // How long the setpoint lasts: the `setpoint_duration` setting (Netatmo's
+  // default duration unless configured).
+  const home = getHomes?.().find((entry) => entry.id === homeId);
+  const { endtime, noEnd } = endtimeForDuration(setpointDuration, { home, roomId, now });
   try {
-    await client.setRoomThermpoint({ homeId, roomId, temp: transform(value) });
+    await sendRoomThermpoint(client, {
+      homeId,
+      roomId,
+      temp: transform(value),
+      endtime,
+      noEnd,
+      now,
+    });
   } catch (err) {
     rethrowScopeError(err);
   }

@@ -212,8 +212,8 @@ test('the Smarther room reaches the heating widget and the heating scene action'
   assert.deepEqual(validateWidgetContent(content), []);
   const [status] = content.components.filter((c) => c.type === 'status');
   assert.deepEqual(
-    status.items.slice(1).map((item) => [item.label, item.value]),
-    [['Corridor', '22 °C → 22 °C']],
+    status.items.map((item) => [item.label, item.value]),
+    [['Corridor', '22 → 22 °C · Heating']], // boiler_status true (issue #77)
   );
 
   await SCENE_ACTIONS.set_heating_mode(

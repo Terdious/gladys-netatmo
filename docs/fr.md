@@ -10,50 +10,108 @@ découvre vos appareils puis maintient leurs valeurs à jour.
 
 ---
 
+## En bref
+
+1. Créez une application gratuite sur
+   [dev.netatmo.com/apps](https://dev.netatmo.com/apps/) et copiez son
+   **client ID** et son **client secret** (étape 1).
+2. Dans Gladys : **Intégrations** → **Netatmo** → onglet **Configuration**.
+   Collez-les, cliquez sur **Enregistrer la configuration**, puis sur
+   **Connecter** (étape 2).
+3. Activez les familles d'appareils que vous possédez et enregistrez
+   (étape 3).
+4. Onglet **Découverte** → **Ajouter à Gladys** sur chaque appareil voulu
+   (étape 4).
+5. Optionnel, avec Gladys Plus : créez une clé **Open API** et collez-la dans
+   le bloc **Webhooks Gladys Plus** pour le temps réel (section _Webhooks
+   Gladys Plus_).
+
+---
+
 ## Prérequis
 
 - Un **compte Netatmo**, avec vos appareils déjà installés et fonctionnels dans
   l'application Netatmo (Gladys lit ce que Netatmo expose — un appareil doit
   d'abord être en ligne dans Netatmo).
 - Gladys Assistant **5.2 ou plus récent**.
+- Optionnel : un abonnement **Gladys Plus**, uniquement pour recevoir les
+  événements en temps réel (voir _Webhooks Gladys Plus_). Sans lui, tout
+  fonctionne, avec un rafraîchissement toutes les 2 minutes.
 
 ---
 
 ## Étape 1 — Créez votre application Netatmo Connect
 
 Gladys n'embarque aucune clé Netatmo partagée : vous utilisez **votre propre**
-application Netatmo Connect, pour que vos données restent entre votre Gladys et
-votre compte Netatmo.
+application Netatmo Connect, gratuite, pour que vos données restent entre votre
+Gladys et votre compte Netatmo. Comptez 2 minutes.
 
-1. Rendez-vous sur **[Netatmo Connect](https://dev.netatmo.com/)** et
-   connectez-vous avec votre compte Netatmo.
-2. Ouvrez **[My Apps → Créer](https://dev.netatmo.com/apps/)** et créez une
-   nouvelle application (nom et description libres — par ex. « Gladys »).
-3. Une fois créée, la page de l'application affiche deux valeurs à copier dans
-   Gladys :
-   - le **client id** (identifiant client)
-   - le **client secret** (secret client)
+1. Ouvrez **[dev.netatmo.com/apps](https://dev.netatmo.com/apps/)** et
+   connectez-vous avec **le même compte que dans l'application Netatmo**
+   (celui qui voit vos appareils).
+2. Cliquez sur **Create** pour créer une application, puis remplissez le
+   formulaire :
+   - **nom de l'application** et **description** : ce que vous voulez, par
+     exemple `Gladys` et `Ma domotique` ;
+   - **nom et e-mail du responsable de la protection des données** (_data
+     protection officer_) : les vôtres ;
+   - **Redirect URI** : **laissez vide** ;
+   - **Webhook URI** : **laissez vide**. Netatmo n'accepte qu'un webhook par
+     application, et l'intégration enregistre elle-même le sien (voir
+     _Webhooks Gladys Plus_) : une adresse saisie ici le remplacerait.
 
-Vous n'avez **pas** besoin de configurer de scopes ni d'URL de redirection sur
-le portail : Gladys demande automatiquement les scopes requis (lecture +
-écriture, couvrant l'Énergie, la Météo, la Sécurité y compris les caméras et la
-sonnette vidéo, et les volets roulants) au moment de la connexion, et gère
-lui-même la redirection OAuth2.
+   Acceptez les conditions d'utilisation et enregistrez (**Save**).
+
+3. La page de l'application affiche alors deux valeurs :
+   - le **client ID** : une suite de lettres et de chiffres ;
+   - le **client secret** : une autre suite, plus longue.
+
+   Gardez cette page ouverte : vous allez les copier dans Gladys.
+
+Vous n'avez **pas** de scopes à configurer sur le portail : Gladys demande
+automatiquement les autorisations nécessaires (lecture + écriture, couvrant
+l'Énergie, la Météo, la Sécurité y compris les caméras et la sonnette vidéo,
+et les volets roulants) au moment de la connexion.
 
 ---
 
-## Étape 2 — Configurez et connectez dans Gladys
+## Étape 2 — Collez les identifiants et connectez votre compte
 
-Sur l'écran **Configuration** de l'intégration :
+1. Dans Gladys, ouvrez **Intégrations**, cherchez **Netatmo** (badge
+   « externe ») et ouvrez l'onglet **Configuration**.
+2. Dans le bloc **Application Netatmo Connect** :
+   - collez le **client ID** dans **Identifiant client de l'application
+     Netatmo** ;
+   - collez le **client secret** dans **Secret client de l'application
+     Netatmo**.
+3. Descendez en bas du formulaire et cliquez sur **Enregistrer la
+   configuration**.
+4. Remontez au champ **Compte Netatmo** et cliquez sur **Connecter**. La page
+   Netatmo s'ouvre : connectez-vous si besoin et acceptez les autorisations
+   demandées. Vous revenez dans Gladys et le statut passe à **Connecté**.
 
-1. Collez votre **client id** et votre **client secret**.
-2. Cliquez sur **Enregistrer**.
-3. Cliquez sur **Connecter** : une fenêtre Netatmo s'ouvre, connectez-vous et
-   autorisez Gladys. Vous êtes redirigé et le statut passe à **Connecté**.
+> **L'adresse de redirection affichée au-dessus du bouton Connecter :**
+> Gladys l'affiche pour toutes les intégrations qui se connectent à un
+> compte. Avec Netatmo, vous n'avez pas besoin de la déclarer : le champ
+> **Redirect URI** de votre application reste vide. Seulement si Netatmo
+> refuse la connexion à cause de l'adresse de redirection (`redirect_uri`),
+> copiez-la avec le bouton copier, collez-la dans **Redirect URI** sur
+> dev.netatmo.com, enregistrez, puis recliquez sur **Connecter**.
 
-> **Astuce :** **Enregistrez** toujours le client id / secret _avant_ de cliquer
-> sur Connecter. Si la connexion indique qu'il faut d'abord sauvegarder les
-> identifiants, enregistrez le formulaire et recliquez sur Connecter.
+**Si ça ne marche pas :**
+
+- **« Renseignez ET SAUVEGARDEZ l'identifiant / secret client Netatmo… »** :
+  vous avez cliqué sur Connecter avant d'enregistrer. Cliquez sur **Enregistrer
+  la configuration**, puis recliquez sur **Connecter**.
+- **Netatmo affiche une erreur au lieu de sa page de connexion** : le client ID
+  ou le secret est mal copié (espace en trop, caractère manquant). Recopiez-les
+  depuis dev.netatmo.com, enregistrez, puis reconnectez. Le secret déjà
+  enregistré n'est plus affiché : laissez son champ vide pour le garder, ou
+  collez-en un nouveau pour le remplacer.
+- **« Connecté, mais des autorisations Netatmo ajoutées récemment manquent… »**
+  : une famille que vous venez d'activer (volets, interphone BTicino, Legrand…)
+  a besoin d'autorisations en plus. Recliquez sur **Connecter** et acceptez :
+  vos appareils et réglages sont conservés.
 
 Les jetons d'accès et de rafraîchissement sont stockés par l'intégration
 elle-même et n'apparaissent jamais dans le formulaire. Gladys les rafraîchit
@@ -76,14 +134,39 @@ Sous **Appareils à découvrir**, activez les familles que vous possédez :
 | **Interphone BTicino**     | Interphone BTicino Classe 300X / Classe 300 EOS, un seul appareil (`BNCX` + ses `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — aperçu, désactivé par défaut     |
 | **Legrand Home + Control** | Éclairages, variateurs, prises et relais Legrand with Netatmo d'une passerelle Home + Control (`NL*`) — aperçu, désactivé par défaut                       |
 
-Activer une famille et **enregistrer** relance la découverte automatiquement —
-pas besoin de re-scanner. Les nouveaux appareils apparaissent sur l'écran
-**Découverte**, où vous créez ceux que vous voulez.
+Activez les interrupteurs des familles que vous possédez, puis cliquez sur
+**Enregistrer la configuration** : la découverte se relance toute seule,
+inutile de cliquer sur Scanner.
 
 **Qualité du flux vidéo des caméras** (`poor` / `low` / `medium` / `high`, par
-défaut `high`) règle la qualité du flux vidéo en direct.
+défaut `high`) règle la qualité du direct des caméras intérieure et
+extérieure. Baissez-la si le direct saccade ou tarde à démarrer, surtout à
+distance via Gladys Plus.
 
-Les valeurs sont rafraîchies toutes les **2 minutes** (limites d'API Netatmo).
+Les valeurs sont rafraîchies toutes les **2 minutes** (limites d'API Netatmo),
+ou en quelques secondes avec les webhooks Gladys Plus.
+
+---
+
+## Étape 4 — Ajoutez vos appareils à Gladys
+
+1. Ouvrez l'onglet **Découverte** de l'intégration. Chaque appareil Netatmo
+   trouvé y apparaît, avec ses fonctionnalités.
+2. Cliquez sur **Ajouter à Gladys** pour chaque appareil voulu. Il passe dans
+   l'onglet **Appareils**, où vous pouvez le renommer et lui choisir une pièce.
+3. Affichez-le sur le tableau de bord : **Tableau de bord** → **Éditer**, puis
+   ajoutez une box (Appareils, Caméra, Thermostat…) ou l'un des widgets de
+   l'intégration (**Météo Netatmo**, **Chauffage Netatmo**, **Caméras
+   Netatmo**, voir _Widgets de tableau de bord_).
+
+Un appareil marqué **Déjà ajouté** est déjà dans Gladys. Après une mise à jour
+de l'intégration, un bouton **Mettre à jour** peut apparaître sur un appareil
+déjà ajouté : il lui apporte les nouvelles fonctionnalités, sans perdre son
+historique.
+
+**Rien n'apparaît ?** Vérifiez que le statut est **Connecté**, que la famille
+est activée **et enregistrée**, et que l'appareil est en ligne dans
+l'application Netatmo, puis cliquez sur **Scanner**.
 
 ---
 
@@ -112,6 +195,36 @@ avec l'action standard « Contrôler un appareil ».
 > n'apparaît pas toute seule : allez sur l'écran **Découverte** et cliquez sur
 > **Mettre à jour** sur chaque thermostat et vanne. Gladys **5.2** ou plus
 > récent est requis (le préréglage de thermostat n'existe pas avant).
+
+---
+
+## Durée d'une consigne envoyée par Gladys
+
+Netatmo termine chaque consigne manuelle : après la durée par défaut réglée
+dans l'application Netatmo, la pièce revient à son planning Netatmo. Le
+réglage **Durée d'une consigne envoyée par Gladys** (section **Chauffage** de
+l'écran **Configuration**) choisit combien de temps durent les consignes que
+Gladys écrit — la **Setpoint temperature** d'un thermostat ou d'une vanne,
+réglée depuis la page de l'appareil, une action de scène « Contrôler un
+appareil » ou le Thermostat de Gladys :
+
+| Choix                                     | La consigne dure                                                                                                                                                                              |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Durée par défaut de Netatmo**           | la durée par défaut de l'application Netatmo (le comportement d'avant ce réglage, par défaut)                                                                                                 |
+| **1 heure** … **12 heures**               | ce temps-là                                                                                                                                                                                   |
+| **Jusqu'au prochain créneau du planning** | jusqu'au prochain créneau du planning Netatmo actif qui change la température de la pièce, dans le fuseau horaire de la maison (durée par défaut de Netatmo quand aucun planning n'est connu) |
+| **Sans fin**                              | aussi longtemps que Netatmo l'accepte : 30 jours, moins si Netatmo refuse cette fin, sans heure de fin en dernier recours — en pratique jusqu'à ce que Gladys (ou quelqu'un) la change        |
+
+Les actions de scène **Régler la consigne d'une pièce** et **Booster une
+pièce** gardent la durée que vous leur donnez, et un boost garde toujours sa
+propre durée.
+
+> **Vous utilisez l'intégration Thermostat de Gladys ? Choisissez Sans fin.**
+> Gladys pilote le planning hebdomadaire et écrit elle-même chaque changement.
+> Avec une durée limitée, Netatmo revient à son propre planning à la fin de la
+> consigne, et Gladys voit la nouvelle consigne comme un changement fait sur le
+> thermostat : une **dérogation manuelle** (voir **Le planning Netatmo continue
+> de tourner** plus bas).
 
 ---
 
@@ -245,8 +358,9 @@ thermostat, ou jusqu'au créneau suivant), puis reprend la main avec sa propre
 programmation. Netatmo est lu toutes les 2 minutes et rapporte la même consigne
 encore et encore : Gladys reconnaît sa propre consigne dans ces lectures, un
 rapport inchangé ne compte donc jamais comme un changement. Pour le résultat le
-plus prévisible, réglez une longue durée par défaut des consignes manuelles
-dans l'application Netatmo, ou alignez le planning Netatmo sur celui de Gladys.
+plus prévisible, réglez la **Durée d'une consigne envoyée par Gladys** sur
+**Sans fin** (voir **Durée d'une consigne envoyée par Gladys** plus haut) : les
+consignes que Gladys écrit restent alors jusqu'à ce que Gladys les change.
 
 Une consigne envoyée depuis Gladys met quelques secondes à quelques dizaines
 de secondes à atteindre le thermostat ou la vanne, le temps que le relais la
@@ -407,11 +521,33 @@ Comme une installation Gladys locale n'est pas joignable depuis Internet, c'est
 **Gladys Plus** qui relaie les événements. Il faut donc un abonnement Gladys
 Plus actif.
 
-### Mise en place (une seule étape)
+### Mise en place (3 minutes)
 
-1. Sur l'écran **Configuration** de l'intégration, repérez le bloc
-   **« Webhooks Gladys Plus »** (affiché automatiquement).
-2. Collez-y votre **clé Open API** Gladys Plus. C'est tout.
+Il vous faut un abonnement **Gladys Plus** actif, et votre Gladys liée à
+Gladys Plus (**Paramètres** → **Gladys Plus**).
+
+1. **Ouvrez Gladys depuis
+   [plus.gladysassistant.com](https://plus.gladysassistant.com/)** et
+   connectez-vous avec votre compte Gladys Plus. L'onglet **Open API**
+   n'apparaît que là : il n'existe pas quand vous ouvrez Gladys par son
+   adresse locale (par exemple `http://192.168.1.10`).
+2. Allez dans **Paramètres** → **Open API**. Saisissez un **nom** (par exemple
+   `Netatmo`), cliquez sur **Générer** et **copiez la clé** affichée : elle
+   n'est montrée **qu'une seule fois**. Si vous l'avez perdue, révoquez-la et
+   générez-en une autre.
+
+   > Ce n'est **pas** la « clé RSA » de l'onglet **Gladys Plus** : celle-là
+   > sert au chiffrement de bout en bout de Gladys Plus et ne fonctionne pas
+   > ici.
+
+3. Ouvrez **Intégrations** → **Netatmo** → onglet **Configuration** (depuis
+   Gladys Plus ou depuis l'adresse locale, au choix). Sous le formulaire, dans
+   le bloc **« Webhooks Gladys Plus »**, collez la clé dans **Clé Open API
+   Gladys Plus** et cliquez sur le bouton **Enregistrer** de ce bloc (et non
+   sur « Enregistrer la configuration »).
+
+Le bloc affiche ensuite l'adresse du webhook. Elle contient votre clé : ne la
+partagez pas.
 
 **Vous n'avez rien à coller sur le site Netatmo :** l'intégration enregistre
 elle-même l'URL auprès de Netatmo, et la ré-enregistre à chaque reconnexion.
@@ -424,21 +560,21 @@ Netatmo webhook registered — events will trigger an immediate refresh
 Ensuite, chaque événement livré par Netatmo ajoute une ligne comme
 `Netatmo webhook event received: NACamera-movement (70:ee:50:…)`.
 
-**Enregistré mais rien n'arrive ?** Lancez l'action **Diagnostic d'un
-appareil** (écran Configuration, les deux champs vides) : la ligne **Webhook URL
-held by Netatmo** indique si Netatmo détient toujours l'URL de l'intégration.
-Un seul webhook par application Netatmo : si un autre client l'a remplacé (le
-champ « webhook URI » de dev.netatmo.com, l'ancien service Netatmo du core),
-enregistrez à nouveau la clé Gladys Plus. Netatmo suspend aussi les envois
-pendant 24 heures pour une application dont le webhook a échoué 5 fois de suite
-(seul dev.netatmo.com l'affiche et permet de lever la suspension). Si l'URL est
-bien celle de l'intégration et que rien n'arrive malgré tout, créez une
-**nouvelle clé Open API** dans Gladys Plus (Réglages → Open API) et
-enregistrez-la ici : une ancienne clé (par exemple reprise de l'URL de l'ancien
-service Netatmo du core) peut s'authentifier sans jamais livrer les webhooks. Les
-détections n'existent que si la surveillance de la caméra est activée. Quelle que
-soit la cause, les détections arrivent quand même, en 2 minutes environ (voir
-ci-dessous).
+**Enregistré mais rien n'arrive ?** Lancez l'action **Diagnostic d'un appareil**
+(écran Configuration, les deux champs vides) : la ligne **Webhook URL held by
+Netatmo** indique si Netatmo détient toujours l'URL de l'intégration. Un seul
+webhook par application Netatmo : si un autre client l'a remplacé (le champ «
+webhook URI » de dev.netatmo.com, l'ancien service Netatmo du core), enregistrez
+à nouveau la clé Gladys Plus. Netatmo suspend aussi les envois pendant 24 heures
+pour une application dont le webhook a échoué 5 fois de suite (seul
+dev.netatmo.com l'affiche et permet de lever la suspension). Si l'URL est bien
+celle de l'intégration et que rien n'arrive malgré tout, créez une **nouvelle
+clé Open API** (depuis plus.gladysassistant.com, **Paramètres** → **Open API**)
+et enregistrez-la ici : une ancienne clé (par exemple reprise de l'URL de
+l'ancien service Netatmo du core) peut s'authentifier sans jamais livrer les
+webhooks. Les détections n'existent que si la surveillance de la caméra est
+activée. Quelle que soit la cause, les détections arrivent quand même, en 2
+minutes environ (voir ci-dessous).
 
 Sans clé (ou sans Gladys Plus), l'intégration fonctionne exactement comme avant,
 en interrogation toutes les 2 minutes — détections comprises.
@@ -549,11 +685,37 @@ Trois widgets rejoignent le choix des widgets du tableau de bord (Gladys **5.1**
 ou plus récent) : **Éditer le tableau de bord**, ajoutez un widget et cherchez «
 Netatmo ».
 
-| Widget                | Affiche                                                                                                                                                                                                                                                                                                   | Réglages                                                                                                          |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Météo Netatmo**     | les tuiles en direct de la station (températures, humidité, CO2, bruit, pression, pluie, vent) et une ligne d'état par module à la batterie faible ou injoignable                                                                                                                                         | la station (vide : la première) et les mesures affichées : Vue d'ensemble, Intérieur, ou Extérieur, pluie et vent |
-| **Chauffage Netatmo** | le mode du chauffage et le planning actif de la maison, une ligne par pièce (température mesurée → consigne, marquée Manuel ou Boost quand la consigne ne vient pas du planning), les boutons Planning / Hors-gel / Absence et, avec plusieurs plannings, un bouton **Changer de planning** qui les liste | un thermostat ou une vanne de la maison (vide : votre unique maison)                                              |
-| **Caméras Netatmo**   | la dernière image de chaque caméra, sa surveillance, et des boutons pour l'activer / la couper                                                                                                                                                                                                            | une caméra affichée en grand (vide : toutes les caméras en liste)                                                 |
+| Widget                | Affiche                                                                                                                                                           | Réglages                                                                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Météo Netatmo**     | les tuiles en direct de la station (températures, humidité, CO2, bruit, pression, pluie, vent) et une ligne d'état par module à la batterie faible ou injoignable | la station (vide : la première) et les mesures affichées : Vue d'ensemble, Intérieur, ou Extérieur, pluie et vent          |
+| **Chauffage Netatmo** | le mode du chauffage de la maison, le nombre de pièces en chauffe, le planning actif, une ligne par pièce et des boutons — voir ci-dessous                        | un thermostat ou une vanne de la maison (vide : votre unique maison) ; sa pièce est celle que le formulaire présélectionne |
+| **Caméras Netatmo**   | la dernière image de chaque caméra, sa surveillance, et des boutons pour l'activer / la couper                                                                    | une caméra affichée en grand (vide : toutes les caméras en liste)                                                          |
+
+### Le widget Chauffage Netatmo
+
+- **Légende** : la maison et son planning actif. **Tuiles** : le mode du
+  chauffage (Planning, Hors-gel, Absence) et les pièces en chauffe (`2/11`).
+- **Une ligne compacte par pièce** : température mesurée → consigne, puis les
+  marqueurs **Manuel**, **Boost** ou **Arrêt** (consigne qui ne vient pas du
+  planning ; une pièce éteinte n'affiche pas de consigne), **Fenêtre** (Netatmo
+  a détecté une fenêtre ouverte) et **Chauffe** (la pièce demande de la
+  chaleur, ou sa chaudière tourne — le **Heating state** de la pièce). L'icône
+  et sa couleur suivent : orange quand la pièce chauffe, bleu pour une fenêtre
+  ouverte. Jusqu'à dix pièces ont leur ligne ; au-delà, la dixième ligne
+  résume les autres.
+- **Boutons** : les modes du chauffage sauf le mode actif (**Planning**,
+  **Hors-gel**, **Absence**), **Consigne d'une pièce** et, avec plusieurs
+  plannings, **Changer de planning** (un formulaire qui les liste).
+- **Consigne d'une pièce** ouvre un court formulaire dans la carte : la
+  **pièce**, l'**action** — **Régler la consigne**, **Boost**, **Retour au
+  planning** ou **Éteindre** —, la **consigne** (7 à 30 °C, arrondie au
+  0,5 °C ; laissée vide, la consigne actuelle de la pièce est gardée — pratique
+  pour ne changer que sa durée) et la **durée** (les choix du réglage **Durée
+  d'une consigne envoyée par Gladys**, qui la présélectionne). La durée
+  s'applique à une consigne, un boost et à l'arrêt ; un boost avec **Durée par
+  défaut de Netatmo** ou **Sans fin** dure la durée de boost de Netatmo. Les
+  lignes du tableau de bord ne se touchent pas et une carte tient quatre
+  boutons : un seul formulaire sert toutes les pièces.
 
 Les tuiles suivent les valeurs en direct ; le reste se rafraîchit avec
 l'intégration (2 minutes, ou dès que le mode du chauffage, la surveillance ou

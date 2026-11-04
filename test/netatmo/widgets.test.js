@@ -159,43 +159,62 @@ test('the weather widget shows the chosen station, or explains that none exists'
 
 // --- Heating -------------------------------------------------------------------
 
-test('the heating content: mode, schedule, one row per room, mode and schedule buttons', async () => {
+// Wednesday 2026-10-14 10:15 in Paris (CEST): the eco slot (08:00-18:00).
+const WEDNESDAY_10_15 = Date.parse('2026-10-14T08:15:00Z');
+const roomStatusOf = (roomId) =>
+  netatmo.state.homeStatuses['home-1'].home.rooms.find((room) => room.id === roomId);
+const buttonOf = (content, key) =>
+  componentsOf(content, 'button').find((button) => button.action.key === key);
+
+/** Send the room form as the core relays it (params as declared, values typed). */
+async function sendRoomForm(values, extra = {}) {
+  const content = await getContent(WIDGET_KEYS.HEATING);
+  const { action } = buttonOf(content, 'room_setpoint');
+  return WIDGETS[WIDGET_KEYS.HEATING].action(ctx({ now: () => WEDNESDAY_10_15, ...extra }), {
+    actionKey: action.key,
+    params: action.params,
+    settings: {},
+    values,
+  });
+}
+
+test('the heating content: schedule caption, mode and heating tiles, compact room rows, buttons', async () => {
   const content = await getContent(WIDGET_KEYS.HEATING, {}, { language: 'fr' });
   assertRenderedAsSent(content);
-  const [status] = componentsOf(content, 'status');
-  assert.deepEqual(status.items[0].value, {
-    en: 'Schedule',
-    fr: 'Planning',
-    de: 'Zeitplan',
-    es: 'Programación',
-  });
-  // The active heating schedule (issue #58).
+  // The home and its active schedule (issue #58).
+  assert.equal(componentsOf(content, 'text')[0].text.fr, 'Maison · Planning: Semaine');
+  // The heating mode of the home, and how many rooms heat.
+  const [mode, heating] = componentsOf(content, 'value');
   assert.deepEqual(
-    [status.items[1].label.fr, status.items[1].value],
-    ['Planning actif', 'Semaine'],
+    [mode.value, mode.color, mode.icon, mode.label.fr],
+    ['Planning', 'success', 'calendar', 'Mode du chauffage'],
   );
-  // Rooms: measured → setpoint, in the user's language (decimal comma),
-  // tagged when the setpoint is manual (issue #58).
+  assert.deepEqual([heating.value, heating.color], ['2/2', 'warning']);
+  // Rooms: measured → setpoint in the user's language (decimal comma), then
+  // the markers: manual setpoint, open window, heating (heat requested, or
+  // the boiler of the thermostat running — issue #77).
+  const [status] = componentsOf(content, 'status');
   assert.deepEqual(
-    status.items.slice(2).map((item) => [item.label, item.value, item.color]),
+    status.items.map((item) => [item.label, item.value, item.icon, item.color]),
     [
-      ['Salon', '19,5 °C → 21 °C', 'neutral'],
-      ['Chambre', '17 °C → 19 °C · Manuel', 'warning'], // heating (power request 42)
+      ['Salon', '19,5 → 21 °C · Chauffe', 'sun', 'warning'], // boiler_status true
+      ['Chambre', '17 → 19 °C · Manuel · Fenêtre · Chauffe', 'wind', 'warning'],
     ],
   );
-  const buttons = componentsOf(content, 'button');
+  // The heating modes but the active one (its tile shows it), the room form,
+  // the schedule form: the 4 buttons of the content budget.
   assert.deepEqual(
-    buttons.map((button) => [button.action.key, button.style]),
+    componentsOf(content, 'button').map((button) => [button.action.key, button.style]),
     [
-      ['mode_schedule', 'primary'],
       ['mode_hg', 'secondary'],
       ['mode_away', 'secondary'],
+      ['room_setpoint', 'primary'],
       ['switch_schedule', 'secondary'],
     ],
   );
   // The schedule button opens a form listing the heating schedules only, the
   // active one pre-selected.
-  const [field] = buttons[3].action.fields;
+  const [field] = buttonOf(content, 'switch_schedule').action.fields;
   assert.equal(field.default, 'schedule-week');
   assert.deepEqual(
     field.options.map((option) => [option.value, option.label.en]),
@@ -206,10 +225,94 @@ test('the heating content: mode, schedule, one row per room, mode and schedule b
   );
 });
 
-test('the heating rows tag a boost, and the room rows fill the status budget', async () => {
+test('the room form: room, command, setpoint 7-30 °C, duration options of the setting', async () => {
+  let content = await getContent(WIDGET_KEYS.HEATING);
+  const { action } = buttonOf(content, 'room_setpoint');
+  assert.deepEqual(action.params, { home_id: 'home-1' });
+  const [room, command, temperature, duration] = action.fields;
+  assert.deepEqual(
+    [room.key, room.display, room.default, room.options.map((option) => option.value)],
+    ['room_id', 'radio', 'room-1', ['room-1', 'room-2']],
+  );
+  assert.deepEqual(
+    command.options.map((option) => [option.value, option.label.en]),
+    [
+      ['setpoint', 'Set the setpoint'],
+      ['boost', 'Boost'],
+      ['schedule', 'Back to schedule'],
+      ['off', 'Off'],
+    ],
+  );
+  assert.equal(command.default, 'setpoint');
+  // Two rooms: no setpoint pre-filled (left empty, the room's current one).
+  assert.deepEqual(
+    [temperature.type, temperature.required, temperature.min, temperature.max, temperature.default],
+    ['number', false, 7, 30, undefined],
+  );
+  assert.deepEqual(
+    duration.options.map((option) => option.value),
+    ['default', '1h', '3h', '6h', '12h', 'next_change', 'no_end'],
+  );
+  assert.equal(duration.default, 'default');
+
+  // The room of the chosen valve is pre-selected; the duration is the setting.
+  content = await WIDGETS[WIDGET_KEYS.HEATING].get(
+    ctx({ config: normalizeConfig({ setpoint_duration: 'no_end' }) }),
+    { settings: { device: 'ext:netatmo:valve-1' }, language: 'en', units: 'metric' },
+  );
+  assertRenderedAsSent(content);
+  const fields = buttonOf(content, 'room_setpoint').action.fields;
+  assert.equal(fields[0].default, 'room-2');
+  assert.equal(fields[3].default, 'no_end');
+
+  // A single room: its current setpoint is pre-filled.
+  const home = telemetry.getHomes()[0];
+  const single = {
+    ...ctx(),
+    telemetry: { ...telemetry, getHomes: () => [{ ...home, rooms: [home.rooms[0]] }] },
+  };
+  const singleContent = await WIDGETS[WIDGET_KEYS.HEATING].get(single, { settings: {} });
+  assertRenderedAsSent(singleContent);
+  assert.equal(buttonOf(singleContent, 'room_setpoint').action.fields[2].default, 21);
+});
+
+test('the heating rows mark a boost, an off room, an open window, and follow the unit system', async () => {
+  const salon = roomStatusOf('room-1');
+  const chambre = roomStatusOf('room-2');
+  salon.therm_setpoint_mode = 'max';
+  chambre.therm_setpoint_mode = 'off';
+  chambre.heating_power_request = 0;
+  netatmo.state.homeStatuses['home-1'].home.modules.find((m) => m.id === 'therm-1').boiler_status =
+    false;
+  await telemetry.refreshValues(config);
+  let content = await getContent(WIDGET_KEYS.HEATING);
+  assertRenderedAsSent(content);
+  let [status] = componentsOf(content, 'status');
+  assert.deepEqual(
+    status.items.map((item) => [item.value, item.icon, item.color]),
+    [
+      ['19.5 → 21 °C · Boost', 'zap', 'neutral'],
+      // Off: no setpoint shown (an off room aims at no temperature).
+      ['17 °C · Off · Window', 'wind', 'neutral'],
+    ],
+  );
+  assert.deepEqual(componentsOf(content, 'value')[1].value, '0/2');
+
+  chambre.therm_setpoint_mode = 'schedule';
+  await telemetry.refreshValues(config);
+  content = await getContent(WIDGET_KEYS.HEATING, {}, { units: 'us' });
+  [status] = componentsOf(content, 'status');
+  assert.deepEqual(
+    status.items.map((item) => [item.value, item.color]),
+    [
+      ['67.1 → 69.8 °F · Boost', 'neutral'],
+      ['62.6 → 66.2 °F · Window', 'info'],
+    ],
+  );
+});
+
+test('twelve heated rooms: nine rows and a tenth that sums up the others', async () => {
   const status = netatmo.state.homeStatuses['home-1'].home;
-  status.rooms[0].therm_setpoint_mode = 'max';
-  // Twelve heated rooms: the status component holds 10 rows (mode, schedule, 8 rooms).
   const home = netatmo.state.homes[0];
   for (let index = 3; index <= 12; index += 1) {
     home.rooms.push({ id: `room-${index}`, name: `Pièce ${index}` });
@@ -223,9 +326,10 @@ test('the heating rows tag a boost, and the room rows fill the status budget', a
     status.modules.push({ id: `valve-${index}`, type: 'NRV', battery_state: 'high' });
     status.rooms.push({
       id: `room-${index}`,
-      therm_measured_temperature: 20,
+      therm_measured_temperature: 18 + index / 2,
       therm_setpoint_temperature: 20,
       therm_setpoint_mode: 'schedule',
+      heating_power_request: index === 12 ? 50 : 0,
     });
   }
   await telemetry.refreshValues(config);
@@ -233,7 +337,18 @@ test('the heating rows tag a boost, and the room rows fill the status budget', a
   assertRenderedAsSent(content);
   const [rows] = componentsOf(content, 'status');
   assert.equal(rows.items.length, 10);
-  assert.deepEqual([rows.items[2].value, rows.items[2].icon], ['19.5 °C → 21 °C · Boost', 'zap']);
+  assert.equal(rows.items[8].label, 'Pièce 9');
+  assert.deepEqual(rows.items[9], {
+    label: { en: '+3 rooms', fr: '+3 pièces', de: '+3 Räume', es: '+3 habitaciones' },
+    // Bounded to the 40 characters of a row value.
+    value: 'Pièce 10 23 · Pièce 11 23.5 · Pièce 12 …',
+    icon: 'more-horizontal',
+    color: 'warning',
+  });
+  assert.equal(componentsOf(content, 'value')[1].value, '3/12');
+  // The room form still lists every room, in a dropdown.
+  const [room] = buttonOf(content, 'room_setpoint').action.fields;
+  assert.deepEqual([room.display, room.options.length], ['dropdown', 12]);
 });
 
 test('a home with one schedule shows it without the schedule button, none without schedules', async () => {
@@ -241,17 +356,38 @@ test('a home with one schedule shows it without the schedule button, none withou
   await telemetry.refreshValues(config);
   let content = await getContent(WIDGET_KEYS.HEATING);
   assertRenderedAsSent(content);
-  assert.equal(componentsOf(content, 'status')[0].items[1].value, 'Hiver');
-  assert.equal(componentsOf(content, 'button').length, 3);
+  assert.equal(componentsOf(content, 'text')[0].text.en, 'Maison · Schedule: Hiver');
+  assert.deepEqual(
+    componentsOf(content, 'button').map((button) => button.action.key),
+    ['mode_hg', 'mode_away', 'room_setpoint'],
+  );
   netatmo.state.homes[0].schedules = [];
   await telemetry.refreshValues(config);
   content = await getContent(WIDGET_KEYS.HEATING);
-  assert.equal(componentsOf(content, 'status')[0].items[1].label, 'Salon');
+  assert.equal(componentsOf(content, 'text')[0].text, 'Maison');
+});
+
+test('an unknown heating mode: every mode button and the room form fit the 4 buttons', async () => {
+  const home = telemetry.getHomes()[0];
+  const unknown = {
+    ...ctx(),
+    telemetry: { ...telemetry, getHomes: () => [{ ...home, therm_mode: undefined }] },
+  };
+  const content = await WIDGETS[WIDGET_KEYS.HEATING].get(unknown, { settings: {}, language: 'en' });
+  assertRenderedAsSent(content);
+  assert.deepEqual(
+    [componentsOf(content, 'value')[0].value, componentsOf(content, 'value')[0].color],
+    ['?', 'neutral'],
+  );
+  assert.deepEqual(
+    componentsOf(content, 'button').map((button) => button.action.key),
+    ['mode_schedule', 'mode_hg', 'mode_away', 'room_setpoint'],
+  );
 });
 
 test('the schedule button switches the schedule, then a toast and a refresh', async () => {
   const content = await getContent(WIDGET_KEYS.HEATING);
-  const button = componentsOf(content, 'button').find((b) => b.action.key === 'switch_schedule');
+  const button = buttonOf(content, 'switch_schedule');
   let refreshes = 0;
   const message = await WIDGETS[WIDGET_KEYS.HEATING].action(
     ctx({ refresh: async () => (refreshes += 1) }),
@@ -276,9 +412,8 @@ test('the schedule button switches the schedule, then a toast and a refresh', as
   // The next content shows the new active schedule, pre-selected in the form.
   await telemetry.refreshValues(config);
   const after = await getContent(WIDGET_KEYS.HEATING);
-  assert.equal(componentsOf(after, 'status')[0].items[1].value, 'Vacances');
-  const field = componentsOf(after, 'button')[3].action.fields[0];
-  assert.equal(field.default, 'schedule-holidays');
+  assert.equal(componentsOf(after, 'text')[0].text.en, 'Maison · Schedule: Vacances');
+  assert.equal(buttonOf(after, 'switch_schedule').action.fields[0].default, 'schedule-holidays');
 });
 
 test('the schedule action refuses a missing form, an unknown schedule, and explains the scope', async () => {
@@ -307,19 +442,11 @@ test('the schedule action refuses a missing form, an unknown schedule, and expla
   );
 });
 
-test('the heating rows follow the user unit system', async () => {
-  const content = await getContent(WIDGET_KEYS.HEATING, {}, { units: 'us' });
-  const [status] = componentsOf(content, 'status');
-  assert.equal(status.items[2].value, '67.1 °F → 69.8 °F');
-});
-
-test('every heating button is handled: setthermmode, then a toast and a refresh', async () => {
-  const content = await getContent(WIDGET_KEYS.HEATING);
+test('every heating mode button is handled: setthermmode, then a toast and a refresh', async () => {
   let refreshes = 0;
-  const modeButtons = componentsOf(content, 'button').filter(
-    (b) => b.action.key !== 'switch_schedule',
-  );
-  for (const { action } of modeButtons) {
+  const press = async (key) => {
+    const content = await getContent(WIDGET_KEYS.HEATING);
+    const { action } = buttonOf(content, key);
     const message = await WIDGETS[WIDGET_KEYS.HEATING].action(
       ctx({ refresh: async () => (refreshes += 1) }),
       { actionKey: action.key, params: action.params, settings: {} },
@@ -328,20 +455,141 @@ test('every heating button is handled: setthermmode, then a toast and a refresh'
     for (const language of ['fr', 'de', 'es']) {
       assert.ok(message[language].length <= 200);
     }
-  }
+    await telemetry.refreshValues(config);
+  };
+  await press('mode_hg');
+  await press('mode_away');
+  // Away is active now: its button is gone, Schedule is back.
+  const after = await getContent(WIDGET_KEYS.HEATING);
+  assert.equal(buttonOf(after, 'mode_away'), undefined);
+  assert.equal(componentsOf(after, 'value')[0].value, 'Away');
+  await press('mode_schedule');
   assert.deepEqual(netatmo.state.setThermModeRequests, [
-    { home_id: 'home-1', mode: 'schedule' },
     { home_id: 'home-1', mode: 'hg' },
     { home_id: 'home-1', mode: 'away' },
+    { home_id: 'home-1', mode: 'schedule' },
   ]);
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(refreshes, 3);
-  // The next content (after the refresh) shows the new mode as the active button.
-  await telemetry.refreshValues(config);
-  const after = await getContent(WIDGET_KEYS.HEATING);
+});
+
+test('the room form sets a setpoint for the chosen duration (setroomthermpoint endtime)', async () => {
+  const nowSeconds = WEDNESDAY_10_15 / 1000;
+  const expected = {
+    default: undefined,
+    '1h': nowSeconds + 3600,
+    '3h': nowSeconds + 3 * 3600,
+    '6h': nowSeconds + 6 * 3600,
+    '12h': nowSeconds + 12 * 3600,
+    // Salon, Wednesday 10:15 in the eco slot (18 °C): comfort (21 °C) at 18:00 Paris.
+    next_change: Date.parse('2026-10-14T16:00:00Z') / 1000,
+    no_end: nowSeconds + 30 * 24 * 3600,
+  };
+  for (const [duration, endtime] of Object.entries(expected)) {
+    netatmo.state.setpointRequests = [];
+    await sendRoomForm({ room_id: 'room-1', command: 'setpoint', temperature: 21.3, duration });
+    assert.deepEqual(
+      netatmo.state.setpointRequests,
+      [
+        {
+          home_id: 'home-1',
+          room_id: 'room-1',
+          mode: 'manual',
+          temp: '21.5', // rounded to the Netatmo step (0.5 °C)
+          ...(endtime === undefined ? {} : { endtime: String(endtime) }),
+        },
+      ],
+      duration,
+    );
+  }
+});
+
+test('the room form: current setpoint, boost, back to schedule, off, then a toast and a refresh', async () => {
+  let refreshes = 0;
+  const refresh = async () => (refreshes += 1);
+  // Left empty: the room's current setpoint (Chambre, 19 °C), for 3 hours.
+  let message = await sendRoomForm(
+    { room_id: 'room-2', command: 'setpoint', duration: '3h' },
+    { refresh },
+  );
+  assert.deepEqual(message, {
+    en: 'Chambre: 19 °C (3 hours)',
+    fr: 'Chambre: 19 °C (3 heures)',
+    de: 'Chambre: 19 °C (3 Stunden)',
+    es: 'Chambre: 19 °C (3 horas)',
+  });
+  // Next change for the Chambre: eco and comfort keep 19 °C, night (16 °C) at 22:30.
+  netatmo.state.setpointRequests = [];
+  await sendRoomForm({
+    room_id: 'room-2',
+    command: 'setpoint',
+    temperature: 20,
+    duration: 'next_change',
+  });
   assert.equal(
-    componentsOf(after, 'button').find((b) => b.style === 'primary').action.key,
-    'mode_away',
+    netatmo.state.setpointRequests[0].endtime,
+    String(Date.parse('2026-10-14T20:30:00Z') / 1000),
+  );
+  // A boost keeps Netatmo's boost duration for "default" and "no end".
+  netatmo.state.setpointRequests = [];
+  message = await sendRoomForm({ room_id: 'room-1', command: 'boost', duration: 'no_end' });
+  await sendRoomForm({ room_id: 'room-1', command: 'boost', duration: '1h' });
+  await sendRoomForm({ room_id: 'room-1', command: 'schedule', duration: '6h' });
+  await sendRoomForm({ room_id: 'room-1', command: 'off', duration: 'default' });
+  await sendRoomForm({ room_id: 'room-1', command: 'off', duration: '12h' });
+  assert.equal(message.en, 'Salon: Boost');
+  const nowSeconds = WEDNESDAY_10_15 / 1000;
+  assert.deepEqual(netatmo.state.setpointRequests, [
+    { home_id: 'home-1', room_id: 'room-1', mode: 'max' },
+    { home_id: 'home-1', room_id: 'room-1', mode: 'max', endtime: String(nowSeconds + 3600) },
+    { home_id: 'home-1', room_id: 'room-1', mode: 'home' },
+    { home_id: 'home-1', room_id: 'room-1', mode: 'off' },
+    { home_id: 'home-1', room_id: 'room-1', mode: 'off', endtime: String(nowSeconds + 43200) },
+  ]);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(refreshes, 1);
+  // The duration defaults to the setting when the form sends none.
+  netatmo.state.setpointRequests = [];
+  message = await sendRoomForm(
+    { room_id: 'room-1', command: 'schedule' },
+    { config: normalizeConfig({ setpoint_duration: '1h' }) },
+  );
+  assert.equal(message.fr, 'Salon: retour au planning');
+  await sendRoomForm(
+    { room_id: 'room-1', temperature: '20' },
+    { config: normalizeConfig({ setpoint_duration: '1h' }) },
+  );
+  assert.equal(netatmo.state.setpointRequests[1].endtime, String(nowSeconds + 3600));
+});
+
+test('the room form refuses a missing form, an unknown room or command, a bad setpoint, a scope refusal', async () => {
+  const { action } = WIDGETS[WIDGET_KEYS.HEATING];
+  const params = { home_id: 'home-1' };
+  await assert.rejects(action(ctx(), { actionKey: 'room_setpoint', params }), /Update Gladys/);
+  await assert.rejects(
+    action(ctx(), { actionKey: 'room_setpoint', params: {}, values: { room_id: 'room-1' } }),
+    /Unknown widget action/,
+  );
+  await assert.rejects(sendRoomForm({ room_id: 'room-9' }), /Unknown room room-9/);
+  await assert.rejects(
+    sendRoomForm({ room_id: 'room-1', command: 'explode' }),
+    /Unknown room command/,
+  );
+  await assert.rejects(
+    sendRoomForm({ room_id: 'room-1', command: 'setpoint', temperature: 31 }),
+    /Invalid setpoint 31/,
+  );
+  delete roomStatusOf('room-1').therm_setpoint_temperature;
+  await telemetry.refreshValues(config);
+  await assert.rejects(
+    sendRoomForm({ room_id: 'room-1', command: 'setpoint', temperature: null }),
+    /type the setpoint/,
+  );
+  assert.deepEqual(netatmo.state.setpointRequests, []);
+  netatmo.state.failSetpointWith = { status: 403, body: { error: { code: 13, message: 'scope' } } };
+  await assert.rejects(
+    sendRoomForm({ room_id: 'room-1', command: 'boost' }),
+    /reconnect your Netatmo/,
   );
 });
 
@@ -385,7 +633,7 @@ test('the heating widget explains a missing or ambiguous home', async () => {
     language: 'en',
     units: 'metric',
   });
-  assert.equal(componentsOf(chosen, 'text')[0].text, 'Maison');
+  assert.equal(componentsOf(chosen, 'text')[0].text.en, 'Maison · Schedule: Semaine');
 
   const noHeating = {
     ...ctx(),
@@ -393,6 +641,18 @@ test('the heating widget explains a missing or ambiguous home', async () => {
   };
   const none = await WIDGETS[WIDGET_KEYS.HEATING].get(noHeating, { settings: {} });
   assert.match(none.components[0].text.en, /No Netatmo heating/);
+
+  // A home without heated room: no rows, no heating tile, no room form.
+  const noRoom = {
+    ...ctx(),
+    telemetry: { ...telemetry, getHomes: () => [{ ...home, rooms: [] }] },
+  };
+  const empty = await WIDGETS[WIDGET_KEYS.HEATING].get(noRoom, { settings: {} });
+  assertRenderedAsSent(empty);
+  assert.deepEqual(
+    empty.components.map((component) => component.type),
+    ['text', 'value', 'button', 'button', 'button'],
+  );
 });
 
 // --- Cameras -------------------------------------------------------------------

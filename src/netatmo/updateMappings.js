@@ -154,7 +154,7 @@ function roomSetpoint(deviceNetatmo) {
  * module's own states are ignored when it is unreachable (Netatmo then
  * replays its last-known values). Nothing when no value is known.
  */
-function roomOperatingState(deviceNetatmo) {
+export function roomOperatingState(deviceNetatmo) {
   const request = deviceNetatmo.room?.heating_power_request;
   const reachable = deviceNetatmo.reachable !== false;
   const boiler = reachable ? deviceNetatmo.boiler_status : undefined;

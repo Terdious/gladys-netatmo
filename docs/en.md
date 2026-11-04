@@ -10,48 +10,97 @@ your devices and keeps their values up to date.
 
 ---
 
+## In short
+
+1. Create a free application on
+   [dev.netatmo.com/apps](https://dev.netatmo.com/apps/) and copy its
+   **client ID** and **client secret** (step 1).
+2. In Gladys: **Integrations** → **Netatmo** → **Configuration** tab. Paste
+   them, click **Save configuration**, then **Connect** (step 2).
+3. Turn on the device families you own and save (step 3).
+4. **Discover** tab → **Add to Gladys** on each device you want (step 4).
+5. Optional, with Gladys Plus: create an **Open API** key and paste it into the
+   **Gladys Plus webhooks** block for real time (section _Gladys Plus
+   webhooks_).
+
+---
+
 ## Prerequisites
 
 - A **Netatmo account**, with your devices already installed and working in the
   Netatmo app (Gladys reads what Netatmo exposes — a device must be online in
   Netatmo first).
 - Gladys Assistant **5.2 or later**.
+- Optional: a **Gladys Plus** subscription, only to receive events in real
+  time (see _Gladys Plus webhooks_). Without it everything works, refreshed
+  every 2 minutes.
 
 ---
 
 ## Step 1 — Create your Netatmo Connect application
 
 Gladys never ships a shared Netatmo key: you use **your own** Netatmo Connect
-application, so your data stays between your Gladys and your Netatmo account.
+application, free of charge, so your data stays between your Gladys and your
+Netatmo account. It takes 2 minutes.
 
-1. Go to **[Netatmo Connect](https://dev.netatmo.com/)** and sign in with your
-   Netatmo account.
-2. Open **[My Apps → Create](https://dev.netatmo.com/apps/)** and create a new
-   application (any name and description — e.g. "Gladys").
-3. Once created, the application page shows two values you will copy into
-   Gladys:
-   - **client id**
-   - **client secret**
+1. Open **[dev.netatmo.com/apps](https://dev.netatmo.com/apps/)** and sign in
+   with **the same account as in the Netatmo app** (the one that sees your
+   devices).
+2. Click **Create** to create an application, then fill in the form:
+   - **app name** and **description**: anything you like, e.g. `Gladys` and
+     `My home automation`;
+   - **data protection officer name and email**: yours;
+   - **Redirect URI**: **leave it empty**;
+   - **Webhook URI**: **leave it empty**. Netatmo accepts one webhook per
+     application, and the integration registers its own (see _Gladys Plus
+     webhooks_): an address typed here would replace it.
 
-You do **not** need to configure scopes or a redirect URI on the portal: Gladys
-requests the required scopes (read + write, covering Energy, Weather, Security
+   Accept the terms of use and **Save**.
+
+3. The application page now shows two values:
+   - the **client ID**: a string of letters and digits;
+   - the **client secret**: another, longer string.
+
+   Keep this page open: you will copy them into Gladys.
+
+You do **not** need to configure scopes on the portal: Gladys requests the
+required permissions (read + write, covering Energy, Weather, Security
 including cameras and the video doorbell, and the roller shutters)
-automatically during the connection, and handles the OAuth2 redirect itself.
+automatically during the connection.
 
 ---
 
-## Step 2 — Configure and connect in Gladys
+## Step 2 — Paste the credentials and connect your account
 
-On the integration's **Configuration** screen:
+1. In Gladys, open **Integrations**, look for **Netatmo** ("external" badge)
+   and open the **Configuration** tab.
+2. In the **Netatmo Connect application** block:
+   - paste the **client ID** into **Netatmo application client id**;
+   - paste the **client secret** into **Netatmo application client secret**.
+3. Scroll to the bottom of the form and click **Save configuration**.
+4. Go back up to the **Netatmo account** field and click **Connect**. The
+   Netatmo page opens: sign in if needed and accept the requested
+   permissions. You come back to Gladys and the status becomes **Connected**.
 
-1. Paste your **client id** and **client secret**.
-2. Click **Save**.
-3. Click **Connect**: a Netatmo window opens, sign in and authorize Gladys. You
-   are redirected back and the status becomes **Connected**.
+> **The redirect address shown above the Connect button:** Gladys shows it
+> for every integration that connects to an account. With Netatmo you do not
+> need to declare it: the **Redirect URI** field of your application stays
+> empty. Only if Netatmo refuses the connection because of the redirect
+> address (`redirect_uri`), copy it with the copy button, paste it into
+> **Redirect URI** on dev.netatmo.com, save, then click **Connect** again.
 
-> **Tip:** always **Save** the client id / secret _before_ clicking Connect. If
-> Connect reports that the credentials must be saved first, save the form and
-> click Connect again.
+**If it does not work:**
+
+- **"Fill in AND SAVE the Netatmo client id / client secret…"**: you clicked
+  Connect before saving. Click **Save configuration**, then **Connect** again.
+- **Netatmo shows an error instead of its sign-in page**: the client ID or
+  secret was copied wrongly (extra space, missing character). Copy them again
+  from dev.netatmo.com, save, then reconnect. A saved secret is no longer
+  displayed: leave its field empty to keep it, or paste a new one to replace it.
+- **"Connected, but some Netatmo permissions added in a recent version are
+  missing…"**: a family you just turned on (roller shutters, BTicino door entry,
+  Legrand…) needs extra permissions. Click **Connect** again and accept: your
+  devices and settings are kept.
 
 The access and refresh tokens are stored by the integration itself and never
 appear on the form. Gladys refreshes them automatically; if the session ever
@@ -73,14 +122,37 @@ Under **Devices to discover**, enable the families you own:
 | **BTicino door entry**     | BTicino Classe 300X / Classe 300 EOS door entry, one device (`BNCX` + its `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — preview, off by default      |
 | **Legrand Home + Control** | Legrand with Netatmo lights, dimmers, plugs and relays of a Home + Control gateway (`NL*`) — preview, off by default                             |
 
-Enabling a family and **saving** re-runs the discovery automatically — no manual
-re-scan needed. Newly surfaced devices appear on the **Discovery** screen, where
-you create the ones you want.
+Turn on the toggles of the families you own, then click **Save
+configuration**: the discovery runs again by itself, no need to click Scan.
 
 **Camera live stream quality** (`poor` / `low` / `medium` / `high`, default
-`high`) sets the quality of the camera live stream.
+`high`) sets the quality of the indoor and outdoor camera live stream. Lower it
+if the live stream stutters or is slow to start, especially remotely through
+Gladys Plus.
 
-Values refresh every **2 minutes** (Netatmo rate limits).
+Values refresh every **2 minutes** (Netatmo rate limits), or within seconds
+with the Gladys Plus webhooks.
+
+---
+
+## Step 4 — Add your devices to Gladys
+
+1. Open the integration's **Discover** tab. Every Netatmo device found shows
+   there, with its features.
+2. Click **Add to Gladys** on each device you want. It moves to the
+   **Devices** tab, where you can rename it and pick its room.
+3. Show it on the dashboard: **Dashboard** → **Edit**, then add a box
+   (Devices, Camera, Thermostat…) or one of the integration's widgets
+   (**Netatmo weather**, **Netatmo heating**, **Netatmo cameras**, see
+   _Dashboard widgets_).
+
+A device marked **Already added** is already in Gladys. After an update of
+the integration, an **Update** button can show on a device already added: it
+brings the new features to it, without losing its history.
+
+**Nothing shows?** Check that the status is **Connected**, that the family is
+turned on **and saved**, and that the device is online in the Netatmo app,
+then click **Scan**.
 
 ---
 
@@ -109,6 +181,33 @@ Use it in a scene ("everybody left → heating to Away") with the standard
 > appear on its own: go to the **Discovery** screen and click **Update** on each
 > thermostat and valve. Gladys **5.2** or later is required (the thermostat
 > preset does not exist before).
+
+---
+
+## Duration of a setpoint sent by Gladys
+
+Netatmo ends every manual setpoint: after the default duration set in the
+Netatmo app, the room goes back to its Netatmo schedule. The **Duration of a
+setpoint sent by Gladys** setting (**Heating** section of the
+**Configuration** screen) chooses how long the setpoints Gladys writes last —
+the **Setpoint temperature** of a thermostat or valve, set from the device
+page, a "Set device value" scene action or the Gladys Thermostat:
+
+| Choice                             | The setpoint lasts                                                                                                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Netatmo default duration**       | the default duration of the Netatmo app (the behaviour before this setting, the default)                                                                                |
+| **1 hour** … **12 hours**          | that long                                                                                                                                                               |
+| **Until the next schedule change** | until the next slot of the active Netatmo schedule that changes the room's temperature, in the home's timezone (Netatmo's default duration when no schedule is known)   |
+| **No end**                         | as long as Netatmo accepts: 30 days, shorter if Netatmo refuses that end, without an end time as a last resort — in practice until Gladys (or someone) changes it again |
+
+The **Set a room setpoint** and **Boost a room** scene actions keep the
+duration you give them, and a boost always keeps its own duration.
+
+> **Using the Gladys Thermostat integration? Choose No end.** Gladys drives
+> the weekly schedule and writes every change itself. With a limited duration,
+> Netatmo goes back to its own schedule when the setpoint ends, and Gladys
+> sees the new setpoint as a change made on the thermostat: a **manual hold**
+> (see **Netatmo's own schedule keeps running** below).
 
 ---
 
@@ -232,8 +331,8 @@ duration** of the thermostat, or until the next slot), then takes over again
 with its own schedule. Netatmo is read every 2 minutes and reports the same
 setpoint again and again: Gladys recognises its own setpoint in these reads,
 so an unchanged report never counts as a change. For the most predictable
-result, set a long default duration of manual setpoints in the Netatmo app, or
-make the Netatmo schedule match the Gladys one.
+result, set the **Duration of a setpoint sent by Gladys** to **No end** (see **Duration of a setpoint sent by Gladys** above):
+the setpoints Gladys writes then stay until Gladys changes them.
 
 A setpoint sent from Gladys takes a few seconds to a few dozen seconds to reach
 the thermostat or valve, while the relay passes it on. The integration re-reads
@@ -381,11 +480,31 @@ number of Netatmo API calls.
 Since a local Gladys is not reachable from the Internet, **Gladys Plus** relays
 the events, so an active Gladys Plus subscription is required.
 
-### Setup (a single step)
+### Setup (3 minutes)
 
-1. On the integration **Configuration** screen, find the **"Gladys Plus
-   webhooks"** block (shown automatically).
-2. Paste your Gladys Plus **Open API key** there. That's it.
+You need an active **Gladys Plus** subscription, with your Gladys linked to
+Gladys Plus (**Settings** → **Gladys Plus**).
+
+1. **Open Gladys from
+   [plus.gladysassistant.com](https://plus.gladysassistant.com/)** and sign
+   in with your Gladys Plus account. The **Open API** tab only shows there: it
+   does not exist when you open Gladys through its local address (e.g.
+   `http://192.168.1.10`).
+2. Go to **Settings** → **Open API**. Type a **name** (e.g. `Netatmo`), click
+   **Generate** and **copy the key** shown: it is displayed **only once**. If
+   you lost it, revoke it and generate another one.
+
+   > It is **not** the "RSA key" of the **Gladys Plus** tab: that one is used
+   > for the Gladys Plus end-to-end encryption and does not work here.
+
+3. Open **Integrations** → **Netatmo** → **Configuration** tab (from Gladys
+   Plus or from the local address, either way). Below the form, in the
+   **"Gladys Plus webhooks"** block, paste the key into **Gladys Plus Open API
+   key** and click that block's own **Save** button (not "Save
+   configuration").
+
+The block then shows the webhook address. It contains your key: do not share
+it.
 
 **Nothing to paste on the Netatmo website:** the integration registers the URL
 at Netatmo itself, and re-registers it on every reconnection. To check, open the
@@ -406,11 +525,11 @@ field of dev.netatmo.com, the former core Netatmo service), save the Gladys Plus
 key again. Netatmo also stops delivering for 24 hours to an application whose
 webhook failed 5 times in a row (only dev.netatmo.com shows it, and lets you
 lift it). If the URL is the integration's and still nothing arrives, create a
-**new Open API key** in Gladys Plus (Settings → Open API) and save it here: an
-older key (for instance one taken from the former core Netatmo service URL) can
-authenticate yet never deliver the webhooks. Detections only exist while the
-camera monitoring is on. Whatever the
-cause, the detections still arrive, within about 2 minutes (see below).
+**new Open API key** (from plus.gladysassistant.com, **Settings** → **Open
+API**) and save it here: an older key (for instance one taken from the former
+core Netatmo service URL) can authenticate yet never deliver the webhooks.
+Detections only exist while the camera monitoring is on. Whatever the cause, the
+detections still arrive, within about 2 minutes (see below).
 
 Without a key (or without Gladys Plus), the integration behaves exactly as
 before, polling every 2 minutes — detections included.
@@ -510,11 +629,34 @@ the schedules of the home. It also returns the **Schedule** name.
 Three widgets join the dashboard widget picker (Gladys **5.1** or later): **Edit
 dashboard**, add a widget and search for "Netatmo".
 
-| Widget              | Shows                                                                                                                                                                                                                                                                                                     | Settings                                                                                               |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Netatmo weather** | live tiles of the station (temperatures, humidity, CO2, noise, pressure, rain, wind) and a health row per module with a low battery or out of reach                                                                                                                                                       | the station (empty: the first one) and the readings shown: Overview, Indoor, or Outdoor, rain and wind |
-| **Netatmo heating** | the heating mode and the active schedule of the home, one row per room (measured → setpoint temperature, marked Manual or Boost when the setpoint does not come from the schedule), the Schedule / Frost protection / Away buttons and, with several schedules, a **Change schedule** button listing them | a thermostat or valve of the home (empty: your single home)                                            |
-| **Netatmo cameras** | the latest picture of each camera, its monitoring, and buttons to turn it on / off                                                                                                                                                                                                                        | one camera shown large (empty: every camera in a list)                                                 |
+| Widget              | Shows                                                                                                                                               | Settings                                                                                                   |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Netatmo weather** | live tiles of the station (temperatures, humidity, CO2, noise, pressure, rain, wind) and a health row per module with a low battery or out of reach | the station (empty: the first one) and the readings shown: Overview, Indoor, or Outdoor, rain and wind     |
+| **Netatmo heating** | the heating mode of the home, how many rooms heat, the active schedule, one row per room and buttons — see below                                    | a thermostat or valve of the home (empty: your single home); its room is the one the room form pre-selects |
+| **Netatmo cameras** | the latest picture of each camera, its monitoring, and buttons to turn it on / off                                                                  | one camera shown large (empty: every camera in a list)                                                     |
+
+### The Netatmo heating widget
+
+- **Caption**: the home and its active schedule. **Tiles**: the heating mode
+  (Schedule, Frost guard, Away) and the rooms heating (`2/11`).
+- **One compact row per room**: measured → setpoint temperature, then the
+  markers **Manual**, **Boost** or **Off** (setpoint not from the schedule;
+  an off room shows no setpoint), **Window** (Netatmo detected an open
+  window) and **Heating** (the room asks for heat, or its boiler thermostat
+  runs — the **Heating state** of the room). The icon and its color follow:
+  orange while the room heats, blue for an open window. Up to ten rooms have
+  their row; with more, the tenth row sums up the others.
+- **Buttons**: the heating modes but the active one (**Schedule**, **Frost
+  protection**, **Away**), **Room setpoint** and, with several schedules,
+  **Change schedule** (a form listing them).
+- **Room setpoint** opens a short form in the card: the **room**, the
+  **action** — **Set the setpoint**, **Boost**, **Back to schedule** or
+  **Off** —, the **setpoint** (7 to 30 °C, rounded to 0.5 °C; left empty, the
+  room's current setpoint is kept — handy to change only its duration) and the
+  **duration** (the choices of the **Duration of a setpoint sent by Gladys** setting, which pre-selects it). The duration applies to a setpoint, a boost
+  and Off; a boost with **Netatmo default duration** or **No end** lasts the
+  Netatmo boost duration. Dashboard rows cannot be tapped and a card holds
+  four buttons: one form serves every room.
 
 The tiles follow the values live; the rest refreshes with the integration (2
 minutes, or as soon as the heating mode, the monitoring or a picture changes).

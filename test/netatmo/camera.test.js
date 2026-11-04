@@ -1,6 +1,6 @@
 // -----------------------------------------------------------------------------
-// Unit tests of the snapshot image pipeline: pass-through under the 150 KB
-// camera-store bound, jpeg-js re-encode above it (the container has no
+// Unit tests of the snapshot image pipeline: pass-through under the image
+// budget (72 KB, so the device page can still save a camera), jpeg-js re-encode above it (the container has no
 // ffmpeg), downscale as a last resort (a heavy camera must never have every
 // frame skipped), and rejection of undecodable oversized payloads.
 // -----------------------------------------------------------------------------
@@ -12,6 +12,7 @@ import jpeg from 'jpeg-js';
 import {
   createCameraImages,
   encodeUnderLimit,
+  MAX_IMAGE_STRING_SIZE,
   MAX_RAW_JPEG_SIZE,
 } from '../../src/netatmo/camera.js';
 
@@ -30,7 +31,7 @@ test('a snapshot under the bound is published as-is', () => {
   const raw = Buffer.from('small-fake-jpeg');
   const image = encodeUnderLimit(raw);
   assert.equal(image, `image/jpg;base64,${raw.toString('base64')}`);
-  assert.ok(image.length <= 150 * 1024);
+  assert.ok(image.length <= MAX_IMAGE_STRING_SIZE);
 });
 
 test('an oversized snapshot is re-encoded under the bound (no ffmpeg in the container)', () => {
@@ -42,7 +43,7 @@ test('an oversized snapshot is re-encoded under the bound (no ffmpeg in the cont
   const image = encodeUnderLimit(oversized);
   assert.ok(image, 're-encode must produce an image');
   assert.match(image, /^image\/jpg;base64,/);
-  assert.ok(image.length <= 150 * 1024);
+  assert.ok(image.length <= MAX_IMAGE_STRING_SIZE);
 });
 
 test('a snapshot too heavy even at the lowest quality is downscaled, never skipped', () => {
@@ -61,12 +62,55 @@ test('a snapshot too heavy even at the lowest quality is downscaled, never skipp
   const image = encodeUnderLimit(huge);
   assert.ok(image, 'the frame must be published, not skipped');
   assert.match(image, /^image\/jpg;base64,/);
-  assert.ok(image.length <= 150 * 1024);
+  assert.ok(image.length <= MAX_IMAGE_STRING_SIZE);
   // And it is still a decodable JPEG, just smaller.
   const decoded = jpeg.decode(Buffer.from(image.replace('image/jpg;base64,', ''), 'base64'), {
     maxMemoryUsageInMB: 128,
   });
   assert.ok(decoded.width < 1920 && decoded.width > 0);
+});
+
+test('a camera device with its image stays under the 100 KB body of a device save', () => {
+  // The Devices tab posts the whole device to POST /api/v1/device (default
+  // 100 KB parser, until GladysAssistant/Gladys#3228): the image must leave
+  // room for the other features of the richest camera (NOC, 13 features).
+  // Worst case: an image exactly at the budget.
+  const image = `image/jpg;base64,${'A'.repeat(MAX_IMAGE_STRING_SIZE - 'image/jpg;base64,'.length)}`;
+  const feature = (index, value) => ({
+    id: '00000000-0000-0000-0000-000000000000',
+    device_id: '00000000-0000-0000-0000-000000000000',
+    name: `Floodlight automatic mode ${index} - Caméra Ext Appentis`,
+    selector: `ext-netatmo-70-ee-50-00-00-00-floodlight-automatic-mode-${index}`,
+    external_id: `ext:netatmo:70:ee:50:00:00:00:floodlight_automatic_mode_${index}`,
+    category: 'camera',
+    type: 'image',
+    read_only: false,
+    keep_history: true,
+    has_feedback: true,
+    min: 0,
+    max: 1,
+    unit: null,
+    last_value: 1,
+    last_value_string: value,
+    last_value_changed: '2026-10-19T07:20:37.448Z',
+    created_at: '2026-10-19T07:20:37.448Z',
+    updated_at: '2026-10-19T07:20:37.448Z',
+  });
+  const device = {
+    id: '00000000-0000-0000-0000-000000000000',
+    name: 'Caméra Ext Appentis',
+    selector: 'ext-netatmo-70-ee-50-00-00-00',
+    external_id: 'ext:netatmo:70:ee:50:00:00:00',
+    room_id: '00000000-0000-0000-0000-000000000000',
+    service_id: '00000000-0000-0000-0000-000000000000',
+    features: [feature(0, image), ...Array.from({ length: 12 }, (_, i) => feature(i + 1, null))],
+    params: Array.from({ length: 6 }, (_, i) => ({
+      name: `PARAM_${i}`,
+      value: `https://prodvpn-eu-0.netatmo.net/restricted/10.255.0.0/${'x'.repeat(64)}/MTc2MDg2/live/files/high/index.m3u8`,
+    })),
+  };
+  const body = Buffer.byteLength(JSON.stringify(device));
+  assert.ok(body < 100 * 1024, `device save body is ${body} bytes`);
 });
 
 test('an oversized non-JPEG payload is dropped instead of crashing', () => {

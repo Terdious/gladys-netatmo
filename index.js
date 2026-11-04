@@ -292,29 +292,38 @@ export function setupIntegration(
     // A Legrand command keeps the commanded value in the dedup itself (issue
     // #60): only the other commands need the dedup forgotten below.
     let remembered = false;
-    await setDeviceValue(
-      {
-        gladys,
-        client,
-        refresh: () => telemetry.refreshNow(config),
-        scheduleRefresh: (delayMs, key) => telemetry.scheduleRefresh(config, delayMs, key),
-        getRawDevice: (id) => telemetry.getRawDevice(id),
-        patchRoom: (homeId, roomId, patch) => telemetry.patchRoom(homeId, roomId, patch),
-        rememberState: (featureExternalId, state) => {
-          remembered = true;
-          telemetry.rememberState(featureExternalId, state);
+    try {
+      await setDeviceValue(
+        {
+          gladys,
+          client,
+          refresh: () => telemetry.refreshNow(config),
+          scheduleRefresh: (delayMs, key) => telemetry.scheduleRefresh(config, delayMs, key),
+          getRawDevice: (id) => telemetry.getRawDevice(id),
+          patchRoom: (homeId, roomId, patch) => telemetry.patchRoom(homeId, roomId, patch),
+          setpointDuration: config.setpoint_duration,
+          getHomes: () => telemetry.getHomes(),
+          rememberState: (featureExternalId, state) => {
+            remembered = true;
+            telemetry.rememberState(featureExternalId, state);
+          },
+          // The relay reaches the thermostat after the cloud acknowledged:
+          // re-read until Netatmo reports the setpoint, without letting the
+          // old value overwrite it meanwhile.
+          awaitSetpoint: (featureExternalId, state) =>
+            telemetry.scheduleThermostatRefreshes(config, `setpoint:${featureExternalId}`, {
+              featureExternalId,
+              state,
+            }),
         },
-        // The relay reaches the thermostat after the cloud acknowledged:
-        // re-read until Netatmo reports the setpoint, without letting the old
-        // value overwrite it meanwhile.
-        awaitSetpoint: (featureExternalId, state) =>
-          telemetry.scheduleThermostatRefreshes(config, `setpoint:${featureExternalId}`, {
-            featureExternalId,
-            state,
-          }),
-      },
-      { device, feature, value },
-    );
+        { device, feature, value },
+      );
+    } catch (err) {
+      // The SDK relays the failure to Gladys without logging it: keep a trace
+      // in the integration logs, the place users copy into a bug report.
+      logger.warn(`Command ${feature.external_id} = ${value} failed: ${err.message}`);
+      throw err;
+    }
     // Gladys saved the commanded value: the next load re-publishes what
     // Netatmo reports, even if it is what was published before the command
     // (issue #77: a mode or setpoint Netatmo did not apply must show again).
@@ -346,6 +355,7 @@ export function setupIntegration(
     gladys,
     client,
     telemetry,
+    config,
     refresh: () => telemetry.refreshNow(config),
   });
   for (const [widgetKey, widget] of Object.entries(WIDGETS)) {

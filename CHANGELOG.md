@@ -24,6 +24,98 @@ the notes of the version's GitHub Release.
   same 3 / 10 / 30 s ladder instead of a single refresh after 2 seconds, so a
   change made from the Netatmo app is not missed when the relay lags.
 
+## [2.6.3] - 2026-10-22
+
+### Fixed
+
+- **Roller shutter, camera monitoring, floodlight, BTicino light and Legrand
+  commands work again from Gladys** (forum report: they were refused with "is
+  not writable"). Gladys sends a command with the device's external id, selector
+  and params only, without its model, and the integration recognised these
+  devices by their model: every such command was refused before reaching
+  Netatmo. The model is now taken from the devices Gladys lists, or from the
+  last Netatmo data of the module. Thermostat setpoints and heating modes were
+  not affected.
+
+## [2.6.2] - 2026-10-22
+
+### Fixed
+
+- **A roller shutter command Netatmo refuses is no longer silent** (forum
+  report: the shutter never moved, nothing in the logs). Netatmo acknowledges
+  `/api/setstate` with HTTP 200 even when the iDiamant gateway does not apply
+  the command, listing a module error in its answer: the shutter command now
+  fails with that error code, the shutter, gateway and home ids, instead of
+  passing as done. An accepted command logs one line.
+- **Every failed command now leaves a line in the integration logs**
+  (`Command <feature> = <value> failed: …`): the SDK relays the failure to
+  Gladys without logging it.
+
+## [2.6.1] - 2026-10-19
+
+### Changed
+
+- **Clearer setup, step by step** (forum feedback): the documentation (en,
+  fr, de, es) opens with an "In short" checklist and walks through each screen
+  with the exact button names: the Netatmo Connect form (what to fill in,
+  Redirect URI and Webhook URI left empty, where the client ID and secret
+  show), saving then connecting, the redirect address Gladys shows above
+  Connect (not needed for Netatmo, with the fallback if Netatmo refuses it),
+  a new step 4 to add the devices from the **Discover** tab and show them on
+  the dashboard, and the usual connection errors.
+- **Gladys Plus webhooks setup made concrete**: the Open API key is created
+  from plus.gladysassistant.com (the **Open API** tab does not exist on the
+  local address), under **Settings** → **Open API** (« Paramètres » in
+  French, not « Réglages »), shown only once, and it is not the RSA key of
+  the Gladys Plus tab; it goes into the **Gladys Plus webhooks** block with
+  that block's own Save button.
+- **Configuration screen texts**: numbered steps in the Netatmo Connect
+  section, precise client ID / secret / account descriptions, what to do
+  after saving the families (Discover tab, Update button), a precise Security
+  toggle (cameras, doorbell, alarms) and a new last section, **Real time with
+  Gladys Plus (optional)**, that explains the Open API key in three steps.
+
+### Fixed
+
+- **A camera can be saved again from the Devices tab** (name, room): the
+  camera image is now kept under 72 KB instead of 150 KB. The Devices tab
+  saves a device by posting it whole, its image included, to a Gladys route
+  limited to 100 KB, so a camera with a recent image always failed with
+  « Une erreur s'est produite lors de l'enregistrement de cet appareil »
+  (413, forum report). The dashboard image is a little lighter. The budget
+  goes back to 150 KB once Gladys stops posting the states on save
+  (GladysAssistant/Gladys#3228).
+
+## [2.6.0] - 2026-10-18
+
+### Added
+
+- Richer **Netatmo heating** widget: a caption with the home and its active
+  schedule, two tiles (heating mode, rooms heating `n/total`), one compact row
+  per room — measured → setpoint, then the markers Manual / Boost / Off,
+  Window (`open_window`) and Heating (the room's heating state of #77:
+  `heating_power_request` above 0 or the boiler thermostat running), the icon
+  colored alike; with more than ten rooms the tenth row sums up the others.
+  The buttons are the heating modes but the active one, **Change schedule**
+  and a new **Room setpoint** button whose form (widget action fields) takes
+  the room, the action (set the setpoint, boost, back to the schedule, off),
+  the setpoint (7–30 °C, rounded to 0.5 °C; empty keeps the current one) and
+  the duration, sent with `setroomthermpoint` (a boost keeps Netatmo's boost
+  duration for "default" and "no end")
+  ([#40](https://github.com/Terdious/gladys-netatmo/issues/40)).
+- **Duration of a setpoint sent by Gladys** setting (`setpoint_duration`,
+  new **Heating** section of the Configuration screen): Netatmo default
+  (unchanged behaviour, the default), 1 h, 3 h, 6 h, 12 h, until the next
+  change of the active Netatmo schedule for the room (computed from the
+  homesdata timetable in the home's timezone, DST included) or no end (30
+  days, stepped down to 7 days, 2 days, 12 hours when Netatmo refuses the
+  endtime, without endtime as a last resort). It applies to the setpoint
+  feature writes — device page, "Set device value", the Gladys Thermostat
+  service — not to the scene actions that carry their own duration nor to a
+  boost. "No end" is the choice for the Gladys Thermostat integration: a
+  setpoint Netatmo ends on its own looks like a manual hold to the core
+  ([#77](https://github.com/Terdious/gladys-netatmo/issues/77)).
+
 ## [2.5.0] - 2026-10-17
 
 ### Added
@@ -519,7 +611,11 @@ the notes of the version's GitHub Release.
 - First stable release: OAuth2 connection, Weather and Energy devices,
   thermostat setpoint, cameras (image, monitoring, live stream).
 
-[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.3...HEAD
+[2.6.3]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.2...v2.6.3
+[2.6.2]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.1...v2.6.2
+[2.6.1]: https://github.com/Terdious/gladys-netatmo/compare/v2.6.0...v2.6.1
+[2.6.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.4.0...v2.5.0
 [2.4.0]: https://github.com/Terdious/gladys-netatmo/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/Terdious/gladys-netatmo/compare/v2.3.0...v2.3.1

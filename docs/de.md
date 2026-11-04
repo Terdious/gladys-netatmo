@@ -10,59 +10,112 @@ Konto, und Gladys erkennt deine Geräte und hält ihre Werte aktuell.
 
 ---
 
+## Kurz gesagt
+
+1. Erstelle eine kostenlose Anwendung auf
+   [dev.netatmo.com/apps](https://dev.netatmo.com/apps/) und kopiere ihre
+   **client ID** und ihr **client secret** (Schritt 1).
+2. In Gladys: **Integrationen** → **Netatmo** → Tab **Konfiguration**. Füge
+   sie ein, klicke auf **Konfiguration speichern** und dann auf **Verbinden**
+   (Schritt 2).
+3. Aktiviere die Gerätefamilien, die du besitzt, und speichere (Schritt 3).
+4. Tab **Entdecken** → **Zu Gladys hinzufügen** bei jedem gewünschten Gerät
+   (Schritt 4).
+5. Optional, mit Gladys Plus: Erstelle einen **Open-API**-Schlüssel und füge
+   ihn für Echtzeit im Block **Gladys-Plus-Webhooks** ein (Abschnitt
+   _Gladys-Plus-Webhooks_).
+
+---
+
 ## Voraussetzungen
 
 - Ein **Netatmo-Konto**, bei dem deine Geräte bereits in der Netatmo-App
   installiert sind und funktionieren (Gladys liest, was Netatmo bereitstellt —
   ein Gerät muss zuerst in Netatmo online sein).
 - Gladys Assistant **5.2 oder neuer**.
+- Optional: ein **Gladys-Plus**-Abo, nur um Ereignisse in Echtzeit zu
+  empfangen (siehe _Gladys-Plus-Webhooks_). Ohne Abo funktioniert alles, mit
+  einer Aktualisierung alle 2 Minuten.
 
 ---
 
 ## Schritt 1 — Erstelle deine Netatmo-Connect-Anwendung
 
-Gladys liefert niemals einen gemeinsamen Netatmo-Schlüssel mit: Du verwendest
-**deine eigene** Netatmo-Connect-Anwendung, sodass deine Daten zwischen deinem
-Gladys und deinem Netatmo-Konto bleiben.
+Gladys liefert keinen gemeinsamen Netatmo-Schlüssel mit: Du verwendest **deine
+eigene**, kostenlose Netatmo-Connect-Anwendung, damit deine Daten zwischen
+deinem Gladys und deinem Netatmo-Konto bleiben. Das dauert 2 Minuten.
 
-1. Gehe zu **[Netatmo Connect](https://dev.netatmo.com/)** und melde dich mit
-   deinem Netatmo-Konto an.
-2. Öffne **[My Apps → Create](https://dev.netatmo.com/apps/)** und erstelle
-   eine neue Anwendung (beliebiger Name und beliebige Beschreibung — z. B.
-   „Gladys“).
-3. Nach dem Erstellen zeigt die Seite der Anwendung zwei Werte an, die du in
-   Gladys kopierst:
-   - **client id**
-   - **client secret**
+1. Öffne **[dev.netatmo.com/apps](https://dev.netatmo.com/apps/)** und melde
+   dich mit **demselben Konto wie in der Netatmo-App** an (dem, das deine
+   Geräte sieht).
+2. Klicke auf **Create**, um eine Anwendung zu erstellen, und fülle das
+   Formular aus:
+   - **Name der Anwendung** und **Beschreibung**: beliebig, z. B. `Gladys` und
+     `Mein Smart Home`;
+   - **Name und E-Mail des Datenschutzbeauftragten** (_data protection
+     officer_): deine eigenen;
+   - **Redirect URI**: **leer lassen**;
+   - **Webhook URI**: **leer lassen**. Netatmo akzeptiert einen Webhook pro
+     Anwendung, und die Integration registriert ihren eigenen (siehe
+     _Gladys-Plus-Webhooks_): Eine hier eingetragene Adresse würde ihn
+     ersetzen.
 
-Du musst im Portal **keine** Berechtigungen (Scopes) und keine Redirect-URI
-konfigurieren: Gladys fordert die benötigten Berechtigungen (Lesen + Schreiben,
-für Energie, Wetter, Sicherheit einschließlich Kameras und Video-Türklingel
-sowie die Rollläden) beim Verbinden automatisch an und kümmert sich selbst um
-die OAuth2-Weiterleitung.
+   Akzeptiere die Nutzungsbedingungen und speichere (**Save**).
+
+3. Die Seite der Anwendung zeigt nun zwei Werte:
+   - die **client ID**: eine Folge aus Buchstaben und Ziffern;
+   - das **client secret**: eine weitere, längere Folge.
+
+   Lass diese Seite offen: Du kopierst die Werte gleich in Gladys.
+
+Im Portal sind **keine** Berechtigungen (Scopes) zu konfigurieren: Gladys
+fordert die nötigen Berechtigungen (Lesen + Schreiben, für Energie, Wetter,
+Sicherheit einschließlich Kameras und Video-Türklingel sowie die Rollläden)
+beim Verbinden automatisch an.
 
 ---
 
-## Schritt 2 — In Gladys konfigurieren und verbinden
+## Schritt 2 — Zugangsdaten einfügen und Konto verbinden
 
-Im Tab **Konfiguration** der Integration:
+1. Öffne in Gladys **Integrationen**, suche **Netatmo** (Badge „extern“) und
+   öffne den Tab **Konfiguration**.
+2. Im Block **Netatmo-Connect-Anwendung**:
+   - füge die **client ID** in **Client-ID der Netatmo-Anwendung** ein;
+   - füge das **client secret** in **Client-Secret der Netatmo-Anwendung**
+     ein.
+3. Scrolle ans Ende des Formulars und klicke auf **Konfiguration speichern**.
+4. Gehe zurück zum Feld **Netatmo-Konto** und klicke auf **Verbinden**. Die
+   Netatmo-Seite öffnet sich: Melde dich bei Bedarf an und bestätige die
+   angefragten Berechtigungen. Du kehrst zu Gladys zurück und der Status
+   wechselt auf **Verbunden**.
 
-1. Füge die **Client-ID der Netatmo-Anwendung** und das **Client-Secret der
-   Netatmo-Anwendung** ein.
-2. Klicke auf **Konfiguration speichern**.
-3. Klicke auf **Verbinden**: Ein Netatmo-Fenster öffnet sich. Melde dich an und
-   autorisiere Gladys. Du wirst zurückgeleitet, und der Status wechselt zu
-   **Verbunden**.
+> **Die über der Schaltfläche Verbinden angezeigte Weiterleitungsadresse:**
+> Gladys zeigt sie bei jeder Integration an, die sich mit einem Konto
+> verbindet. Bei Netatmo musst du sie nicht eintragen: Das Feld **Redirect
+> URI** deiner Anwendung bleibt leer. Nur wenn Netatmo die Verbindung wegen
+> der Weiterleitungsadresse (`redirect_uri`) ablehnt, kopiere sie mit der
+> Kopier-Schaltfläche, füge sie auf dev.netatmo.com in **Redirect URI** ein,
+> speichere und klicke erneut auf **Verbinden**.
 
-> **Tipp:** Speichere Client-ID / Client-Secret immer mit **Konfiguration
-> speichern**, _bevor_ du auf Verbinden klickst. Meldet Verbinden, dass die
-> Zugangsdaten zuerst gespeichert werden müssen, speichere das Formular und
-> klicke erneut auf Verbinden.
+**Wenn es nicht klappt:**
 
-Das Access-Token und das Refresh-Token werden von der Integration selbst
+- **„Trage die Netatmo-Client-ID / das Client-Secret ein UND SPEICHERE sie…“**:
+  Du hast vor dem Speichern auf Verbinden geklickt. Klicke auf **Konfiguration
+  speichern** und dann erneut auf **Verbinden**.
+- **Netatmo zeigt einen Fehler statt seiner Anmeldeseite**: Client-ID oder
+  Secret wurden falsch kopiert (zusätzliches Leerzeichen, fehlendes Zeichen).
+  Kopiere sie erneut von dev.netatmo.com, speichere und verbinde dich neu. Ein
+  gespeichertes Secret wird nicht mehr angezeigt: Lass sein Feld leer, um es zu
+  behalten, oder füge ein neues ein, um es zu ersetzen.
+- **„Verbunden, aber neu hinzugekommene Netatmo-Berechtigungen fehlen…“**: Eine
+  gerade aktivierte Familie (Rollläden, BTicino-Türsprechanlage, Legrand…)
+  braucht zusätzliche Berechtigungen. Klicke erneut auf **Verbinden** und
+  bestätige: Deine Geräte und Einstellungen bleiben erhalten.
+
+Die Zugriffs- und Aktualisierungstokens werden von der Integration selbst
 gespeichert und erscheinen nie im Formular. Gladys erneuert sie automatisch;
-sollte die Sitzung einmal endgültig ablaufen, fordert dich der Tab
-Konfiguration auf, dich erneut zu verbinden.
+läuft die Sitzung endgültig ab, fordert dich der Konfigurationsbildschirm zum
+erneuten Verbinden auf.
 
 ---
 
@@ -80,14 +133,40 @@ Aktiviere unter **Zu erkennende Geräte** die Familien, die du besitzt:
 | **BTicino-Türsprechanlage** | BTicino-Türsprechanlage Classe 300X / Classe 300 EOS, ein Gerät (`BNCX` + seine `BNEU`, `BNDL`, `BNSL`, `BNCS`, `BNXM`) — Vorschau, standardmäßig deaktiviert |
 | **Legrand Home + Control**  | Legrand-with-Netatmo-Lichter, Dimmer, Steckdosen und Relais eines Home-+-Control-Gateways (`NL*`) — Vorschau, standardmäßig deaktiviert                       |
 
-Wenn du eine Familie aktivierst und **speicherst**, wird die Erkennung
-automatisch neu gestartet — kein manueller Scan nötig. Neu gefundene Geräte
-erscheinen im Tab **Entdecken**, wo du diejenigen erstellst, die du möchtest.
+Aktiviere die Schalter der Familien, die du besitzt, und klicke auf
+**Konfiguration speichern**: Die Erkennung startet von selbst neu, ein Klick
+auf Scannen ist nicht nötig.
 
 **Qualität des Kamera-Livestreams** (`poor` / `low` / `medium` / `high`,
-Standard `high`) legt die Qualität des Kamera-Livestreams fest.
+Standard `high`) legt die Qualität des Livestreams der Innen- und
+Außenkameras fest. Senke sie, wenn der Livestream ruckelt oder langsam
+startet, vor allem aus der Ferne über Gladys Plus.
 
-Die Werte werden alle **2 Minuten** aktualisiert (Ratenbegrenzung von Netatmo).
+Die Werte werden alle **2 Minuten** aktualisiert (Ratenbegrenzung von
+Netatmo), mit den Gladys-Plus-Webhooks in wenigen Sekunden.
+
+---
+
+## Schritt 4 — Füge deine Geräte zu Gladys hinzu
+
+1. Öffne den Tab **Entdecken** der Integration. Jedes gefundene
+   Netatmo-Gerät erscheint dort mit seinen Funktionen.
+2. Klicke bei jedem gewünschten Gerät auf **Zu Gladys hinzufügen**. Es
+   wandert in den Tab **Geräte**, wo du es umbenennen und ihm einen Raum
+   zuweisen kannst.
+3. Zeige es im Dashboard an: **Dashboard** → **Bearbeiten**, dann eine Box
+   hinzufügen (Geräte, Kamera, Thermostat…) oder eines der Widgets der
+   Integration (**Netatmo-Wetter**, **Netatmo-Heizung**, **Netatmo-Kameras**,
+   siehe _Dashboard-Widgets_).
+
+Ein mit **Bereits hinzugefügt** markiertes Gerät ist schon in Gladys. Nach
+einem Update der Integration kann bei einem bereits hinzugefügten Gerät die
+Schaltfläche **Aktualisieren** erscheinen: Sie bringt ihm die neuen
+Funktionen, ohne seinen Verlauf zu verlieren.
+
+**Nichts erscheint?** Prüfe, ob der Status **Verbunden** ist, die Familie
+aktiviert **und gespeichert** ist und das Gerät in der Netatmo-App online ist,
+und klicke dann auf **Scannen**.
 
 ---
 
@@ -116,6 +195,36 @@ Standardaktion „Gerätewert setzen“.
 > Funktion nicht von selbst: Öffne den Bildschirm **Erkennung** und klicke bei
 > jedem Thermostat und Ventil auf **Aktualisieren**. Gladys **5.2** oder neuer
 > ist erforderlich (das Thermostat-Preset gibt es vorher nicht).
+
+---
+
+## Dauer eines von Gladys gesendeten Sollwerts
+
+Netatmo beendet jeden manuellen Sollwert: Nach der in der Netatmo-App
+eingestellten Standarddauer kehrt der Raum zu seinem Netatmo-Zeitplan zurück.
+Die Einstellung **Dauer eines von Gladys gesendeten Sollwerts** (Abschnitt
+**Heizung** des Bildschirms **Konfiguration**) legt fest, wie lange die
+Sollwerte gelten, die Gladys schreibt — die **Setpoint temperature** eines
+Thermostats oder Ventils, gesetzt über die Geräteseite, eine Szenenaktion
+„Gerätewert setzen“ oder das Gladys-Thermostat:
+
+| Auswahl                               | Der Sollwert gilt                                                                                                                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Netatmo-Standarddauer**             | die Standarddauer der Netatmo-App (das Verhalten vor dieser Einstellung, die Voreinstellung)                                                                                          |
+| **1 Stunde** … **12 Stunden**         | so lange                                                                                                                                                                              |
+| **Bis zur nächsten Zeitplanänderung** | bis zum nächsten Zeitfenster des aktiven Netatmo-Zeitplans, das die Temperatur des Raums ändert, in der Zeitzone des Zuhauses (Netatmo-Standarddauer, wenn kein Zeitplan bekannt ist) |
+| **Ohne Ende**                         | so lange, wie Netatmo es annimmt: 30 Tage, kürzer, wenn Netatmo dieses Ende ablehnt, als letzter Ausweg ohne Endzeit — in der Praxis, bis Gladys (oder jemand) ihn wieder ändert      |
+
+Die Szenenaktionen **Sollwert eines Raums einstellen** und **Raum boosten**
+behalten die Dauer, die du ihnen gibst, und ein Boost behält immer seine
+eigene Dauer.
+
+> **Du nutzt die Thermostat-Integration von Gladys? Wähle Ohne Ende.** Gladys
+> steuert den Wochenzeitplan und schreibt jede Änderung selbst. Mit einer
+> begrenzten Dauer kehrt Netatmo am Ende des Sollwerts zu seinem eigenen
+> Zeitplan zurück, und Gladys sieht den neuen Sollwert als eine am Thermostat
+> gemachte Änderung: eine **manuelle Übersteuerung** (siehe **Der
+> Netatmo-Zeitplan läuft weiter** weiter unten).
 
 ---
 
@@ -248,9 +357,10 @@ als **manuelle Übersteuerung**, genau wie einen Dreh am Widget-Regler (für die
 Zeitfenster), und übernimmt dann wieder mit ihrem eigenen Zeitplan. Netatmo
 wird alle 2 Minuten gelesen und meldet immer wieder denselben Sollwert: Gladys
 erkennt ihren eigenen Sollwert in diesen Abfragen, eine unveränderte Meldung
-zählt also nie als Änderung. Für das vorhersehbarste Ergebnis stelle in der
-Netatmo-App eine lange Standarddauer für manuelle Sollwerte ein oder gleiche
-den Netatmo-Zeitplan an den von Gladys an.
+zählt also nie als Änderung. Für das vorhersehbarste Ergebnis stelle die
+**Dauer eines von Gladys gesendeten Sollwerts** auf **Ohne Ende** (siehe
+**Dauer eines von Gladys gesendeten Sollwerts** weiter oben): Die Sollwerte,
+die Gladys schreibt, bleiben dann, bis Gladys sie ändert.
 
 Ein von Gladys gesendeter Sollwert braucht einige Sekunden bis einige Dutzend
 Sekunden, bis das Relais ihn an das Thermostat oder Ventil weitergibt. Die
@@ -413,11 +523,33 @@ Da ein lokales Gladys nicht aus dem Internet erreichbar ist, leitet **Gladys
 Plus** die Ereignisse weiter; ein aktives Gladys-Plus-Abonnement ist daher
 erforderlich.
 
-### Einrichtung (ein einziger Schritt)
+### Einrichtung (3 Minuten)
 
-1. Suche im Tab **Konfiguration** der Integration den Block **„Gladys-Plus-
-   Webhooks“** (wird automatisch angezeigt).
-2. Füge dort deinen Gladys-Plus-**Open-API-Schlüssel** ein. Das war's.
+Du brauchst ein aktives **Gladys-Plus**-Abo, und dein Gladys muss mit Gladys
+Plus verknüpft sein (**Einstellungen** → **Gladys Plus**).
+
+1. **Öffne Gladys über
+   [plus.gladysassistant.com](https://plus.gladysassistant.com/)** und melde
+   dich mit deinem Gladys-Plus-Konto an. Der Tab **Open API** erscheint nur
+   dort: Er existiert nicht, wenn du Gladys über seine lokale Adresse öffnest
+   (z. B. `http://192.168.1.10`).
+2. Gehe zu **Einstellungen** → **Open API**. Gib einen **Namen** ein (z. B.
+   `Netatmo`), klicke auf **Generieren** und **kopiere den angezeigten
+   Schlüssel**: Er wird **nur einmal** angezeigt. Hast du ihn verloren,
+   widerrufe ihn und generiere einen neuen.
+
+   > Es ist **nicht** der „RSA-Schlüssel“ aus dem Tab **Gladys Plus**: Der
+   > dient der Ende-zu-Ende-Verschlüsselung von Gladys Plus und funktioniert
+   > hier nicht.
+
+3. Öffne **Integrationen** → **Netatmo** → Tab **Konfiguration** (über Gladys
+   Plus oder die lokale Adresse, egal). Füge den Schlüssel unter dem Formular
+   im Block **„Gladys-Plus-Webhooks“** in **Gladys-Plus-Open-API-Schlüssel**
+   ein und klicke auf die Schaltfläche **Speichern** dieses Blocks (nicht auf
+   „Konfiguration speichern“).
+
+Der Block zeigt danach die Webhook-Adresse. Sie enthält deinen Schlüssel: Gib
+sie nicht weiter.
 
 **Auf der Netatmo-Website ist nichts einzufügen:** Die Integration registriert
 die URL selbst bei Netatmo und registriert sie bei jeder erneuten Verbindung
@@ -440,12 +572,12 @@ speichere den Gladys-Plus-Schlüssel erneut. Netatmo stellt außerdem 24 Stunden
 lang nichts mehr zu, wenn der Webhook einer Anwendung 5-mal hintereinander
 fehlgeschlagen ist (nur dev.netatmo.com zeigt das an und hebt es auf). Ist es
 die URL der Integration und kommt trotzdem nichts an, erstelle in Gladys Plus
-einen **neuen Open-API-Schlüssel** (Einstellungen → Open API) und speichere ihn
-hier: Ein älterer Schlüssel (etwa aus der URL des früheren Netatmo-Dienstes des
-Cores) kann sich anmelden, ohne je Webhooks zuzustellen.
-Erkennungen gibt es nur, solange die Überwachung der Kamera aktiv ist. Unabhängig
-von der Ursache kommen die Erkennungen trotzdem an, innerhalb von etwa 2
-Minuten (siehe unten).
+einen **neuen Open-API-Schlüssel** (über plus.gladysassistant.com,
+**Einstellungen** → **Open API**) und speichere ihn hier: Ein älterer Schlüssel
+(etwa aus der URL des früheren Netatmo-Dienstes des Cores) kann sich anmelden,
+ohne je Webhooks zuzustellen. Erkennungen gibt es nur, solange die Überwachung
+der Kamera aktiv ist. Unabhängig von der Ursache kommen die Erkennungen trotzdem
+an, innerhalb von etwa 2 Minuten (siehe unten).
 
 Ohne Schlüssel (oder ohne Gladys Plus) verhält sich die Integration genau wie
 zuvor und fragt alle 2 Minuten ab — Erkennungen inklusive.
@@ -552,11 +684,38 @@ Drei Widgets erscheinen in der Widget-Auswahl des Dashboards (Gladys **5.1**
 oder neuer): **Dashboard bearbeiten**, ein Widget hinzufügen und nach „Netatmo“
 suchen.
 
-| Widget              | Zeigt                                                                                                                                                                                                                                                                                                                                 | Einstellungen                                                                                             |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung                                                                                                                                                                            | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind |
-| **Netatmo-Heizung** | den Heizmodus und den aktiven Zeitplan des Zuhauses, eine Zeile pro Raum (gemessene Temperatur → Sollwert, mit Manuell oder Boost markiert, wenn der Sollwert nicht vom Zeitplan kommt), die Schaltflächen Zeitplan / Frostschutz / Abwesend und, bei mehreren Zeitplänen, eine Schaltfläche **Zeitplan wechseln**, die sie auflistet | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause)                                     |
-| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                                                                                                                                                                                               | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                |
+| Widget              | Zeigt                                                                                                                                                      | Einstellungen                                                                                                              |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Netatmo-Wetter**  | Live-Kacheln der Station (Temperaturen, Feuchte, CO2, Lärm, Luftdruck, Regen, Wind) und eine Statuszeile pro Modul mit schwachem Akku oder ohne Verbindung | die Station (leer: die erste) und die angezeigten Messwerte: Übersicht, Innen, oder Außen, Regen und Wind                  |
+| **Netatmo-Heizung** | den Heizmodus des Zuhauses, wie viele Räume heizen, den aktiven Zeitplan, eine Zeile pro Raum und Schaltflächen — siehe unten                              | ein Thermostat oder Ventil des Zuhauses (leer: dein einziges Zuhause); sein Raum ist der, den das Raumformular vorauswählt |
+| **Netatmo-Kameras** | das letzte Bild jeder Kamera, ihre Überwachung und Schaltflächen zum Ein- / Ausschalten                                                                    | eine groß angezeigte Kamera (leer: alle Kameras als Liste)                                                                 |
+
+### Das Widget Netatmo-Heizung
+
+- **Untertitel**: das Zuhause und sein aktiver Zeitplan. **Kacheln**: der
+  Heizmodus (Zeitplan, Frostschutz, Abwesend) und die heizenden Räume
+  (`2/11`).
+- **Eine kompakte Zeile pro Raum**: gemessene Temperatur → Sollwert, dann die
+  Markierungen **Manuell**, **Boost** oder **Aus** (Sollwert nicht vom
+  Zeitplan; ein ausgeschalteter Raum zeigt keinen Sollwert), **Fenster**
+  (Netatmo hat ein offenes Fenster erkannt) und **Heizt** (der Raum fordert
+  Wärme an oder sein Kesselthermostat läuft — der **Heating state** des Raums).
+  Symbol und Farbe folgen: orange, solange der Raum heizt, blau bei offenem
+  Fenster. Bis zu zehn Räume haben ihre Zeile; bei mehr fasst die zehnte Zeile
+  die übrigen zusammen.
+- **Schaltflächen**: die Heizmodi außer dem aktiven (**Zeitplan**,
+  **Frostschutz**, **Abwesend**), **Raum-Sollwert** und, bei mehreren
+  Zeitplänen, **Zeitplan wechseln** (ein Formular, das sie auflistet).
+- **Raum-Sollwert** öffnet ein kurzes Formular in der Karte: den **Raum**, die
+  **Aktion** — **Sollwert einstellen**, **Boost**, **Zurück zum Zeitplan** oder
+  **Ausschalten** —, den **Sollwert** (7 bis 30 °C, auf 0,5 °C gerundet; leer
+  gelassen, bleibt der aktuelle Sollwert des Raums — praktisch, um nur seine
+  Dauer zu ändern) und die **Dauer** (die Auswahl der Einstellung **Dauer eines
+  von Gladys gesendeten Sollwerts**, die sie vorauswählt). Die Dauer gilt für
+  einen Sollwert, einen Boost und Ausschalten; ein Boost mit
+  **Netatmo-Standarddauer** oder **Ohne Ende** dauert die Netatmo-Boostdauer.
+  Die Zeilen des Dashboards lassen sich nicht antippen und eine Karte fasst
+  vier Schaltflächen: Ein Formular dient allen Räumen.
 
 Die Kacheln folgen den Werten live; der Rest wird mit der Integration
 aktualisiert (2 Minuten, oder sobald sich der Heizmodus, die Überwachung oder

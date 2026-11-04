@@ -229,6 +229,32 @@ test('setDeviceValue: open / close / stop and position go through setstate with 
   assert.equal(refreshes, 5);
 });
 
+test('a command as Gladys sends it (no model on the device) still drives the shutter', async () => {
+  // Forum report: the core relays a command with the device's external_id,
+  // selector and params only, and the feature's external_id, category and
+  // type; without the model the shutter command was refused as "not writable".
+  const shutter = await discoverShutter('0009999992');
+  const asSent = (device, feature) => ({
+    device: { external_id: device.external_id, selector: device.selector, params: device.params },
+    feature: { external_id: feature.external_id, category: feature.category, type: feature.type },
+  });
+  const deps = { gladys, client };
+
+  // The model comes from the devices the SDK keeps…
+  await setDeviceValue(deps, { ...asSent(shutter, featureOf(shutter, 'state')), value: -1 });
+  // …or, when they are not loaded yet, from the last raw Netatmo payload.
+  gladys.devices = [];
+  await setDeviceValue(
+    { ...deps, getRawDevice: (id) => (id === '0009999992' ? { id, type: 'NBR' } : undefined) },
+    { ...asSent(shutter, featureOf(shutter, 'position')), value: 40 },
+  );
+
+  assert.deepEqual(
+    netatmo.state.setStateRequests.map((request) => request.home.modules[0].target_position),
+    [0, 40],
+  );
+});
+
 test('setDeviceValue rejects an unknown shutter state and a missing bridge', async () => {
   const shutter = await discoverShutter('0009999992');
   const state = featureOf(shutter, 'state');
@@ -250,6 +276,26 @@ test('setDeviceValue rejects an unknown shutter state and a missing bridge', asy
     /not writable/,
   );
   assert.equal(netatmo.state.setStateRequests.length, 0);
+});
+
+test('a module error in the setstate answer fails the shutter command, no refresh armed', async () => {
+  // Forum report: Netatmo answered HTTP 200 with a module error, the shutter
+  // never moved and nothing was logged.
+  const shutter = await discoverShutter('0009999992');
+  netatmo.state.overrides['/api/setstate'] = {
+    body: { status: 'ok', body: { errors: [{ code: 6, id: SHUTTER_BRIDGE_ID }] } },
+  };
+  let refreshes = 0;
+  await assert.rejects(
+    setDeviceValue(
+      { gladys, client, scheduleRefresh: () => (refreshes += 1) },
+      { device: shutter, feature: featureOf(shutter, 'state'), value: -1 },
+    ),
+    new RegExp(
+      `did not apply target_position 0 to shutter 0009999992 \\(bridge ${SHUTTER_BRIDGE_ID}, home home-1\\): error 6 on ${SHUTTER_BRIDGE_ID}`,
+    ),
+  );
+  assert.equal(refreshes, 0);
 });
 
 test('a missing shutter scope asks to reconnect, on the command and the Configuration screen', async () => {

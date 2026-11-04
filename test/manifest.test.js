@@ -22,6 +22,7 @@ import * as featureBuilders from '../src/netatmo/features.js';
 import { SCENE_ACTIONS } from '../src/netatmo/scenes.js';
 import { SCENE_TRIGGER_KEYS } from '../src/netatmo/events.js';
 import { WIDGETS, WIDGET_OF_UPDATE } from '../src/netatmo/widgets.js';
+import { SETPOINT_DURATION_LABELS } from '../src/netatmo/roomSetpoint.js';
 
 const manifest = JSON.parse(
   await readFile(new URL('../gladys-assistant-integration.json', import.meta.url), 'utf8'),
@@ -160,6 +161,15 @@ test('section fields are purely presentational', () => {
       assert.match(link.url, /^https:\/\//, 'section links must be https');
     }
   }
+});
+
+test('the setpoint_duration options are the durations the code handles, labelled alike', () => {
+  const field = manifest.config_schema.find((entry) => entry.key === 'setpoint_duration');
+  assert.equal(field.type, 'select');
+  assert.deepEqual(
+    Object.fromEntries(field.options.map((option) => [option.value, option.label])),
+    SETPOINT_DURATION_LABELS,
+  );
 });
 
 test('the declared webhook is the one the code handles', () => {

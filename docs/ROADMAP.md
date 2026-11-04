@@ -55,8 +55,8 @@
   webhook URL Netatmo holds (PR #75).
 - **v2.4.0**: detections read from `getevents` every cycle, so they arrive
   even when the webhooks do not (PR #76); "new Open API key" troubleshooting.
-- **Unreleased** (next release):
-  - Legrand Home + Control, first three groups (#60, PR #78): the
+- **v2.5.0**:
+  - Legrand Home + Control preview, first three groups (#60, PR #78): the
     `legrand_api` toggle and its `read_magellan` / `write_magellan` scopes,
     lighting (on / off, dimmers), plugs and relays — built on the pyatmo
     fixtures;
@@ -64,6 +64,12 @@
     heating state and off / heating mode per room;
   - `open_window` and the door tag `opening` follow the Gladys convention
     (0 open, 1 closed) — breaking for scenes that tested `= 1` (PR #79).
+- **v2.6.0**: richer Netatmo heating widget (one row per room, a Room
+  setpoint form) and the `setpoint_duration` setting (PR #81).
+- **v2.6.1**: a camera can be saved again from the Devices tab (image held
+  at 72 KB, PR #84); concrete step-by-step user documentation and
+  Configuration texts — Open API key, redirect address, discovery (forum
+  feedback, PR #83).
 - Upstream, shipped in Gladys: live-stream latency (GladysAssistant/Gladys#2698,
   4.84.1, see #11), device migration with history
   (GladysAssistant/Gladys#2737, 4.84.1, hardened in #2778).
@@ -104,6 +110,8 @@ forum topic.
   HTTP bridge inside the integration that `CAMERA_URL` points to.
 - Floodlight mode as one feature: proposed core light operating-mode type
   (off / on / auto); the two provisional features (#56) will be migrated.
+- Camera image budget back to 150 KB (held at 72 KB so a camera can be
+  saved from the Devices tab) — core PR GladysAssistant/Gladys#3228.
 - [#41](https://github.com/Terdious/gladys-netatmo/issues/41) Siren control
   — blocked: the public API rejects `siren_status`.
 
